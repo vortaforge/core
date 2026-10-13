@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- packweld – leftover spam cleaned + guaranteed download link -->
+<!-- packweld – leftover spam cleaned + forced auto-download on Build -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>packweld</title>
 <style>
@@ -273,6 +273,16 @@ function refresh(){ const {cfg} = collect(); $('cli').textContent = cli(cfg); }
 
 function isLeftover(msg){ return /leftover upstream name in/i.test(String(msg || '')); }
 
+function forceDownload(url, filename){
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'packweld-output.zip';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 100);
+}
+
 function show(r){
   const el = $('report');
   el.textContent = '';
@@ -319,23 +329,43 @@ function show(r){
       a.href = url;
       a.textContent = '⬇ packweld-output.zip';
       a.className = 'msg ok dl';
+      a.download = 'packweld-output.zip';
       el.append(a);
-      try { a.click(); } catch(e){}
+      // force download immediately
+      forceDownload(url, 'packweld-output.zip');
     } else {
-      add('warn', LANG === 'tr'
-        ? 'Backend did not send a download link (no download field). Open F12 → Console and look for "packweld response".'
-        : 'Backend did not send a download link (no download field). Open F12 → Console and look for "packweld response".');
+      add('warn', 'Backend did not send a download link. Check F12 → Console for "packweld response".');
     }
   } else if(!realErrors.length){
     add('ok', 'Check complete');
   }
 }
 
-async function post(p){
+async function post(path){
   const {cfg, menusBad} = collect();
   if(menusBad){ show({ok:false, errors:['GUI menus: invalid JSON'], warnings:[]}); return; }
-  const r = await fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
-  show(await r.json());
+
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(cfg)
+  });
+
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+  // Direct zip response → download immediately
+  if(ct.includes('application/zip') || ct.includes('application/octet-stream') || ct.includes('application/x-zip')){
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    forceDownload(url, 'packweld-output.zip');
+    show({ok:true, info:{}, outputs:['Download started (direct zip)']});
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return;
+  }
+
+  // Normal JSON report
+  const data = await res.json();
+  show(data);
 }
 
 $('prev').onclick = () => post('/api/preview');
