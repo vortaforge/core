@@ -5,7 +5,7 @@
 # injects the boolean result as a named macro variable into the target function.
 #
 # Usage:
-#   function macroengine:engine/macro/with_advancement \
+#   function macroengine:api/macro/with_advancement \
 #     {func:"ns:path", player:"Name", advancement:"ns:adv/path", var:"done"}
 #
 # Parameters:

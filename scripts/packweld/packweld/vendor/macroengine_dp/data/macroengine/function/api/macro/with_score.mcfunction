@@ -5,7 +5,7 @@
 # macro variable into the target function.
 #
 # Usage:
-#   function macroengine:engine/macro/with_score \
+#   function macroengine:api/macro/with_score \
 #     {func:"ns:path", player:"Name", objective:"myObj", var:"myVar"}
 #
 # Parameters:

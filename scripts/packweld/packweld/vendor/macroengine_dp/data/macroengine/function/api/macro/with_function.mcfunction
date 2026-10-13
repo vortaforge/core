@@ -8,7 +8,7 @@
 # Establishes a type-safe data bridge between two functions.
 #
 # Usage:
-#   function macroengine:engine/macro/with_function \
+#   function macroengine:api/macro/with_function \
 #     {source:"ns:provider", target:"ns:consumer"}
 #
 # Parameters:
