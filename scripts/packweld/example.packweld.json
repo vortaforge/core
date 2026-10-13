@@ -1,0 +1,94 @@
+{
+  "name": "Acme Lib",
+  "namespace": "acme",
+  "gui_namespace": null,
+  "gui_name": null,
+  "version": "1.0.0",
+  "description": "",
+  "author": "You",
+  "homepage": "",
+  "extra_notice": "",
+  "include_macroengine": true,
+  "include_guikit": true,
+  "include_resourcepack": true,
+  "include_docs": true,
+  "modules": [
+    "api/store",
+    "api/perm",
+    "systems/math",
+    "systems/rng"
+  ],
+  "config_overrides": {
+    "hud_rate": 5
+  },
+  "isolate_player_action": true,
+  "stamp_headers": false,
+  "min_format": [
+    121,
+    0
+  ],
+  "max_format": [
+    121,
+    0
+  ],
+  "rp_min_format": [
+    97,
+    1
+  ],
+  "rp_max_format": [
+    97,
+    1
+  ],
+  "icon": null,
+  "targets": [
+    "java",
+    "bedrock"
+  ],
+  "output_dir": "out",
+  "make_zip": true,
+  "keep_dirs": true,
+  "bedrock": {
+    "enabled": true,
+    "namespace": null,
+    "modules": null,
+    "server_version": "2.0.0",
+    "server_ui_version": "2.0.0",
+    "min_engine_version": [
+      1,
+      21,
+      130
+    ],
+    "menus": [
+      {
+        "id": "main",
+        "title": "Acme",
+        "body": "Pick one",
+        "buttons": [
+          {
+            "text": "Hello",
+            "action": {
+              "type": "message",
+              "text": "Hi!"
+            }
+          },
+          {
+            "text": "Sound",
+            "action": {
+              "type": "sound",
+              "id": "random.levelup"
+            }
+          },
+          {
+            "text": "Close",
+            "action": {
+              "type": "close"
+            }
+          }
+        ]
+      }
+    ],
+    "gui_open_item": null,
+    "gui_default_menu": null,
+    "single_mcaddon": true
+  }
+}

@@ -1,0 +1,21 @@
+# macroengine:api/cmd/other/multi_cmd/advanced/run_with_options
+# Run with advanced options.
+#
+# INPUT (storage macroengine:input):
+#   list    → command list (string or object)
+#   options → {priority_sort:1b, spread_ticks:0, error_mode:"continue", profile:1b, type:"..."}
+#
+
+execute if data storage macroengine:engine modules{cmd:0b} run return 0
+data modify storage macroengine:engine _mcmd_queue set from storage macroengine:input list
+execute unless data storage macroengine:input options run data modify storage macroengine:input options set value {}
+data modify storage macroengine:engine _mcmd_options merge from storage macroengine:input options
+
+execute unless data storage macroengine:engine _mcmd_options.error_mode run data modify storage macroengine:engine _mcmd_options.error_mode set value "continue"
+execute unless data storage macroengine:engine _mcmd_options.profile run data modify storage macroengine:engine _mcmd_options.profile set value 0b
+execute unless data storage macroengine:engine _mcmd_options.spread_ticks run data modify storage macroengine:engine _mcmd_options.spread_ticks set value 0
+
+execute if data storage macroengine:engine _mcmd_options{priority_sort:1b} run function macroengine:core/internal/api/cmd/other/multi_cmd/advanced/sort_by_priority
+execute if data storage macroengine:engine _mcmd_options.spread_ticks unless data storage macroengine:engine _mcmd_options{spread_ticks:0} run return run function macroengine:core/internal/api/cmd/other/multi_cmd/advanced/run_spread
+
+function macroengine:api/cmd/other/multi_cmd/run

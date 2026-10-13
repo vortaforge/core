@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "packweld"
+version = "0.1.0"
+description = "Generate your own namespaced copy of macroEngine + guikit: Java datapack and Bedrock add-on. No dependencies."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Unlicense" }
+dependencies = []
+
+[project.scripts]
+packweld = "packweld.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["packweld*"]
+
+[tool.setuptools.package-data]
+packweld = ["vendor/**/*", "ui/*.html", "bedrock_js/*.js"]

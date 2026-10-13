@@ -1,0 +1,137 @@
+# macroEngine (v26.3)
+
+**macroEngine** is a macro/module framework datapack for Minecraft Java Edition, providing a large library of reusable command-based systems (math, string, NBT, geo, permissions, UUID cache, hooks, rate limiting, and more) plus a multi-source text/value input system (books, signs, lecterns, name tags, command block minecarts).
+
+> Maintained by: [VortaForge](https://github.com/vortaforge) — repository [`vortaforge/core`](https://github.com/vortaforge/core), path `packs/macroEngine-Datapack-v26.3`
+> Former owner: Runtoolkit (`runtoolkit` organization and `runtoolkit/suite`, retired/archived; original source, not maintained)
+> Minecraft: **26.3** (`min_format` / `max_format` **121.0**)
+> 
+> License: Unlicense
+> 
+> Namespace: `macroengine`
+> 
+> Maintainer: [VortaForge](https://github.com/vortaforge)
+
+---
+
+## Features
+
+![macroEngine layers](docs/media/architecture.svg)
+
+- **API layer** (`api/`) — stable public entry points: `cmd`, `cb` (callback queue), `color`, `gamerule`, `interaction`, `item`, `macro`, `perm`, `store`, `title`, `toggle`, `trigger`, `wand`
+- **Systems layer** (`systems/`) — internal utility modules: `math`, `string`, `nbt`, `logic`, `geo`, `flag`, `hook`, `log`, `rate_limit`, `sound`, `uuid`, `color`
+- **Input system** (`input/`) — capture player-provided values via writable book, sign, lectern, name tag, or command block minecart, with shared validation (`input/validate`) for int/float/bool/tag-safe strings
+- **Toggle system** — per-module runtime enable/disable for `cb`, `perm`, `geo`, `wand`, `interaction`, and `hook` modules
+- **Rate limiting** — global, per-player, and per-channel request throttling
+- **Hook system** — bind functions to fire on events such as block break, dimension change, and advancement grant
+- **Item modifiers** (`item_modifier/`) — reusable `item_modifier` definitions for enchanting, glint, lore, tooltip, and rename operations
+- **Advancement-driven triggers** (`advancement/`) — core, hidden, and system advancements used to drive internal logic and hooks
+- **Command conditions and nested groups** (`api/cmd/other/multi_cmd/`) — queue entries accept a `condition` object with boolean composition (`all_of`, `any_of`, `not`, nestable to depth 8) and a `commands` list that expands in place, so a group can be gated as a unit. Leaves: `tag`, `score` (target and bounds now optional), `predicate`, `entity`, `storage` (existence), and `data` (numeric range). Every leaf fails closed — a missing required key or an unreadable path reports *not passed* rather than silently passing
+- **Deterministic RNG** (`systems/rng/`) — `seed`, `state`, `next`, `int`, `chance`, `pick`. Seeding makes randomised behaviour reproducible, which the previous generator could not do: it kept an undocumented `_rng_state` key with no way to set it. `systems/math/random` is now a thin wrapper over `systems/rng/int`, so there is one generator rather than two
+- **Text-component rendering** (`systems/text/`) — helpers for NBT-backed components. On 26.1+ a `{"storage":...,"nbt":...}` component renders a string *with its quotes* and a number or boolean *with vanilla colouring* unless `interpret` and `plain` are both set. Every such component in this pack now sets both explicitly; `scripts/fix_text_components.py` at the repository root enforces it
+
+- **Store module** (`api/store/`) — storage-based variables, per-player values, raw NBT helpers (`api/store/nbt/*`: `get`, `set`, `set_default`, `append`, `merge`, `remove`, `exists`, `count`, `copy`, `add`, `toggle`, `pop`, `shift` over any storage/path) and multilingual message templates (`render`, `render_all`, `convert`, `show`) that return plain strings; see [`docs/store.md`](docs/store.md). It replaced the old `api/data` and `api/placeholder` modules. Untrusted text is never substituted into a command or JSON string, so chat/sign/book input is safe. Migration notes: [`docs/migrating-from-data-api.md`](docs/migrating-from-data-api.md)
+- **Title / action bar with tokens** (`api/title/*_p`, plus `clear`, `reset`, `times`; see [`docs/title.md`](docs/title.md)) — storage-driven (no quote/backslash breakage), rendered with `api/store/render` per recipient
+- **Runtime config** (`core/config/*`, see [`docs/config.md`](docs/config.md)) — every behaviour knob is a validated key: module on/off switches, tick systems and rates, handler scan intervals, queue depth, template limits and token switches, title defaults, name length
+
+---
+
+## Requirements
+
+- Minecraft Java Edition **26.3**
+- Datapack `min_format`/`max_format`: **122**
+
+---
+
+## Installation
+
+1. Place the datapack folder in your world's `datapacks/` directory (or load it via a server-side pack source).
+2. Run `/reload` or restart the server.
+3. macroEngine initializes automatically via `#macroengine:events/on_load`.
+
+To check the default tick configuration, see `data/macroengine/function/config/`.
+
+---
+
+## Usage
+
+Most functionality is exposed through the `api/` namespace, e.g.:
+
+```mcfunction
+function macroengine:api/cmd/actionbar
+function macroengine:api/perm/grant
+function macroengine:api/wand/give
+```
+
+Internal systems under `systems/` are used by API functions and are not intended to be called directly by end users, though they remain accessible for advanced/custom integrations.
+
+---
+
+## Notes
+
+- This is the 26.3 build of macroEngine, derived from the earlier build in the archived `runtoolkit/suite` monorepo (`packs/macroEngine-Datapack-v26.3`). Development continues in `vortaforge/core`; do not file issues or PRs against `runtoolkit/*`.
+
+---
+
+## FAQ
+
+> This section is based on a **static review** of the source (the code was read, not run in-game). Test on a staging server before deploying to production.
+
+### Is it safe?
+
+**Short answer:** no malicious content was found, but it is not safe to install blindly either. It is a powerful toolkit and can be dangerous if misused.
+
+- **What is not in the pack:** the zip contains no `.jar`, `.exe`, scripts, `.git/` or `.env` files, only datapack files (`.mcfunction`, `.json`, `pack.png`). A datapack cannot open network connections or write to the server's file system on its own.
+- **The real risk is the command-executing APIs.** Several functions run a caller-supplied string as a command (the `$execute ... run $(cmd)` pattern: `api/cmd/as_player`, `api/cmd/other/run_*`, `api/perm/run`, `api/perm/exec`, `core/lib/queue_add_cmd`, `core/lib/schedule_cmd`). Passing player-controlled text (sign, book, name tag) into them results in **command injection**.
+- **The input system does not execute input.** Captured raw text is only written to the `macroengine:input` storage. Validate it with `input/validate/check` (`int`, `float`, `bool`, `tag_safe`) before using it.
+- **There is no built-in protection.** The pack has no load gate or caller authorization. Any other datapack in the same world can call these functions (there is no isolation between datapacks).
+- **Permission level:** everything runs at the server's function permission level.
+
+### Can I install it on a server?
+
+Yes. It is a purely server-side datapack, and players do not need any mods. Requirements:
+
+1. **Version:** the pack targets `26.3` (pack format `121.0`).
+2. **Text rendering:** use it together with `macroEngine-Resourcepack-v26.3`.
+3. **Back up first** and try it on a test server.
+4. **Removal:** delete the pack from the world's `datapacks` folder (Realms: re-upload the world without it). The pack no longer ships server-administration commands (`/datapack`, `/op`, ...).
+
+### Is it paid?
+
+No. The pack is released under the **Unlicense** (public domain): free, including commercial use, and no attribution is required. Two notes:
+
+- This is not legal advice.
+
+### Is it still maintained?
+
+Not currently. The maintainer is stepping away and plans to return in 2027-2028, at which point changes will come as a pull request. Until then do not expect fixes; fork it and patch it yourself if you need changes.
+
+### How is the performance?
+
+Not measured. From the code: while players are online, the `time`, `player` and `queue` systems run **every tick**, `hud` every 2 ticks and `admin` every 4 ticks. `player_systems` also runs NBT-filtered `execute as @e` / `kill @e` scans over all `item` entities every tick, so cost grows with the number of dropped items. Systems you do not use can be turned off with `systems/flag/toggle_system`.
+
+### Screenshots and demos
+
+<!--
+In-game media is not included yet. Add real captures under docs/media/ and uncomment:
+
+![Input capture via writable book](docs/media/input-book.gif)
+-->
+
+The diagrams above are generated from the source code. Real in-game captures (input capture) are not available yet.
+
+## Known Issues
+
+- **Unmaintained until 2027-2028.** No security or compatibility patches will follow before then.
+- **Single target.** Minecraft Java 26.3 (data pack format `121.0`). Other versions are not tested and may not load.
+- **Forceload side effects.** On load the pack runs `forceload add 0 0` and `forceload add -30000000 1600`. Cleanup only runs `forceload remove 0 0`, which also removes a `0 0` forceload the server owner added themselves, and `-30000000 1600` is **never removed** (if it lies outside the world border, the command may fail silently).
+- **Command-executing APIs do not check who is calling.** See "Is it safe?".
+- **NBT-filtered `@e[type=item]` scan every tick** (performance note above).
+- **License and file inconsistencies.** `LICENSE` and `THIRD_PARTY_LICENSES.md` are not in this zip (the statement "Both files ship inside the distributed zip" above is wrong). `_rt_origin.mcfunction` is claimed to be stripped from distribution zips but is present (the game ignores it, so it is harmless) and its license header contradicts the Unlicense.
+
+## License
+
+- macroEngine original code: Unlicense (public domain) — see [`LICENSE`](LICENSE).
+- String module (`core/lib/string`, `core/internal/text`): macroEngine original code.
+
+Both files ship inside the distributed zip.
