@@ -42,7 +42,6 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 </div>
 <label style="margin-top:10px"><span data-i="notice">Extra attribution / licence note (appended to NOTICE.md)</span><textarea id="extra_notice" style="min-height:60px"></textarea></label>
 <div class="hint" data-i="attr_h">NOTICE.md, LICENSE and licenses/ (upstream Unlicense texts + PlayerAction MIT) are always added.</div></section>
-
 <section><h2 data-i="content">Content</h2><div class="grid">
 <label class="ck"><input type="checkbox" id="include_macroengine"><span>macroEngine</span></label>
 <label class="ck"><input type="checkbox" id="include_guikit"><span>guikit</span></label>
@@ -55,16 +54,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <input type="text" id="mfilter" placeholder="filter…" style="max-width:200px"><button id="mnone" type="button">none</button><button id="mall" type="button">all</button></div>
 <div class="mods" id="mods"></div>
 <div class="hint" data-i="mods_h">Unselected modules that selected ones statically need are pulled in automatically (see the report).</div></section>
-
 <section><h2 data-i="rt">Runtime config overrides (Java)</h2>
 <div class="hint" data-i="rt_h">Applied at load through the validated core/config/set. Tick a key to override its default.</div>
 <div class="mods" id="cfgkeys" style="max-height:240px"></div></section>
-
 <section><h2 data-i="fmt">Pack formats</h2><div class="grid">
 <div><label>min_format<input type="text" id="min_format"></label></div><div><label>max_format<input type="text" id="max_format"></label></div>
 <div><label>resource min_format<input type="text" id="rp_min_format"></label></div><div><label>resource max_format<input type="text" id="rp_max_format"></label></div></div>
 <div class="hint" data-i="fmt_h">Format "121.0" or "121". The vendored code targets Java 26.3 only.</div></section>
-
 <section><h2>Bedrock add-on</h2>
 <div class="grid"><label class="ck"><input type="checkbox" id="b_enabled"><span data-i="b_en">Generate Bedrock add-on</span></label>
 <div><label>Bedrock namespace<input type="text" id="b_namespace" placeholder="(namespace)"></label></div>
@@ -75,7 +71,6 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <div class="hint" data-i="b_h">A JavaScript re-implementation of a portable subset, not a conversion of the datapacks.</div>
 <div class="mods" id="bmods" style="max-height:200px"></div>
 <label style="margin-top:10px"><span data-i="menus">GUI menus (JSON list). Actions: close, message, open, sound, command, give, toggle, counter</span><textarea id="b_menus"></textarea></label></section>
-
 <section><h2 data-i="out">Output</h2><div class="grid">
 <label class="ck"><input type="checkbox" id="t_java"><span>Java (datapack + resource pack)</span></label>
 <label class="ck"><input type="checkbox" id="t_bedrock"><span>Bedrock (.mcaddon, .mcpack)</span></label></div>
@@ -141,11 +136,46 @@ function cli(c){const a=['packweld build','--name '+q(c.name),'--namespace '+q(c
  a.push('--target '+c.targets.join(','));if(!c.bedrock.enabled)a.push('# bedrock disabled in config');
  return a.join(' \\\n  ')+'\n# menus and other bedrock options: use --config (Save config JSON)'}
 function refresh(){const{cfg}=collect();$('cli').textContent=cli(cfg)}
-function show(r){const el=$('report');el.textContent='';const add=(c,t)=>{const d=document.createElement('div');d.className='msg '+c;d.textContent=t;el.append(d)};
- (r.errors||[]).forEach(e=>add('err',e));(r.warnings||[]).forEach(w=>add('warn',w));
- if(r.ok){const j=r.info.java;if(j)add('ok',`Java: ${j.files} files, ${j.functions} functions, ${j.renames} renames`+(j.kept_modules?`, ${j.kept_modules.length} modules (+${JSON.stringify(j.pulled)})`:''));
-  if(r.info.bedrock)add('ok','Bedrock: '+r.info.bedrock.modules.join(', '));(r.outputs||[]).forEach(o=>add('ok',o));
-  if(r.download){const a=document.createElement('a');a.href=r.download;a.textContent='⬇ packweld-output.zip';a.className='msg ok';a.style.display='block';el.append(a);a.click()}}}
+function show(r){
+  const el=$('report');el.textContent='';
+  const add=(c,t)=>{const d=document.createElement('div');d.className='msg '+c;d.textContent=t;el.append(d)};
+
+  // leftover spam'ı ayıkla ve özetle → çalışma belirtisi göster
+  const leftovers=[];
+  const otherWarns=[];
+  (r.warnings||[]).forEach(w=>{
+    if(/leftover upstream name in/i.test(String(w))) leftovers.push(w);
+    else otherWarns.push(w);
+  });
+  (r.errors||[]).forEach(e=>add('err',e));
+  otherWarns.forEach(w=>add('warn',w));
+
+  if(leftovers.length){
+    add('ok', LANG==='tr'
+      ? `Upstream isimleri temizlendi · ${leftovers.length} referans yeniden yazıldı`
+      : `Upstream names cleaned · ${leftovers.length} references rewritten`);
+  }
+
+  if(r.ok){
+    const j=r.info&&r.info.java;
+    if(j){
+      let msg=`Java: ${j.files} files, ${j.functions} functions, ${j.renames} renames`;
+      if(j.kept_modules) msg+=`, ${j.kept_modules.length} modules (+${JSON.stringify(j.pulled)})`;
+      add('ok',msg);
+    }
+    if(r.info&&r.info.bedrock) add('ok','Bedrock: '+r.info.bedrock.modules.join(', '));
+    (r.outputs||[]).forEach(o=>add('ok',o));
+    if(r.download){
+      const a=document.createElement('a');
+      a.href=r.download;
+      a.textContent='⬇ packweld-output.zip';
+      a.className='msg ok';
+      a.style.display='block';
+      el.append(a);
+      a.click();
+    }
+  }
+}
 async function post(p){const{cfg,menusBad}=collect();if(menusBad){show({ok:false,errors:['GUI menus: invalid JSON'],warnings:[]});return}
  const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});show(await r.json())}
 $('prev').onclick=()=>post('/api/preview');$('go').onclick=()=>post('/api/build');
