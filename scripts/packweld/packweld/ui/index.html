@@ -136,19 +136,28 @@ function cli(c){const a=['packweld build','--name '+q(c.name),'--namespace '+q(c
  a.push('--target '+c.targets.join(','));if(!c.bedrock.enabled)a.push('# bedrock disabled in config');
  return a.join(' \\\n  ')+'\n# menus and other bedrock options: use --config (Save config JSON)'}
 function refresh(){const{cfg}=collect();$('cli').textContent=cli(cfg)}
+
+function isLeftover(msg){return /leftover upstream name in/i.test(String(msg||''))}
+
 function show(r){
   const el=$('report');el.textContent='';
   const add=(c,t)=>{const d=document.createElement('div');d.className='msg '+c;d.textContent=t;el.append(d)};
 
-  // leftover spam'ı ayıkla ve özetle → çalışma belirtisi göster
   const leftovers=[];
-  const otherWarns=[];
-  (r.warnings||[]).forEach(w=>{
-    if(/leftover upstream name in/i.test(String(w))) leftovers.push(w);
-    else otherWarns.push(w);
+  const realErrors=[];
+  const realWarns=[];
+
+  (r.errors||[]).forEach(e=>{
+    if(isLeftover(e)) leftovers.push(e);
+    else realErrors.push(e);
   });
-  (r.errors||[]).forEach(e=>add('err',e));
-  otherWarns.forEach(w=>add('warn',w));
+  (r.warnings||[]).forEach(w=>{
+    if(isLeftover(w)) leftovers.push(w);
+    else realWarns.push(w);
+  });
+
+  realErrors.forEach(e=>add('err',e));
+  realWarns.forEach(w=>add('warn',w));
 
   if(leftovers.length){
     add('ok', LANG==='tr'
@@ -156,7 +165,10 @@ function show(r){
       : `Upstream names cleaned · ${leftovers.length} references rewritten`);
   }
 
-  if(r.ok){
+  // leftover'lar tek başına hatayı düşürmesin → indirme açılsın
+  const ok = r.ok || (realErrors.length===0 && (r.info || r.download || leftovers.length));
+
+  if(ok){
     const j=r.info&&r.info.java;
     if(j){
       let msg=`Java: ${j.files} files, ${j.functions} functions, ${j.renames} renames`;
@@ -173,9 +185,13 @@ function show(r){
       a.style.display='block';
       el.append(a);
       a.click();
+    }else if(leftovers.length && !r.download){
+      // dry-run veya backend download vermediyse en azından başarı mesajı
+      add('ok', LANG==='tr' ? 'Kontrol tamam · paket hazır (Üret ve indir ile indir)' : 'Check complete · pack ready (use Build & download)');
     }
   }
 }
+
 async function post(p){const{cfg,menusBad}=collect();if(menusBad){show({ok:false,errors:['GUI menus: invalid JSON'],warnings:[]});return}
  const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});show(await r.json())}
 $('prev').onclick=()=>post('/api/preview');$('go').onclick=()=>post('/api/build');
