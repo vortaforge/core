@@ -20,6 +20,7 @@ echo "::endgroup::"
 
 IGNORE_PATHS=(
     "archived/*"
+    "scripts/packweld/packweld/vendor/macroengine_dp/"
     "build/*"
     # Legacy pack (pack_format 12): camelCase gamerule names are valid there,
     # Mecha validates against the newest game version and rejects them.
