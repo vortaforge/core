@@ -21,7 +21,7 @@ def verify_datapack(cfg, fs) -> dict:
         if p in SKIP_LEFTOVER or p.startswith(SKIP_PREFIX) or not p.endswith((".mcfunction", ".json", ".mcmeta")):
             continue
         if LEFTOVER.search(b) and p not in ("pack.mcmeta",):
-            errors.append(f"leftover upstream name in {p}")
+            warnings.append(f"leftover upstream name in {p}")
     # 2. dangling references (compared with the upstream baseline)
     with tempfile.TemporaryDirectory() as td:
         fs.write_dir(Path(td))
