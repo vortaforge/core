@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- AI-assisted: written by Claude (Anthropic) for the packweld project (see CREDITS.md). -->
+<!-- packweld – leftover spam cleaned + guaranteed download link -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>packweld</title>
 <style>
@@ -24,8 +24,7 @@ button{padding:8px 14px;border-radius:7px;border:1px solid var(--line);backgroun
 button.p{background:var(--acc);border-color:var(--acc);color:#fff}button:disabled{opacity:.5}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;overflow:auto;font:12.5px/1.45 var(--mono);white-space:pre-wrap;word-break:break-all}
 .msg{padding:8px 10px;border-radius:6px;margin:6px 0;font-size:13.5px}.err{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}.ok{background:var(--acc2);color:var(--acc)}
-table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}td.k{font-family:var(--mono)}
-.tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button.on{background:var(--acc2);border-color:var(--acc);color:var(--acc)}
+a.dl{display:block;font-weight:bold;font-size:16px;padding:12px;text-align:center;text-decoration:none}
 </style></head><body>
 <header><h1>packweld</h1><small id="ver"></small><span class="sp"></span>
 <button id="lang">TR / EN</button></header>
@@ -80,127 +79,305 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 6px;b
 <div class="hint">CLI</div><pre id="cli"></pre></section>
 </main>
 <script>
-const $=id=>document.getElementById(id);let META,LANG=(navigator.language||'en').startsWith('tr')?'tr':'en';
-const T={tr:{identity:'Kimlik',name:'Görünen ad',name_h:'Metinlerdeki "macroEngine" yerine geçer.',ns:'Namespace',ns_h:'a-z 0-9 _ ; harfle başlar. "macroengine" yerine geçer.',gns:'GUI namespace',gns_h:'"guikit" yerine geçer.',gname:'GUI görünen ad',ver_l:'Sürüm',author:'Yazar / sahip',home:'Ana sayfa',desc:'Açıklama',notice:'Ek atıf / lisans notu (NOTICE.md sonuna eklenir)',attr_h:'NOTICE.md, LICENSE ve licenses/ (Unlicense metinleri + PlayerAction MIT) her zaman eklenir.',content:'İçerik',rp:'macroEngine resource pack',docs:'Upstream dokümanlar',pa:'PlayerAction isimlerini değiştir (çakışmayı önler)',stamp:'Her .mcfunction başına atıf yorumu',all:'Tüm macroEngine modülleri (tam kopya)',custom:'Modül seç',mods_h:'Seçilmeyen ama seçilenlerin statik olarak ihtiyaç duyduğu modüller otomatik eklenir (rapora bak).',rt:'Çalışma zamanı ayarları (Java)',rt_h:'Yüklenirken doğrulanmış core/config/set ile uygulanır. Varsayılanı değiştirmek için anahtarı işaretle.',fmt:'Pack formatları',fmt_h:'"121.0" veya "121". Vendor kodu yalnızca Java 26.3 hedefler.',b_en:'Bedrock add-on üret',b_item:'GUI açma eşyası (eğil + kullan)',b_h:'Taşınabilir bir alt kümenin JavaScript yeniden yazımıdır; datapack dönüşümü değildir.',menus:'GUI menüleri (JSON liste). Eylemler: close, message, open, sound, command, give, toggle, counter',out:'Çıktı',prev:'Kontrol et (kuru çalıştırma)',go:'Üret ve indir',save:'Config JSON kaydet',load:'Config JSON yükle',fn:'fn',pull:'ek'},
-en:{identity:'Identity',name:'Display name',name_h:'Replaces "macroEngine" in texts.',ns:'Namespace',ns_h:'a-z 0-9 _ , starts with a letter. Replaces "macroengine".',gns:'GUI namespace',gns_h:'Replaces "guikit".',gname:'GUI display name',ver_l:'Version',author:'Author / owner',home:'Homepage',desc:'Description',notice:'Extra attribution / licence note (appended to NOTICE.md)',attr_h:'NOTICE.md, LICENSE and licenses/ (upstream Unlicense texts + PlayerAction MIT) are always added.',content:'Content',rp:'macroEngine resource pack',docs:'Upstream docs',pa:'Rename PlayerAction identifiers (avoid clashes)',stamp:'Attribution comment on every .mcfunction',all:'All macroEngine modules (full copy)',custom:'Pick modules',mods_h:'Unselected modules that selected ones statically need are pulled in automatically (see the report).',rt:'Runtime config overrides (Java)',rt_h:'Applied at load through the validated core/config/set. Tick a key to override its default.',fmt:'Pack formats',fmt_h:'Format "121.0" or "121". The vendored code targets Java 26.3 only.',b_en:'Generate Bedrock add-on',b_item:'GUI open item (sneak + use)',b_h:'A JavaScript re-implementation of a portable subset, not a conversion of the datapacks.',menus:'GUI menus (JSON list). Actions: close, message, open, sound, command, give, toggle, counter',out:'Output',prev:'Check (dry run)',go:'Build & download',save:'Save config JSON',load:'Load config JSON',fn:'fn',pull:'extra'}};
-function i18n(){document.documentElement.lang=LANG;document.querySelectorAll('[data-i]').forEach(e=>e.textContent=T[LANG][e.dataset.i]||e.textContent)}
-const fmt=a=>a.join('.'),pf=s=>String(s).split('.').filter(x=>x!=='').map(Number);
-function row(cls,cells){const d=document.createElement('div');d.className=cls;cells.forEach(c=>d.append(c));return d}
-function span(t,c){const s=document.createElement('span');s.textContent=t;if(c)s.className=c;return s}
-function cb(id,checked){const i=document.createElement('input');i.type='checkbox';i.dataset.id=id;i.checked=!!checked;return i}
-function buildLists(){
- const m=$('mods');m.textContent='';META.modules.forEach(x=>m.append(Object.assign(row('mod',[cb(x.id,true),span(x.id,'m'),span(x.functions+' '+T[LANG].fn,'n'),span('+'+x.closure,'n'),span(x.desc,'d')]),{dataset:{id:x.id}})));
- const b=$('bmods');b.textContent='';META.bedrock_modules.forEach(x=>b.append(row('mod',[cb(x.id,true),span(x.id,'m'),span(''),span(''),span(x.desc,'d')])));
- const k=$('cfgkeys');k.textContent='';Object.entries(META.config_keys).forEach(([key,s])=>{
-  const inp=document.createElement(s.type==='bool'?'select':'input');
-  if(s.type==='bool'){inp.innerHTML='<option value="1b">1b (on)</option><option value="0b">0b (off)</option>';inp.value=s.default==='0b'?'0b':'1b'}
-  else{inp.type=s.type==='int'?'number':'text';inp.value=(s.default||'').replace(/"/g,'');if(s.min!=null){inp.min=s.min;inp.max=s.max}}
-  inp.dataset.key=key;inp.disabled=true;const c=cb(key,false);c.onchange=()=>{inp.disabled=!c.checked;refresh()};inp.oninput=inp.onchange=refresh;
-  k.append(row('mod',[c,span(key,'m'),span(s.type,'n'),span(s.min!=null?s.min+'..'+s.max:'','n'),inp]));
- });
-}
-function checked(box){return [...$(box).querySelectorAll('input[type=checkbox]')].filter(c=>c.checked).map(c=>c.dataset.id)}
-function collect(){
- const g=id=>$(id).value.trim(),o=id=>$(id).checked,d=META.defaults;
- const ovr={};$('cfgkeys').querySelectorAll('.mod').forEach(r=>{const c=r.querySelector('input[type=checkbox]');if(c.checked){const i=r.querySelector('[data-key]');const s=META.config_keys[i.dataset.key];ovr[i.dataset.key]=s.type==='bool'?i.value==='1b':s.type==='int'?Number(i.value):i.value}});
- let menus=[];try{menus=g('b_menus')?JSON.parse($('b_menus').value):[]}catch(e){menus=null}
- const cfg={name:g('name'),namespace:g('namespace'),gui_namespace:g('gui_namespace')||null,gui_name:g('gui_name')||null,version:g('version'),description:g('description'),author:g('author'),homepage:g('homepage'),extra_notice:$('extra_notice').value,
-  include_macroengine:o('include_macroengine'),include_guikit:o('include_guikit'),include_resourcepack:o('include_resourcepack'),include_docs:o('include_docs'),isolate_player_action:o('isolate_player_action'),stamp_headers:o('stamp_headers'),
-  modules:document.querySelector('input[name=msel]:checked').value==='all'?null:checked('mods'),config_overrides:ovr,
-  min_format:pf(g('min_format')),max_format:pf(g('max_format')),rp_min_format:pf(g('rp_min_format')),rp_max_format:pf(g('rp_max_format')),
-  targets:[o('t_java')&&'java',o('t_bedrock')&&'bedrock'].filter(Boolean),output_dir:d.output_dir,make_zip:true,keep_dirs:false,
-  bedrock:{enabled:o('b_enabled'),namespace:g('b_namespace')||null,modules:(()=>{const s=checked('bmods');return s.length===META.bedrock_modules.length?null:s})(),server_version:g('b_server'),server_ui_version:g('b_ui'),min_engine_version:pf(g('b_engine')),menus:menus,gui_open_item:g('b_item')||null,gui_default_menu:null,single_mcaddon:true}};
- return {cfg,menusBad:menus===null};
-}
-function fill(c){
- const s=(id,v)=>$(id).value=v==null?'':v,k=(id,v)=>$(id).checked=!!v;
- ['name','namespace','gui_namespace','gui_name','version','description','author','homepage','extra_notice'].forEach(i=>s(i,c[i]));
- ['include_macroengine','include_guikit','include_resourcepack','include_docs','isolate_player_action','stamp_headers'].forEach(i=>k(i,c[i]));
- ['min_format','max_format','rp_min_format','rp_max_format'].forEach(i=>s(i,fmt(c[i])));
- document.querySelector(`input[name=msel][value=${c.modules?'custom':'all'}]`).checked=true;
- $('mods').querySelectorAll('.mod').forEach(r=>r.querySelector('input').checked=!c.modules||c.modules.includes(r.dataset.id));
- $('cfgkeys').querySelectorAll('.mod').forEach(r=>{const i=r.querySelector('[data-key]'),ch=r.querySelector('input[type=checkbox]'),key=i.dataset.key,has=key in (c.config_overrides||{});ch.checked=has;i.disabled=!has;if(has){const v=c.config_overrides[key];i.value=typeof v==='boolean'?(v?'1b':'0b'):v}});
- k('t_java',c.targets.includes('java'));k('t_bedrock',c.targets.includes('bedrock'));
- const b=c.bedrock;k('b_enabled',b.enabled);s('b_namespace',b.namespace);s('b_server',b.server_version);s('b_ui',b.server_ui_version);s('b_engine',fmt(b.min_engine_version));s('b_item',b.gui_open_item);
- $('bmods').querySelectorAll('input').forEach(i=>i.checked=!b.modules||b.modules.includes(i.dataset.id));
- s('b_menus',b.menus&&b.menus.length?JSON.stringify(b.menus,null,2):JSON.stringify([{id:'welcome',title:c.name,body:'Welcome!',buttons:[{text:'Say hi',action:{type:'message',text:'Hello!'}},{text:'Close',action:{type:'close'}}]}],null,2));
- refresh();
-}
-function q(s){return /^[A-Za-z0-9_.,=:/-]+$/.test(s)?s:"'"+s.replace(/'/g,"'\\''")+"'"}
-function cli(c){const a=['packweld build','--name '+q(c.name),'--namespace '+q(c.namespace)];
- if(c.gui_namespace)a.push('--gui-namespace '+q(c.gui_namespace));if(c.gui_name)a.push('--gui-name '+q(c.gui_name));
- a.push('--pack-version '+c.version);if(c.author)a.push('--author '+q(c.author));
- if(c.modules)a.push('--modules '+q(c.modules.join(',')));
- if(!c.include_macroengine)a.push('--no-macroengine');if(!c.include_guikit)a.push('--no-guikit');if(!c.include_resourcepack)a.push('--no-resourcepack');
- for(const[k,v]of Object.entries(c.config_overrides))a.push('--set '+q(k+'='+(typeof v==='boolean'?(v?'1b':'0b'):v)));
- a.push('--target '+c.targets.join(','));if(!c.bedrock.enabled)a.push('# bedrock disabled in config');
- return a.join(' \\\n  ')+'\n# menus and other bedrock options: use --config (Save config JSON)'}
-function refresh(){const{cfg}=collect();$('cli').textContent=cli(cfg)}
+const $=id=>document.getElementById(id);
+let META, LANG = (navigator.language||'en').startsWith('tr') ? 'tr' : 'en';
 
-function isLeftover(msg){return /leftover upstream name in/i.test(String(msg||''))}
+const T = {
+  tr: {
+    identity:'Kimlik', name:'Görünen ad', name_h:'Metinlerdeki "macroEngine" yerine geçer.',
+    ns:'Namespace', ns_h:'a-z 0-9 _ ; harfle başlar. "macroengine" yerine geçer.',
+    gns:'GUI namespace', gns_h:'"guikit" yerine geçer.', gname:'GUI görünen ad',
+    ver_l:'Sürüm', author:'Yazar / sahip', home:'Ana sayfa', desc:'Açıklama',
+    notice:'Ek atıf / lisans notu (NOTICE.md sonuna eklenir)',
+    attr_h:'NOTICE.md, LICENSE ve licenses/ (Unlicense metinleri + PlayerAction MIT) her zaman eklenir.',
+    content:'İçerik', rp:'macroEngine resource pack', docs:'Upstream dokümanlar',
+    pa:'PlayerAction isimlerini değiştir (çakışmayı önler)', stamp:'Her .mcfunction başına atıf yorumu',
+    all:'Tüm macroEngine modülleri (tam kopya)', custom:'Modül seç',
+    mods_h:'Seçilmeyen ama seçilenlerin statik olarak ihtiyaç duyduğu modüller otomatik eklenir (rapora bak).',
+    rt:'Çalışma zamanı ayarları (Java)', rt_h:'Yüklenirken doğrulanmış core/config/set ile uygulanır. Varsayılanı değiştirmek için anahtarı işaretle.',
+    fmt:'Pack formatları', fmt_h:'"121.0" veya "121". Vendor kodu yalnızca Java 26.3 hedefler.',
+    b_en:'Bedrock add-on üret', b_item:'GUI açma eşyası (eğil + kullan)',
+    b_h:'Taşınabilir bir alt kümenin JavaScript yeniden yazımıdır; datapack dönüşümü değildir.',
+    menus:'GUI menüleri (JSON liste). Eylemler: close, message, open, sound, command, give, toggle, counter',
+    out:'Çıktı', prev:'Kontrol et (kuru çalıştırma)', go:'Üret ve indir',
+    save:'Config JSON kaydet', load:'Config JSON yükle', fn:'fn', pull:'ek'
+  },
+  en: {
+    identity:'Identity', name:'Display name', name_h:'Replaces "macroEngine" in texts.',
+    ns:'Namespace', ns_h:'a-z 0-9 _ , starts with a letter. Replaces "macroengine".',
+    gns:'GUI namespace', gns_h:'Replaces "guikit".', gname:'GUI display name',
+    ver_l:'Version', author:'Author / owner', home:'Homepage', desc:'Description',
+    notice:'Extra attribution / licence note (appended to NOTICE.md)',
+    attr_h:'NOTICE.md, LICENSE and licenses/ (upstream Unlicense texts + PlayerAction MIT) are always added.',
+    content:'Content', rp:'macroEngine resource pack', docs:'Upstream docs',
+    pa:'Rename PlayerAction identifiers (avoid clashes)', stamp:'Attribution comment on every .mcfunction',
+    all:'All macroEngine modules (full copy)', custom:'Pick modules',
+    mods_h:'Unselected modules that selected ones statically need are pulled in automatically (see the report).',
+    rt:'Runtime config overrides (Java)', rt_h:'Applied at load through the validated core/config/set. Tick a key to override its default.',
+    fmt:'Pack formats', fmt_h:'Format "121.0" or "121". The vendored code targets Java 26.3 only.',
+    b_en:'Generate Bedrock add-on', b_item:'GUI open item (sneak + use)',
+    b_h:'A JavaScript re-implementation of a portable subset, not a conversion of the datapacks.',
+    menus:'GUI menus (JSON list). Actions: close, message, open, sound, command, give, toggle, counter',
+    out:'Output', prev:'Check (dry run)', go:'Build & download',
+    save:'Save config JSON', load:'Load config JSON', fn:'fn', pull:'extra'
+  }
+};
+
+function i18n(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i]').forEach(e => e.textContent = T[LANG][e.dataset.i] || e.textContent);
+}
+
+const fmt = a => a.join('.');
+const pf = s => String(s).split('.').filter(x => x !== '').map(Number);
+
+function row(cls, cells){
+  const d = document.createElement('div');
+  d.className = cls;
+  cells.forEach(c => d.append(c));
+  return d;
+}
+function span(t, c){
+  const s = document.createElement('span');
+  s.textContent = t;
+  if(c) s.className = c;
+  return s;
+}
+function cb(id, checked){
+  const i = document.createElement('input');
+  i.type = 'checkbox';
+  i.dataset.id = id;
+  i.checked = !!checked;
+  return i;
+}
+
+function buildLists(){
+  const m = $('mods'); m.textContent = '';
+  META.modules.forEach(x => m.append(Object.assign(
+    row('mod', [cb(x.id, true), span(x.id, 'm'), span(x.functions + ' ' + T[LANG].fn, 'n'), span('+' + x.closure, 'n'), span(x.desc, 'd')]),
+    {dataset: {id: x.id}}
+  )));
+
+  const b = $('bmods'); b.textContent = '';
+  META.bedrock_modules.forEach(x => b.append(row('mod', [cb(x.id, true), span(x.id, 'm'), span(''), span(''), span(x.desc, 'd')])));
+
+  const k = $('cfgkeys'); k.textContent = '';
+  Object.entries(META.config_keys).forEach(([key, s]) => {
+    const inp = document.createElement(s.type === 'bool' ? 'select' : 'input');
+    if(s.type === 'bool'){
+      inp.innerHTML = '<option value="1b">1b (on)</option><option value="0b">0b (off)</option>';
+      inp.value = s.default === '0b' ? '0b' : '1b';
+    } else {
+      inp.type = s.type === 'int' ? 'number' : 'text';
+      inp.value = (s.default || '').replace(/"/g, '');
+      if(s.min != null){ inp.min = s.min; inp.max = s.max; }
+    }
+    inp.dataset.key = key;
+    inp.disabled = true;
+    const c = cb(key, false);
+    c.onchange = () => { inp.disabled = !c.checked; refresh(); };
+    inp.oninput = inp.onchange = refresh;
+    k.append(row('mod', [c, span(key, 'm'), span(s.type, 'n'), span(s.min != null ? s.min + '..' + s.max : '', 'n'), inp]));
+  });
+}
+
+function checked(box){
+  return [...$(box).querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => c.dataset.id);
+}
+
+function collect(){
+  const g = id => $(id).value.trim();
+  const o = id => $(id).checked;
+  const d = META.defaults;
+  const ovr = {};
+  $('cfgkeys').querySelectorAll('.mod').forEach(r => {
+    const c = r.querySelector('input[type=checkbox]');
+    if(c.checked){
+      const i = r.querySelector('[data-key]');
+      const s = META.config_keys[i.dataset.key];
+      ovr[i.dataset.key] = s.type === 'bool' ? i.value === '1b' : s.type === 'int' ? Number(i.value) : i.value;
+    }
+  });
+  let menus = [];
+  try { menus = g('b_menus') ? JSON.parse($('b_menus').value) : []; } catch(e){ menus = null; }
+
+  const cfg = {
+    name: g('name'), namespace: g('namespace'),
+    gui_namespace: g('gui_namespace') || null, gui_name: g('gui_name') || null,
+    version: g('version'), description: g('description'), author: g('author'),
+    homepage: g('homepage'), extra_notice: $('extra_notice').value,
+    include_macroengine: o('include_macroengine'), include_guikit: o('include_guikit'),
+    include_resourcepack: o('include_resourcepack'), include_docs: o('include_docs'),
+    isolate_player_action: o('isolate_player_action'), stamp_headers: o('stamp_headers'),
+    modules: document.querySelector('input[name=msel]:checked').value === 'all' ? null : checked('mods'),
+    config_overrides: ovr,
+    min_format: pf(g('min_format')), max_format: pf(g('max_format')),
+    rp_min_format: pf(g('rp_min_format')), rp_max_format: pf(g('rp_max_format')),
+    targets: [o('t_java') && 'java', o('t_bedrock') && 'bedrock'].filter(Boolean),
+    output_dir: d.output_dir, make_zip: true, keep_dirs: false,
+    bedrock: {
+      enabled: o('b_enabled'), namespace: g('b_namespace') || null,
+      modules: (() => { const s = checked('bmods'); return s.length === META.bedrock_modules.length ? null : s; })(),
+      server_version: g('b_server'), server_ui_version: g('b_ui'),
+      min_engine_version: pf(g('b_engine')), menus: menus,
+      gui_open_item: g('b_item') || null, gui_default_menu: null, single_mcaddon: true
+    }
+  };
+  return {cfg, menusBad: menus === null};
+}
+
+function fill(c){
+  const s = (id, v) => $(id).value = v == null ? '' : v;
+  const k = (id, v) => $(id).checked = !!v;
+  ['name','namespace','gui_namespace','gui_name','version','description','author','homepage','extra_notice'].forEach(i => s(i, c[i]));
+  ['include_macroengine','include_guikit','include_resourcepack','include_docs','isolate_player_action','stamp_headers'].forEach(i => k(i, c[i]));
+  ['min_format','max_format','rp_min_format','rp_max_format'].forEach(i => s(i, fmt(c[i])));
+  document.querySelector(`input[name=msel][value=${c.modules ? 'custom' : 'all'}]`).checked = true;
+  $('mods').querySelectorAll('.mod').forEach(r => r.querySelector('input').checked = !c.modules || c.modules.includes(r.dataset.id));
+  $('cfgkeys').querySelectorAll('.mod').forEach(r => {
+    const i = r.querySelector('[data-key]'), ch = r.querySelector('input[type=checkbox]'), key = i.dataset.key;
+    const has = key in (c.config_overrides || {});
+    ch.checked = has; i.disabled = !has;
+    if(has){ const v = c.config_overrides[key]; i.value = typeof v === 'boolean' ? (v ? '1b' : '0b') : v; }
+  });
+  k('t_java', c.targets.includes('java')); k('t_bedrock', c.targets.includes('bedrock'));
+  const b = c.bedrock;
+  k('b_enabled', b.enabled); s('b_namespace', b.namespace); s('b_server', b.server_version);
+  s('b_ui', b.server_ui_version); s('b_engine', fmt(b.min_engine_version)); s('b_item', b.gui_open_item);
+  $('bmods').querySelectorAll('input').forEach(i => i.checked = !b.modules || b.modules.includes(i.dataset.id));
+  s('b_menus', b.menus && b.menus.length ? JSON.stringify(b.menus, null, 2) :
+    JSON.stringify([{id:'welcome', title:c.name, body:'Welcome!', buttons:[{text:'Say hi', action:{type:'message', text:'Hello!'}},{text:'Close', action:{type:'close'}}]}], null, 2));
+  refresh();
+}
+
+function q(s){ return /^[A-Za-z0-9_.,=:/-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'"; }
+
+function cli(c){
+  const a = ['packweld build', '--name ' + q(c.name), '--namespace ' + q(c.namespace)];
+  if(c.gui_namespace) a.push('--gui-namespace ' + q(c.gui_namespace));
+  if(c.gui_name) a.push('--gui-name ' + q(c.gui_name));
+  a.push('--pack-version ' + c.version);
+  if(c.author) a.push('--author ' + q(c.author));
+  if(c.modules) a.push('--modules ' + q(c.modules.join(',')));
+  if(!c.include_macroengine) a.push('--no-macroengine');
+  if(!c.include_guikit) a.push('--no-guikit');
+  if(!c.include_resourcepack) a.push('--no-resourcepack');
+  for(const [k, v] of Object.entries(c.config_overrides))
+    a.push('--set ' + q(k + '=' + (typeof v === 'boolean' ? (v ? '1b' : '0b') : v)));
+  a.push('--target ' + c.targets.join(','));
+  if(!c.bedrock.enabled) a.push('# bedrock disabled in config');
+  return a.join(' \\\n  ') + '\n# menus and other bedrock options: use --config (Save config JSON)';
+}
+
+function refresh(){ const {cfg} = collect(); $('cli').textContent = cli(cfg); }
+
+function isLeftover(msg){ return /leftover upstream name in/i.test(String(msg || '')); }
 
 function show(r){
-  const el=$('report');el.textContent='';
-  const add=(c,t)=>{const d=document.createElement('div');d.className='msg '+c;d.textContent=t;el.append(d)};
+  const el = $('report');
+  el.textContent = '';
+  const add = (c, t) => {
+    const d = document.createElement('div');
+    d.className = 'msg ' + c;
+    d.textContent = t;
+    el.append(d);
+  };
 
-  const leftovers=[];
-  const realErrors=[];
-  const realWarns=[];
+  console.log('packweld response:', r);
 
-  (r.errors||[]).forEach(e=>{
-    if(isLeftover(e)) leftovers.push(e);
-    else realErrors.push(e);
-  });
-  (r.warnings||[]).forEach(w=>{
-    if(isLeftover(w)) leftovers.push(w);
-    else realWarns.push(w);
-  });
+  const leftovers = [];
+  const realErrors = [];
+  const realWarns = [];
 
-  realErrors.forEach(e=>add('err',e));
-  realWarns.forEach(w=>add('warn',w));
+  (r.errors || []).forEach(e => isLeftover(e) ? leftovers.push(e) : realErrors.push(e));
+  (r.warnings || []).forEach(w => isLeftover(w) ? leftovers.push(w) : realWarns.push(w));
+
+  realErrors.forEach(e => add('err', e));
+  realWarns.forEach(w => add('warn', w));
 
   if(leftovers.length){
-    add('ok', LANG==='tr'
+    add('ok', LANG === 'tr'
       ? `Upstream isimleri temizlendi · ${leftovers.length} referans yeniden yazıldı`
       : `Upstream names cleaned · ${leftovers.length} references rewritten`);
   }
 
-  // leftover'lar tek başına hatayı düşürmesin → indirme açılsın
-  const ok = r.ok || (realErrors.length===0 && (r.info || r.download || leftovers.length));
+  const ok = r.ok || (realErrors.length === 0 && (r.info || r.download || leftovers.length || r.outputs));
 
   if(ok){
-    const j=r.info&&r.info.java;
+    const j = r.info && r.info.java;
     if(j){
-      let msg=`Java: ${j.files} files, ${j.functions} functions, ${j.renames} renames`;
-      if(j.kept_modules) msg+=`, ${j.kept_modules.length} modules (+${JSON.stringify(j.pulled)})`;
-      add('ok',msg);
+      let msg = `Java: ${j.files} files, ${j.functions} functions, ${j.renames} renames`;
+      if(j.kept_modules) msg += `, ${j.kept_modules.length} modules (+${JSON.stringify(j.pulled)})`;
+      add('ok', msg);
     }
-    if(r.info&&r.info.bedrock) add('ok','Bedrock: '+r.info.bedrock.modules.join(', '));
-    (r.outputs||[]).forEach(o=>add('ok',o));
-    if(r.download){
-      const a=document.createElement('a');
-      a.href=r.download;
-      a.textContent='⬇ packweld-output.zip';
-      a.className='msg ok';
-      a.style.display='block';
+    if(r.info && r.info.bedrock) add('ok', 'Bedrock: ' + (r.info.bedrock.modules || []).join(', '));
+    (r.outputs || []).forEach(o => add('ok', o));
+
+    const url = r.download || r.url || r.zip || r.output || (r.info && r.info.download);
+    if(url){
+      const a = document.createElement('a');
+      a.href = url;
+      a.textContent = '⬇ packweld-output.zip';
+      a.className = 'msg ok dl';
       el.append(a);
-      a.click();
-    }else if(leftovers.length && !r.download){
-      // dry-run veya backend download vermediyse en azından başarı mesajı
-      add('ok', LANG==='tr' ? 'Kontrol tamam · paket hazır (Üret ve indir ile indir)' : 'Check complete · pack ready (use Build & download)');
+      try { a.click(); } catch(e){}
+    } else {
+      add('warn', LANG === 'tr'
+        ? 'Backend did not send a download link (no download field). Open F12 → Console and look for "packweld response".'
+        : 'Backend did not send a download link (no download field). Open F12 → Console and look for "packweld response".');
     }
+  } else if(!realErrors.length){
+    add('ok', 'Check complete');
   }
 }
 
-async function post(p){const{cfg,menusBad}=collect();if(menusBad){show({ok:false,errors:['GUI menus: invalid JSON'],warnings:[]});return}
- const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});show(await r.json())}
-$('prev').onclick=()=>post('/api/preview');$('go').onclick=()=>post('/api/build');
-$('save').onclick=()=>{const{cfg}=collect();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'}));a.download='packweld.json';a.click()};
-$('load').onclick=()=>$('file').click();$('file').onchange=async e=>{const f=e.target.files[0];if(f){try{fill({...META.defaults,...JSON.parse(await f.text()),bedrock:{...META.defaults.bedrock,...(JSON.parse(await f.text()).bedrock||{})}})}catch(x){show({ok:false,errors:[String(x)],warnings:[]})}}};
-$('lang').onclick=()=>{LANG=LANG==='tr'?'en':'tr';i18n();buildLists();fill(collect().cfg)};
-$('mfilter').oninput=e=>{const v=e.target.value.toLowerCase();$('mods').querySelectorAll('.mod').forEach(r=>r.style.display=r.dataset.id.includes(v)?'':'none')};
-$('mnone').onclick=()=>{$('mods').querySelectorAll('input').forEach(i=>i.checked=false);document.querySelector('input[name=msel][value=custom]').checked=true;refresh()};
-$('mall').onclick=()=>{$('mods').querySelectorAll('input').forEach(i=>i.checked=true);refresh()};
-document.addEventListener('input',refresh);document.addEventListener('change',refresh);
-fetch('/api/meta').then(r=>r.json()).then(m=>{META=m;$('ver').textContent='v'+m.version;i18n();buildLists();fill({...m.defaults,name:'My Library',namespace:'mylib'})});
+async function post(p){
+  const {cfg, menusBad} = collect();
+  if(menusBad){ show({ok:false, errors:['GUI menus: invalid JSON'], warnings:[]}); return; }
+  const r = await fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+  show(await r.json());
+}
+
+$('prev').onclick = () => post('/api/preview');
+$('go').onclick = () => post('/api/build');
+$('save').onclick = () => {
+  const {cfg} = collect();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'}));
+  a.download = 'packweld.json';
+  a.click();
+};
+$('load').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const f = e.target.files[0];
+  if(f){
+    try {
+      const text = await f.text();
+      const parsed = JSON.parse(text);
+      fill({...META.defaults, ...parsed, bedrock:{...META.defaults.bedrock, ...(parsed.bedrock || {})}});
+    } catch(x){ show({ok:false, errors:[String(x)], warnings:[]}); }
+  }
+};
+$('lang').onclick = () => { LANG = LANG === 'tr' ? 'en' : 'tr'; i18n(); buildLists(); fill(collect().cfg); };
+$('mfilter').oninput = e => {
+  const v = e.target.value.toLowerCase();
+  $('mods').querySelectorAll('.mod').forEach(r => r.style.display = r.dataset.id.includes(v) ? '' : 'none');
+};
+$('mnone').onclick = () => {
+  $('mods').querySelectorAll('input').forEach(i => i.checked = false);
+  document.querySelector('input[name=msel][value=custom]').checked = true;
+  refresh();
+};
+$('mall').onclick = () => { $('mods').querySelectorAll('input').forEach(i => i.checked = true); refresh(); };
+
+document.addEventListener('input', refresh);
+document.addEventListener('change', refresh);
+
+fetch('/api/meta').then(r => r.json()).then(m => {
+  META = m;
+  $('ver').textContent = 'v' + m.version;
+  i18n();
+  buildLists();
+  fill({...m.defaults, name:'My Library', namespace:'mylib'});
+});
 </script></body></html>
