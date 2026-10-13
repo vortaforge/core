@@ -62,7 +62,14 @@ class Handler(BaseHTTPRequestHandler):
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # Client closed the connection (tab closed, request cancelled,
+            # page refreshed) before we finished writing the response.
+            # Nothing we can do about that on our end; don't let it
+            # propagate as an unhandled exception/traceback in the server log.
+            pass
 
     def do_GET(self):
         if not self._local_only():
