@@ -1,9 +1,7 @@
 # NOTICE
 
-> **⚠️ Maintenance paused (not permanently archived).** Since 2026-10-04 the maintainer is expected to be inactive on GitHub until at least 2027–2028. Issues, pull requests and security reports may go unanswered, and no fixes or releases are planned. See [Project status](https://github.com/vortaforge/core#project-status-maintenance-paused).
-
-Read this before opening a pull request. It explains the mixed Gradle/
-datapack layout of this monorepo and sets expectations for what a PR
+Read this before opening a pull request. It explains the layout of
+this monorepo and sets expectations for what a PR
 should — and should not — contain.
 
 ## Repo layout, in short
@@ -16,21 +14,13 @@ next to it:
   here must build cleanly across **all** subprojects, not just the one you
   touched — a shared dependency bump or API change can silently break a
   sibling mod.
-- `packs/` — Datapacks. These are **not** part of the Gradle build. There is
-  nothing to compile; validity is checked by loading the pack plus the
-  syntax/reference tooling listed in `SECURITY.md` § "Validation tooling"
-  (Mecha lint, `checkPacks`, `mergeDatapacks`), not by `buildAll`. Don't
-  assume a green Gradle run says anything about a datapack change.
 - `scripts/` — Helper tooling, lower trust by default. Review before
   running locally.
-- `examples/` — Templates and sample code. Not shipped, not covered by the
-  same security posture as `mods/` or `packs/`.
-- `archived/` — Frozen, reference only.
-
-If your change spans both a mod and a pack (e.g. a Fabric mod that reads
-data from a companion datapack), say so explicitly in the PR description —
-this is the case most likely to be missed by CI, since `buildAll` only
-covers the Gradle side.
+- `examples/` — Example mods. Not shipped, not covered by the same
+  security posture as `mods/`.
+- `archived/` — Frozen, reference only. This includes every datapack and
+  resource pack (`archived/data-packs/`) and the datapack Gradle tasks and CI
+  steps (`archived/tasks/`). Nothing there is built, linted or maintained.
 
 ## Gradle specifics
 
@@ -41,12 +31,6 @@ covers the Gradle side.
   the steps are marked `continue-on-error` so the diagnostics can still run,
   but the "Final summary" step re-fails the job if either one did not
   succeed (see `.github/workflows/build.yml`).
-- CI's separate **datapack** lint (Mecha, `scripts/lint_datapacks.sh`) is
-  also enforced: the script propagates Mecha's exit status, so a syntax
-  error in any `.mcfunction` fails the job and blocks the release gate.
-  Note that Mecha only validates command *syntax* — it never loads the
-  pack, so the "you've validated the pack loads correctly" checkbox below
-  still applies. Paths listed in the script's `IGNORE_PATHS` are skipped.
 - Building a single subproject during iteration is fine
   (`./gradlew :mods:<subproject-name>:build`), but run the full `buildAll`
   before opening the PR — cross-subproject breakage is the most common
@@ -54,30 +38,14 @@ covers the Gradle side.
 - Avoid adding dependencies unless necessary; every added dependency is
   shared build surface for the whole monorepo, not just your subproject.
 
-## Datapacks specifics
+## Archived datapacks
 
-- Datapacks in `packs/` follow the pack-format and namespace conventions
-  documented per-project — check the subproject's own README before
-  assuming a version target.
-- Namespace isolation matters: don't introduce function/tag names that can
-  collide with another pack in this repo or with common third-party packs.
-- Macro-heavy or command-generation logic is a known risk area in this
-  project (see `SECURITY.md`). If your change touches macro expansion,
-  dynamic function generation, or anything that assembles commands from
-  external input, call that out explicitly in the PR — it will get closer
-  review than an average change.
-- Packs listed in `archived/archive.json` are frozen. Don't submit feature PRs
-  against them; fixes only, and only if the issue is significant. Note that
-  **nothing is currently archived under `packs/`** - the registry's only
-  entry is the retired `runtoolkit/suite` repository with `"path": null`, so
-  today every pack in `packs/` accepts normal PRs. Validate with
-  `./gradlew printArchiveList` rather than trusting this sentence.
+All datapacks were archived on 2026-10-14. Do not submit feature PRs against anything under `archived/`; fixes only, and only if the issue is significant (see `archived/README.md`). Validate the registry with `./gradlew printArchiveList`.
 
 ## Do not misuse this project
 
-This notice exists because of the nature of what's in this repo — datapack
-macro systems, command-generation tooling, and Fabric mods that can touch
-server/client behavior. To be explicit:
+This notice exists because of the nature of what's in this repo — Fabric mods that can touch
+server/client behavior, and archived datapack macro and command-generation tooling. To be explicit:
 
 - Do not use anything in this repository to build griefing tools, cheat
   clients/mods, exploit kits, or anything designed to bypass another
@@ -101,9 +69,6 @@ or clearly malicious cases, the contributor being blocked from the repo.
 
 - [ ] `./gradlew buildAll` passes
 - [ ] `./gradlew lint` passes
-- [ ] If you touched `packs/`, you've validated the pack loads correctly
-      (Gradle passing does not cover this)
-- [ ] PR description explains **what** changed and **why**, and says
-      whether the change touches mods, packs, or both
+- [ ] PR description explains **what** changed and **why**
 - [ ] No unexplained dependencies, obfuscation, or behavior not covered by
       the description

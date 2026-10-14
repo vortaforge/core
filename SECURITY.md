@@ -1,14 +1,5 @@
 # Security Policy
 
-## Status: maintenance paused
-
-As of 2026-10-04 the maintainer expects to be inactive on GitHub until at least 2027–2028. Until then:
-
-- Security reports (private advisories and issues) may not be read or answered, and no fixes, advisories or releases should be expected. This **overrides** the response targets further down.
-- No version of anything in this repository is supported. Treat all of it as unpatched.
-- You may still report a problem privately; it will be handled if and when maintenance resumes. If it matters to you now, fork the project (Unlicense) and patch your copy.
-- Everything under `archived/` stays reference-only: do not deploy it on a live server without review.
-
 ## Reporting a vulnerability
 
 If you find a security issue in any project under this repository (Fabric
@@ -24,7 +15,7 @@ opening a public issue.
 Do not include working exploit code or live payloads in public issues or pull requests (see "Prohibited content and practices" below).
 
 Please include:
-- Affected project/path (e.g. `packs/RTWrapper`, `mods/...`)
+- Affected project/path (e.g. `mods/...`)
 - Steps to reproduce, or a minimal example
 - Impact (what an attacker could actually do)
 - Minecraft/Fabric/Loom version, if relevant
@@ -40,11 +31,10 @@ This repo consolidates multiple projects with different security postures:
 
 | Area | Status |
 |---|---|
-| `mods/` | Fabric mods. Maintenance paused (see Status above). Compiled, type-safe. |
-| `packs/` | 14 live packs (datapacks + the macroEngine resource pack), all under active layout. **Not** archived: `archived/` currently holds no packs at all (see `archived/archive.json`, whose only entry is the retired `runtoolkit/suite` repo with `"path": null`). |
+| `mods/` | Fabric mods. Compiled, type-safe. |
 | `scripts/` | Helper tooling. Treat as lower trust; review before running. |
 | `examples/` | Templates and sample code. Not intended for production use. |
-| `archived/` | Reserved for no-longer-maintained projects, kept for reference only — do not deploy on a live server without review. Tracked in `archived/archive.json`; see `archived/README.md`. |
+| `archived/` | No-longer-maintained projects, kept for reference only — do not deploy on a live server without review. Holds all datapacks and resource packs (`archived/data-packs/`) and the datapack Gradle/CI tasks (`archived/tasks/`). Tracked in `archived/archive.json`; see `archived/README.md`. |
 
 Datapacks and Fabric mods carry different security postures by nature; where
 practical, security-sensitive logic lives in a Fabric mod rather than a
@@ -58,16 +48,9 @@ actually runs, and what each tool does and does not prove:
 
 | Tool | Invoked by | Checks | Does **not** check |
 |---|---|---|---|
-| `scripts/lint_datapacks.sh` (Mecha 0.101.0) | `build.yml`, step `Lint datapacks` - enforced | `.mcfunction` **command syntax** for every pack not in `IGNORE_PATHS` | Whether the pack **loads**, whether references resolve, whether behaviour is correct |
-| `./gradlew checkPacks` | `build.yml` via `check` | `pack.mcmeta` shape and format range, JSON validity, cross-references between packs | Command semantics |
-| `./gradlew checkOriginWatermarks` | `build.yml` via `zipPacks` | every pack carries `data/<namespace>/function/_vc_origin.mcfunction` | Content of the watermark (covered by the next row) |
-| `python3 scripts/origin_watermarks.py --check` | `build.yml`, step `Check provenance watermark content` | every watermark equals what the template generates for its pack and namespace, and contains only comments (a no-op) | That the pack's code is what the watermark claims; it proves consistency, not authorship |
-| `./gradlew mergeDatapacks` | `build.yml`, step `Build merged datapack` | load/tick reference resolution (`strictLoadRefs`), pack-format agreement across the merged set | Runtime behaviour |
-| `./gradlew buildAll` / `lint` | `build.yml` | the **Gradle** side only (`mods/`) | Anything under `packs/` |
+| `./gradlew buildAll` / `lint` | `build.yml` | the Gradle side (`mods/`, `examples/`) | Runtime behaviour in a real Minecraft server |
 
-A green CI run therefore says the repository *parses and builds*. It has never
-said a datapack behaves correctly - that still needs a load test in a real
-world, which is what the `NOTICE.md` checklist asks for.
+A green CI run says the mods *build and lint*. It does not say they behave correctly in a real game.
 
 ## Prohibited content and practices
 

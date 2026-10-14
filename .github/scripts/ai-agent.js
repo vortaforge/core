@@ -75,7 +75,7 @@ const ARG_BLOCKLIST = [
 // Named checks remain fixed (model only picks the name).
 const CHECKS = {
   audit: ["python3", ["scripts/audit_repo.py"]],
-  lint: ["bash", ["scripts/lint_datapacks.sh"]],
+  lint: ["./gradlew", ["lint", "--continue"]],
 };
 
 // -------------------------------------------------------------- environment ---
@@ -561,7 +561,7 @@ Tools (put them in "actions"):
   {"tool":"write_file","path":"any/repo/path","content":"..."}   // blocked: .git, .github, secrets, node_modules, ...
   {"tool":"run_python","path":"file.py"}  OR  {"tool":"run_python","code":"..."}
   {"tool":"run_node","path":"file.js"}    OR  {"tool":"run_node","code":"..."}
-  {"tool":"run_command","bin":"ls","args":["-la","packs/"]}     // blocklisted binaries rejected
+  {"tool":"run_command","bin":"ls","args":["-la","mods/"]}     // blocklisted binaries rejected
   {"tool":"web_search","query":"...","num_results":5}
   {"tool":"search_files","pattern":"regex or text","path":"optional","glob":"*.py"}
   {"tool":"fetch_url","url":"https://..."}

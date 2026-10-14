@@ -4,10 +4,11 @@ Guidance for Claude / Claude Code when working in `vortaforge/core`. Read it bef
 
 ## What this repo is
 
-A monorepo of Minecraft Java Edition projects: Fabric mods (`mods/`), datapacks and resource packs
-(`packs/`), tooling (`scripts/`), examples (`examples/`) and read-only reference material (`archived/`).
+A monorepo of Minecraft Java Edition Fabric mods (`mods/`), tooling (`scripts/`), examples (`examples/`)
+and read-only reference material (`archived/`). All datapacks and resource packs were archived on 2026-10-14
+(`archived/data-packs/`); the datapack Gradle tasks and CI steps are in `archived/tasks/`.
 It is an independent project, not affiliated with Mojang or Microsoft. Everything is released under the
-Unlicense (`LICENSE`); third-party code keeps its own license (`packs/macroEngine-Datapack-v26.3/THIRD_PARTY_LICENSES.md`).
+Unlicense (`LICENSE`); third-party code keeps its own license (for example `archived/data-packs/packs/macroEngine-Datapack-v26.3/THIRD_PARTY_LICENSES.md`).
 
 Publishing history: `runtoolkit` -> `vortacraftmc` -> `vortaforge`. The older organizations are archived and stay
 as they are.
@@ -26,18 +27,16 @@ as they are.
    and the Turkish letter tables in the text engine are the only non-English content.
 6. **Do not claim something works unless it was run.** Say what was linted, built or only read.
 7. **Do not run tests on or against a Minecraft server.** No self-test functions, no test harnesses that need a game
-   server. Static checks (Mecha, Gradle build, script `--check` modes) are fine.
-8. Do not rename runtime identifiers (datapack namespaces such as `data/vortacraftmc/`, scoreboard fake players such
-   as `#vortacraftmc.*`, the Java package `com.vortacraftmc`) without an explicit migration plan: that breaks existing
-   worlds and dependents.
+   server. Static checks (Gradle build, lint, script `--check` modes) are fine.
+8. Do not rename runtime identifiers (the Java package `com.vortacraftmc`, and the datapack namespaces and scoreboard
+   fake players inside `archived/`) without an explicit migration plan: that breaks existing worlds and dependents.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
 | `mods/` | Fabric mods (Gradle subprojects, each with its own `build.gradle` and Minecraft/Java version) |
-| `packs/` | Datapacks and resource packs; `macroEngine-Datapack-v26.3` is the largest; `merge-manifest.json` drives the merged datapack |
-| `scripts/` | `lint_datapacks.sh` (Mecha), `origin_watermarks.py`, `gui_generator`, `dpgen`, `dp-depman`, audit helpers |
+| `scripts/` | `audit_repo.py`, `audit_full.py`, `check_archive.py`, `backup-org.sh` |
 | `examples/` | Example mods |
 | `archived/` | Reference only. Do not deploy and do not fix |
 | `index.html`, `robots.txt`, `sitemap.xml`, `banner.png` | The GitHub Pages download page and its SEO files |
@@ -47,24 +46,11 @@ as they are.
 ```bash
 ./gradlew buildAll                      # build every subproject
 ./gradlew lint                          # Gradle lint
-scripts/lint_datapacks.sh               # Mecha validation of all datapacks (needs `pip install mecha==0.101.0`)
-python3 scripts/origin_watermarks.py --check   # watermark headers up to date; use --write to regenerate
+./gradlew checkArchive                  # validate archived/archive.json (or: python3 scripts/check_archive.py)
 ```
 
-CI (`.github/workflows/build.yml`) runs these on Java 25 and Python 3.9 / 3.12. Actions are pinned by commit SHA;
+CI (`.github/workflows/build.yml`) runs buildAll and lint on Java 25. Actions are pinned by commit SHA;
 keep it that way and keep `permissions` minimal.
-
-Known: the pinned Mecha reports two errors on `time query minecraft:day` (26.3 World Clocks syntax it does not
-know yet). They are not bugs in the pack.
-
-## Datapack conventions (macroEngine)
-
-- Public functions live under `api/`, internals under `core/internal/`, shared helpers under `systems/`.
-- **Never substitute untrusted text into a macro line.** Validate names with `systems/validate/safe_name` while the
-  value is still data in storage, then pass it as a macro argument. See `api/perm/require` and `api/store/*`.
-- Prefer storage in, storage out. Plain strings over text components unless the caller needs a component.
-- `api/store/*` is the single storage module (variables, `api/store/nbt/*`, templates); the old `api/placeholder/*` and `api/data/*` modules are gone (`docs/store.md`).
-- Keep `pack.mcmeta` `min_format`/`max_format` in sync with the targeted Minecraft version; do not guess pack formats.
 
 ## Java / Gradle conventions
 

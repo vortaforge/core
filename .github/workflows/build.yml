@@ -6,27 +6,10 @@ on:
   workflow_dispatch:
 
 # ---------------------------------------------------------------------------
-# SUPPLY-CHAIN BOUNDARY
-#
-# This workflow is deliberately split into two jobs:
-#
-#   ci       contents: read   - checks out the repo and runs repository code
-#                               (Gradle, pip, third-party dependencies)
-#   publish  contents: write  - no checkout, runs no repository code; it only
-#                               downloads the artifact `ci` produced and moves
-#                               the packs-latest tag
-#
-# The boundary matters: a malicious dependency or a compromised build step can
-# only reach the release if it can also hold write access. Keeping those in
-# separate jobs means the code-executing job has a read-only token, and the job
-# with the writable token never executes anything from this repository.
-#
-# The cost is an artifact round-trip between the two jobs. That is the point -
-# the artifact is the only thing that crosses the boundary.
-#
-# `publish` additionally requires the `release` environment when one is
-# configured with required reviewers, which turns publication into an approval
-# step rather than an automatic one.
+# This workflow builds and lints the Fabric mods. It runs repository code
+# (Gradle, third-party dependencies) with a read-only token and publishes
+# nothing. The datapack CI (lint, pack zips, merged datapack, packs-latest
+# release) was archived: see archived/tasks/workflows/build.datapack-ci.yml.
 #
 # The organisation backup is NOT run here - it has its own dedicated workflow
 # (.github/workflows/backup-org.yml) with its own secrets and encryption
@@ -37,25 +20,18 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Never cancel a run on main: it may be in the middle of publishing.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   ci:
-    name: Verify & package
+    name: Build & lint
     runs-on: ubuntu-latest
 
-    # Read-only: this job checks out the repository and runs repository code.
     permissions:
       contents: read
 
-    # The publish job gates on this instead of re-deriving it.
-    outputs:
-      publish: ${{ steps.release-gate.outputs.PUBLISH }}
-
     env:
       FORCE_COLOR: "1"
-      PYTHONUNBUFFERED: "1"
       GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
     steps:
@@ -94,192 +70,6 @@ jobs:
           java -version
           ./gradlew --version
 
-      - name: Check provenance watermark content
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/origin_watermarks.py --check
-
-      # ==================================================================
-      # GROUP 2 - test configuration
-      # ==================================================================
-      - name: Write test configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::📝 Test configuration"
-          trap 'echo "::endgroup::"' EXIT
-
-          cat > menu.json << 'JSON'
-          {
-            "namespace": "demo",
-            "menu_id": "shop",
-            "pages": [
-              {
-                "index": 0,
-                "name": "Main",
-                "widgets": [
-                  {
-                    "kind": "button",
-                    "slot": 13,
-                    "item": "minecraft:diamond",
-                    "name": { "text": "Get Diamond", "color": "aqua" },
-                    "commands": ["give @s minecraft:diamond 1"]
-                  },
-                  { "kind": "close", "slot": 26 }
-                ]
-              }
-            ]
-          }
-          JSON
-          python -m json.tool menu.json >/dev/null
-          echo "✔ menu.json created and validated"
-
-      # ==================================================================
-      # GROUP 3 - guigenmc, one setup + one test step per Python version
-      #
-      # This used to be a 2x2 matrix job. Each version needs its own
-      # setup-python step: PATH changes made by setup-python only apply to
-      # steps that run afterwards, never to a shell already executing. Loop
-      # over the versions inside one step and the second version is never
-      # installed - it would silently re-test the first one.
-      # ==================================================================
-      - name: Set up Python 3.9
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.9"
-
-      - name: guigenmc • Python 3.9
-        id: guigenmc-39
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -uo pipefail
-          GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; RESET=$'\033[0m'
-
-          echo "::group::🐍 guigenmc • Python 3.9"
-          trap 'echo "::endgroup::"' EXIT
-
-          py="$(python -c 'import sys;print(".".join(map(str,sys.version_info[:2])))')"
-          echo "interpreter: $py"
-          if [ "$py" != "3.9" ]; then
-            echo "::error title=Wrong interpreter::Expected Python 3.9 but setup-python provided $py."
-            exit 1
-          fi
-
-          pip install -q -e ./scripts/gui_generator || exit 1
-
-          ok=1
-          guigenmc generate menu.json -f || ok=0
-          test -f shop_datapack/pack.mcmeta || ok=0
-          test -f shop_datapack/data/demo/function/core/load.mcfunction || ok=0
-          guigenmc generate menu.json -z -f -o shop-3.9.zip || ok=0
-          test -s shop-3.9.zip || ok=0
-          guigenmc validate menu.json || ok=0
-          # FIX: `guigenmc tree` used to be wrapped in its own ::group:: inside
-          # this step's group. GitHub Actions has no nested groups - the inner
-          # ::endgroup:: closed the outer one and everything after it lost its
-          # folding. It is plain output now, inside this one group.
-          guigenmc tree menu.json || ok=0
-
-          static_file="$(python -c 'import guigenmc, pathlib; print(pathlib.Path(guigenmc.__file__).parent / "static" / "index.html")')"
-          echo "static: $static_file"
-          [ -f "$static_file" ] || ok=0
-
-          if [ "$ok" = 1 ]; then
-            printf '%s✔ Python 3.9: generate + zip + validate + tree + static OK%s\n' "$GREEN" "$RESET"
-          else
-            printf '%s✘ Python 3.9: one or more checks failed%s\n' "$RED" "$RESET"
-            echo "::error title=guigenmc on Python 3.9::one or more checks failed"
-            exit 1
-          fi
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.12"
-
-      - name: guigenmc • Python 3.12
-        id: guigenmc-312
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -uo pipefail
-          GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; RESET=$'\033[0m'
-
-          echo "::group::🐍 guigenmc • Python 3.12"
-          trap 'echo "::endgroup::"' EXIT
-
-          py="$(python -c 'import sys;print(".".join(map(str,sys.version_info[:2])))')"
-          echo "interpreter: $py"
-          if [ "$py" != "3.12" ]; then
-            echo "::error title=Wrong interpreter::Expected Python 3.12 but setup-python provided $py."
-            exit 1
-          fi
-
-          pip install -q -e ./scripts/gui_generator || exit 1
-
-          ok=1
-          guigenmc generate menu.json -f || ok=0
-          test -f shop_datapack/pack.mcmeta || ok=0
-          test -f shop_datapack/data/demo/function/core/load.mcfunction || ok=0
-          guigenmc generate menu.json -z -f -o shop-3.12.zip || ok=0
-          test -s shop-3.12.zip || ok=0
-          guigenmc validate menu.json || ok=0
-          guigenmc tree menu.json || ok=0
-
-          static_file="$(python -c 'import guigenmc, pathlib; print(pathlib.Path(guigenmc.__file__).parent / "static" / "index.html")')"
-          echo "static: $static_file"
-          [ -f "$static_file" ] || ok=0
-
-          if [ "$ok" = 1 ]; then
-            printf '%s✔ Python 3.12: generate + zip + validate + tree + static OK%s\n' "$GREEN" "$RESET"
-          else
-            printf '%s✘ Python 3.12: one or more checks failed%s\n' "$RED" "$RESET"
-            echo "::error title=guigenmc on Python 3.12::one or more checks failed"
-            exit 1
-          fi
-
-      # The wheel-contents check does not depend on the interpreter version.
-      - name: Python package build
-        id: guigenmc-pkg
-        continue-on-error: true
-        shell: bash
-        working-directory: ./scripts/gui_generator
-        run: |
-          set -uo pipefail
-          GREEN=$'\033[1;32m'; RESET=$'\033[0m'
-
-          echo "::group::📦 Python package :: sdist + wheel"
-          trap 'echo "::endgroup::"' EXIT
-
-          pip install -q build twine
-          python -m build
-          python -m twine check dist/*
-
-          # The editable install always sees static/ in the source tree;
-          # this checks that the built wheel actually ships it.
-          python - << 'PY'
-          import glob, sys, zipfile
-          wheels = glob.glob("dist/*.whl")
-          if not wheels:
-              sys.exit("No wheel was built")
-          names = zipfile.ZipFile(wheels[0]).namelist()
-          if not any(n.endswith("static/index.html") for n in names):
-              sys.exit("Wheel is missing static/index.html")
-          PY
-
-          printf '%s✔ sdist/wheel build, twine check and wheel contents passed%s\n' "$GREEN" "$RESET"
-
-      - name: Upload generated datapack
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: datapack-generated
-          path: shop-*.zip
-          if-no-files-found: ignore
-          retention-days: 3
-
       # ==================================================================
       # GROUP 4 - Gradle build
       # ==================================================================
@@ -295,9 +85,9 @@ jobs:
           trap 'echo "::endgroup::"' EXIT
 
           chmod +x ./gradlew
-          printf '%s▶ Running buildAll + build (-PconfirmZip=yes)%s\n' "$CYAN" "$RESET"
+          printf '%s▶ Running buildAll + build %s\n' "$CYAN" "$RESET"
 
-          ./gradlew buildAll build --continue -PconfirmZip=yes
+          ./gradlew buildAll build --continue
           rc=$?
 
           if [ "$rc" -eq 0 ]; then
@@ -316,7 +106,6 @@ jobs:
           path: |
             mods/**/build/libs/*.jar
             examples/**/build/libs/*.jar
-            build/packs-dist/*.zip
             build/dist/**
           if-no-files-found: ignore
           # 90 is the maximum for public repositories.
@@ -343,40 +132,6 @@ jobs:
           else
             printf '%s✘ Gradle lint failed with exit code %s%s\n' "$RED" "$rc" "$RESET"
             echo "::error title=Gradle lint failed::lint --continue exited with code $rc"
-          fi
-          exit "$rc"
-
-      # ==================================================================
-      # GROUP 6 - datapack lint
-      # ==================================================================
-      - name: Lint datapacks
-        id: datapack-lint
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -uo pipefail
-          GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; RESET=$'\033[0m'
-
-          # FIX: this step used to wrap the script in "::group::Datapack Lint".
-          # scripts/lint_datapacks.sh emits its OWN ::group:: markers (Installing
-          # Mecha, Ignoring paths, Preparing validation, Mecha validation,
-          # Cleanup, Validation summary), so wrapping it produced exactly the
-          # nested-group bug being fixed here - confirmed in a real CI log, where
-          # the stream reached depth 2 with six nested opens. The script's own
-          # groups are the real structure; this step only reports the result.
-          if [ ! -f "scripts/lint_datapacks.sh" ]; then
-            printf '%s✘ scripts/lint_datapacks.sh is missing%s\n' "$RED" "$RESET"
-            echo "::error file=scripts/lint_datapacks.sh,title=Missing lint script::The datapack lint script does not exist."
-            exit 1
-          fi
-
-          bash scripts/lint_datapacks.sh
-          rc=$?
-          if [ "$rc" -eq 0 ]; then
-            printf '%s✔ Datapack lint passed%s\n' "$GREEN" "$RESET"
-          else
-            printf '%s✘ Datapack lint failed with exit code %s%s\n' "$RED" "$rc" "$RESET"
-            echo "::error title=Datapack lint failed::lint_datapacks.sh exited with code $rc"
           fi
           exit "$rc"
 
@@ -417,176 +172,7 @@ jobs:
           retention-days: 3
 
       # ==================================================================
-      # GROUP 8 - release gate
-      # ==================================================================
-      - name: Release gate
-        id: release-gate
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; YELLOW=$'\033[1;33m'; RESET=$'\033[0m'
-
-          echo "::group::🚦 Release Gate"
-          trap 'echo "::endgroup::"' EXIT
-
-          g39="${{ steps.guigenmc-39.outcome }}"
-          g312="${{ steps.guigenmc-312.outcome }}"
-          gpkg="${{ steps.guigenmc-pkg.outcome }}"
-          build_result="${{ steps.build.outcome }}"
-          gradle_lint_result="${{ steps.gradle-lint.outcome }}"
-          datapack_lint_result="${{ steps.datapack-lint.outcome }}"
-
-          printf '%sguigenmc 3.9:%s %s\n'    "$YELLOW" "$RESET" "$g39"
-          printf '%sguigenmc 3.12:%s %s\n'   "$YELLOW" "$RESET" "$g312"
-          printf '%sguigenmc package:%s %s\n' "$YELLOW" "$RESET" "$gpkg"
-          printf '%sBuild:%s %s\n'           "$YELLOW" "$RESET" "$build_result"
-          printf '%sGradle lint:%s %s\n'     "$YELLOW" "$RESET" "$gradle_lint_result"
-          printf '%sDatapack lint:%s %s\n'   "$YELLOW" "$RESET" "$datapack_lint_result"
-
-          allowed=false
-          if [ "$g39" = "success" ] &&
-             [ "$g312" = "success" ] &&
-             [ "$gpkg" = "success" ] &&
-             [ "$build_result" = "success" ] &&
-             [ "$gradle_lint_result" = "success" ] &&
-             [ "$datapack_lint_result" = "success" ]; then
-            allowed=true
-          fi
-
-          publish=false
-          if [ "$allowed" = "true" ] &&
-             [ "$GITHUB_REF" = "refs/heads/main" ] &&
-             { [ "$GITHUB_EVENT_NAME" = "push" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; }; then
-            publish=true
-          fi
-
-          echo "RELEASE_ALLOWED=$allowed" >> "$GITHUB_OUTPUT"
-          echo "PUBLISH=$publish" >> "$GITHUB_OUTPUT"
-
-          if [ "$allowed" = "true" ]; then
-            printf '%s✔ Release gate PASSED%s\n' "$GREEN" "$RESET"
-          else
-            printf '%s✘ Release gate FAILED - nothing will be published.%s\n' "$RED" "$RESET"
-            echo "::warning title=Release blocked::A build, lint or guigenmc check failed; packs-latest will not be updated."
-          fi
-
-      # ==================================================================
-      # GROUP 9 - pack release assets (only when the gate opened)
-      # ==================================================================
-      - name: Build pack zips
-        if: steps.release-gate.outputs.PUBLISH == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::📦 Package Individual Packs"
-          trap 'echo "::endgroup::"' EXIT
-          ./gradlew zipPacks -PconfirmZip=yes
-
-      - name: Build merged datapack
-        if: steps.release-gate.outputs.PUBLISH == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::🔀 Build Merged Datapack"
-          trap 'echo "::endgroup::"' EXIT
-          ./gradlew mergeDatapacks build
-
-      - name: Collect release assets
-        if: steps.release-gate.outputs.PUBLISH == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::📤 Collect release assets"
-          trap 'echo "::endgroup::"' EXIT
-
-          mkdir -p release-assets
-          shopt -s nullglob
-          files=(build/packs-dist/*.zip build/dist/*.zip)
-
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error title=No release assets::No zips were found in build/packs-dist or build/dist."
-            exit 1
-          fi
-
-          # Both directories are flattened into one folder; a duplicate file
-          # name would silently overwrite an asset, so fail on collisions.
-          dupes=$(printf '%s\n' "${files[@]}" | xargs -n1 basename | sort | uniq -d)
-          if [ -n "$dupes" ]; then
-            echo "::error title=Duplicate asset names::Same file name in build/packs-dist and build/dist: $dupes"
-            exit 1
-          fi
-
-          cp -v "${files[@]}" release-assets/
-
-      # ==================================================================
-      # GROUP 10 - hand the assets across the boundary
-      #
-      # This job stops here. It has a read-only token, so it cannot publish
-      # anything; the `publish` job below owns that. The artifact is the only
-      # thing that crosses.
-      # ==================================================================
-      - name: Upload release assets
-        if: steps.release-gate.outputs.PUBLISH == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: release-packs
-          path: release-assets/*.zip
-          if-no-files-found: error
-          retention-days: 7
-
-      # ==================================================================
-      # GROUP 11 - diagnostics
-      #
-      # FIX: this step used to open "::group::Diagnostics" and then open
-      # "::group::Git status", "::group::Generated files" and
-      # "::group::Build directories" INSIDE it. GitHub Actions has no nested
-      # groups - the inner ::endgroup:: closed the OUTER one, so everything
-      # after it was unfolded and the log lost its folding. These are now
-      # sequential sibling groups, each closed before the next one opens.
-      # The guard flag stops the EXIT trap emitting a stray ::endgroup::.
-      # ==================================================================
-      - name: Diagnostics
-        if: always()
-        shell: bash
-        run: |
-          set +e
-
-          G=0
-          grp()  { echo "::group::$1"; G=1; }
-          endg() { if [ "$G" = 1 ]; then echo "::endgroup::"; G=0; fi; }
-          trap endg EXIT
-
-          CYAN=$'\033[1;36m'; RESET=$'\033[0m'
-
-          grp "🔎 Diagnostics :: step outcomes"
-          printf '%sguigenmc 3.9:%s %s\n'     "$CYAN" "$RESET" "${{ steps.guigenmc-39.outcome }}"
-          printf '%sguigenmc 3.12:%s %s\n'    "$CYAN" "$RESET" "${{ steps.guigenmc-312.outcome }}"
-          printf '%sguigenmc package:%s %s\n' "$CYAN" "$RESET" "${{ steps.guigenmc-pkg.outcome }}"
-          printf '%sBuild:%s %s\n'            "$CYAN" "$RESET" "${{ steps.build.outcome }}"
-          printf '%sGradle lint:%s %s\n'      "$CYAN" "$RESET" "${{ steps.gradle-lint.outcome }}"
-          printf '%sDatapack lint:%s %s\n'    "$CYAN" "$RESET" "${{ steps.datapack-lint.outcome }}"
-          printf '%sRelease gate:%s allowed=%s publish=%s\n' "$CYAN" "$RESET" \
-            "${{ steps.release-gate.outputs.RELEASE_ALLOWED }}" \
-            "${{ steps.release-gate.outputs.PUBLISH }}"
-          endg
-
-          grp "🌳 Generated files"
-          find . -maxdepth 4 -type f \
-            \( -name '*.zip' -o -name '*.whl' -o -name '*.tar.gz' -o -name '*.jar' \) \
-            -not -path './archive/*' -print 2>/dev/null | sort
-          endg
-
-          grp "📁 Build directories"
-          find build -maxdepth 3 -type d -print 2>/dev/null | sort
-          endg
-
-          grp "🔀 Git status"
-          git status --short
-          endg
-
-      # ==================================================================
-      # GROUP 12 - summary
+      # Final summary
       # ==================================================================
       - name: Final summary
         if: always()
@@ -594,141 +180,34 @@ jobs:
         run: |
           set +e
 
-          G=0
-          grp()  { echo "::group::$1"; G=1; }
-          endg() { if [ "$G" = 1 ]; then echo "::endgroup::"; G=0; fi; }
-          trap endg EXIT
-
           GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; RESET=$'\033[0m'
 
-          g39="${{ steps.guigenmc-39.outcome }}"
-          g312="${{ steps.guigenmc-312.outcome }}"
-          gpkg="${{ steps.guigenmc-pkg.outcome }}"
           build_result="${{ steps.build.outcome }}"
           gradle_lint_result="${{ steps.gradle-lint.outcome }}"
-          datapack_lint_result="${{ steps.datapack-lint.outcome }}"
-          release_allowed="${{ steps.release-gate.outputs.RELEASE_ALLOWED }}"
-          publish="${{ steps.release-gate.outputs.PUBLISH }}"
 
-          grp "📊 Final Summary"
           show() {
-            if [ "$2" = "success" ] || [ "$2" = "true" ]; then
+            if [ "$2" = "success" ]; then
               printf '%s✔ %s%s\n' "$GREEN" "$1" "$RESET"
             else
               printf '%s✘ %s%s\n' "$RED" "$1" "$RESET"
             fi
           }
-
-          show "guigenmc Python 3.9"  "$g39"
-          show "guigenmc Python 3.12" "$g312"
-          show "guigenmc package"     "$gpkg"
-          show "Build"                "$build_result"
-          show "Gradle lint"          "$gradle_lint_result"
-          show "Datapack lint"        "$datapack_lint_result"
-          show "Release gate"         "$release_allowed"
+          show "Build"       "$build_result"
+          show "Gradle lint" "$gradle_lint_result"
 
           icon() { if [ "$1" = "success" ]; then echo "✅"; else echo "❌"; fi; }
-
           {
             echo "# 🏗️ CI Summary"
             echo ""
             echo "| Component | Result |"
             echo "|---|---|"
-            echo "| guigenmc Python 3.9 | $(icon "$g39") \`$g39\` |"
-            echo "| guigenmc Python 3.12 | $(icon "$g312") \`$g312\` |"
-            echo "| guigenmc package | $(icon "$gpkg") \`$gpkg\` |"
             echo "| Build | $(icon "$build_result") \`$build_result\` |"
             echo "| Gradle lint | $(icon "$gradle_lint_result") \`$gradle_lint_result\` |"
-            echo "| Datapack lint | $(icon "$datapack_lint_result") \`$datapack_lint_result\` |"
-            echo "| Release gate | \`$release_allowed\` |"
-            echo "| Will publish | \`${publish:-false}\` |"
-            echo ""
-            echo "## Environment"
-            echo ""
-            echo "| Property | Value |"
-            echo "|---|---|"
-            echo "| Runner | \`$RUNNER_OS\` |"
-            echo "| Java | \`25\` |"
-            echo "| Python | \`3.9\`, \`3.12\` |"
-            echo "| Ref | \`$GITHUB_REF\` |"
-            echo "| Commit | \`$GITHUB_SHA\` |"
           } >> "$GITHUB_STEP_SUMMARY"
-          endg
 
           # Every checked step uses continue-on-error, so the job would
           # otherwise stay green. Fail it explicitly.
-          if [ "$g39" != "success" ] ||
-             [ "$g312" != "success" ] ||
-             [ "$gpkg" != "success" ] ||
-             [ "$build_result" != "success" ] ||
-             [ "$gradle_lint_result" != "success" ] ||
-             [ "$datapack_lint_result" != "success" ]; then
+          if [ "$build_result" != "success" ] || [ "$gradle_lint_result" != "success" ]; then
             echo "::error title=CI failed::One or more checks did not succeed."
             exit 1
           fi
-
-  # ======================================================================
-  # PUBLISH: the only job with write access. No checkout, no repository
-  # code - it downloads the artifact produced by `ci` and moves the tag.
-  # ======================================================================
-  publish:
-    name: Publish release
-    needs: ci
-    if: needs.ci.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
-    # When a `release` environment with required reviewers exists, this turns
-    # publication into a manual approval instead of an automatic step.
-    environment: release
-
-    steps:
-      - name: Download release assets
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
-        with:
-          name: release-packs
-          path: release-assets
-
-      # Fail before touching the tag if the artifact came across empty - an
-      # artifact can exist and still contain nothing, and publishing an empty
-      # release over a good one is not recoverable by simply re-running.
-      - name: Verify assets arrived
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::🔎 Verify release assets"
-          trap 'echo "::endgroup::"' EXIT
-
-          shopt -s nullglob
-          files=(release-assets/*.zip)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error title=No release assets::The release-packs artifact contained no zips."
-            exit 1
-          fi
-          empty=0
-          for f in "${files[@]}"; do
-            if [ ! -s "$f" ]; then
-              echo "::error title=Empty release asset::$f is zero bytes."
-              empty=1
-            fi
-          done
-          [ "$empty" -eq 0 ] || exit 1
-          echo "✔ ${#files[@]} asset(s) present and non-empty"
-
-      - name: Publish packs-latest
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
-        with:
-          tag_name: packs-latest
-          name: Latest packs
-          body: |
-            MAINTENANCE PAUSED (not permanently archived). Since 2026-10-04 the maintainer is expected to be inactive until at least 2027-2028; no fixes or releases are planned and issues may go unanswered.
-
-            The zips attached here are built from the LIVE `packs/` tree (individual packs plus the merged datapack), not from `archived/` - `archived/` holds no datapacks and is never built, zipped or merged. CI's datapack lint is advisory only and cannot fail a build, so a green run is not proof a pack is valid: review a pack before deploying it on a live server.
-
-            Automatically updated on every push to main. Always reflects the current contents of packs/ and the merged datapack built from packs/merge-manifest.json.
-          files: release-assets/*.zip
-          # Fail loudly instead of publishing an empty release.
-          fail_on_unmatched_files: true
-          make_latest: true

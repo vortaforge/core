@@ -3,8 +3,7 @@
 Thanks for your interest in contributing to this project.
 
 **Read [NOTICE.md](NOTICE.md) before opening a PR.** It covers the
-Gradle/datapack split in this monorepo (what's built by `buildAll` and what
-isn't), what a PR should contain, and what will get a PR closed
+layout of this monorepo, what a PR should contain, and what will get a PR closed
 (obfuscated code, undisclosed behavior, misuse of the macro/command
 tooling for griefing or exploit purposes). This guide assumes you've
 already read it.
@@ -64,29 +63,13 @@ probably two commits. Reference related issues or PRs in the body
 ## Pull requests
 
 - Open a PR against the `main` branch.
-- Make sure the **`CI`** workflow is green before requesting review. Inside its `Verify & package` job the steps that can fail you are `Build all subprojects` (`./gradlew buildAll`), `Gradle lint` (`./gradlew lint`) and `Lint datapacks` (`scripts/lint_datapacks.sh`, Mecha); `Release gate` then blocks publishing if any of them failed.
-- Describe what changed and why in the PR description — and whether the change touches `mods/`, `packs/`, or both, since only the former is covered by `buildAll`.
+- Make sure the **`CI`** workflow is green before requesting review. Inside its `Build & lint` job the steps that can fail you are `Build all subprojects` (`./gradlew buildAll`) and `Gradle lint` (`./gradlew lint`).
+- Describe what changed and why in the PR description.
 - Run through the checklist at the bottom of [NOTICE.md](NOTICE.md) before requesting review.
 
 ## Security
 
-This project follows a security-first development philosophy, particularly around Minecraft datapack macro injection risks and namespace isolation. If you find a security issue, do **not** open a public issue - use [GitHub's private vulnerability reporting](https://github.com/vortaforge/core/security/advisories/new), and fall back to a detail-free public issue only if that is unavailable to you. The full procedure, including what must not be included in a report, is in [SECURITY.md](SECURITY.md).
-
-## Provenance watermark (`_vc_origin.mcfunction`)
-
-Every datapack under `packs/` carries a `_vc_origin.mcfunction` file (under
-`data/<namespace>/function/`) that `build.gradle`'s `zipPacks` task checks
-for before packaging. This file is not build output and should not be
-removed, renamed, or hand-edited in `packs/` by a contributor's PR —
-`zipPacks` treats a missing watermark as a build failure, and the project
-maintainers ask that it stay untouched in the source tree. Only `build.gradle`
-itself (via its `build/packs-remap/` working copy, never `packs/`) and
-maintainers acting through the project's own tooling are expected to
-touch these files. That tooling is `scripts/origin_watermarks.py`:
-`--write` regenerates every watermark from one template, `--check` (run in CI)
-rejects hand edits and any executable line, `--report` lists packs and namespaces. This is a contribution-conduct expectation, not a
-license restriction — the Unlicense in `LICENSE` continues to govern
-what anyone may do with a copy of this code once obtained.
+This project follows a security-first development philosophy, particularly around permission handling and injection risks in mods. If you find a security issue, do **not** open a public issue - use [GitHub's private vulnerability reporting](https://github.com/vortaforge/core/security/advisories/new), and fall back to a detail-free public issue only if that is unavailable to you. The full procedure, including what must not be included in a report, is in [SECURITY.md](SECURITY.md).
 
 ## Code style
 

@@ -26,10 +26,7 @@ repository-wide rules on this.
 |---|---|---|
 | 1.0.0 | 1.20.x (`pack_format: 26`) | No longer updated. Superseded by `packs/LeftClickDetection`. |
 
-The whole repository is under a maintenance pause - see
-[Project status](https://github.com/vortaforge/core#project-status-maintenance-paused).
-No version of anything here is currently supported, and reports may go
-unanswered. This file describes what *would* be in scope, not a service level.
+This pack is archived. No version of it is supported. This file describes what *would* be in scope, not a service level.
 
 > **Note on the format number.** `pack.mcmeta` declares `pack_format: 26` while
 > describing itself as "1.20.x". 26 is a **resource** pack format (24w06a); the

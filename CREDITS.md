@@ -3,6 +3,29 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-14 - chore: archive all datapacks and move the repository to Fabric only
+
+**Tool:** Claude (Anthropic), working from a prompt by the maintainer. Review status: _pending - update
+when reviewed_.
+
+### Changed (AI-assisted edit)
+
+| File | Change |
+|---|---|
+| `packs/` -> `archived/data-packs/packs/` | `git mv` of every datapack, the macroEngine resource pack and `merge-manifest.json`. No file contents changed, except the status line in `InteractionClickDetection/SECURITY.md`. |
+| `scripts/{dp-depman,dpgen,gui_generator,lint_datapacks.sh,fix_text_components.py,origin_watermarks.py}`, `examples/template-datapack`, `.github/ISSUE_TEMPLATE/bug_report_pack.yml` -> `archived/data-packs/other/` | `git mv`. The issue form also lost its status banner. |
+| `build.gradle` | Sections 3-6 (origin watermarks, `zipPacks`, `checkPacks`, `printPackList`, `printPackFormats`, `mergeDatapacks`) removed and copied verbatim to `archived/tasks/datapack-tasks.gradle`. `clean`, root `build` and `checkArchive` were rewritten for a Fabric-only tree. |
+| `settings.gradle` | `packs` removed from `SCAN_ROOTS`; the `rtwrapper-fabric` exclusion removed. |
+| `.github/workflows/build.yml` | Reduced to build + Gradle lint + source archive + summary. Datapack lint, guigenmc matrix, release gate, pack zips and the `publish` job removed; the original is kept in `archived/tasks/workflows/build.datapack-ci.yml`. |
+| `.github/workflows/codeowners-sync.yml` | Pack rules removed from the generated CODEOWNERS and from its validation; the old rules are in `archived/tasks/workflows/codeowners-sync.datapack-rules.txt`. |
+| `.github/scripts/ai-agent.js` | The `lint` check now runs `./gradlew lint --continue` instead of `scripts/lint_datapacks.sh`. |
+| `scripts/check_archive.py`, `archived/archive.json`, `archived/README.md` | Registry gained 21 entries; the checker no longer looks at `packs/` or the merge manifest. |
+| `README.md`, `NOTICE.md`, `SECURITY.md`, `CONTRIBUTING.md`, `AGENT.md`, `CLAUDE.md`, `scripts/README.md`, issue and PR templates | Datapack sections removed (kept in `archived/data-packs/other/docs/removed-doc-sections.md`). The "Project status (maintenance paused)" section, banners and anchor links were deleted, including in `mods/*/README.md`. |
+
+- **Verified:** `scripts/check_archive.py` passes (22 entries, 0 errors); `build.yml`, `codeowners-sync.yml` and the issue forms parse as YAML; `ai-agent.js` passes `node --check`; `check_archive.py` compiles.
+- **Not verified:** no Gradle run. The wrapper could not be downloaded in the sandbox, so `build.gradle` and `settings.gradle` were only checked for balanced braces. The new `build.yml` and `./gradlew lint` in `ai-agent.js` have not run on GitHub. `scripts/audit_repo.py` still expects `packs/` and reports two critical findings. `index.html` still lists the datapack downloads.
+- **Left as is on purpose:** the "maintenance pause" comments in `.github/dependabot.yml`, `.github/workflows/codeowners-sync.yml` and `.github/workflows/backup-org.yml`, which explain settings that are still switched off (Dependabot limit 0, no weekly schedule, no unattended token use). The Fabric mods `datapack-blocker` and `datapack-fixer` stay in `mods/`.
+
 ## 2026-10-12 - docs: fix stale function paths in macroEngine usage comments
 
 **Tool:** Claude (Anthropic), working from a prompt by the maintainer. Review status: _pending - update

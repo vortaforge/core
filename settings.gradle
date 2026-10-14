@@ -3,11 +3,11 @@
 //
 // Responsible for:
 //   1. Plugin repositories (pluginManagement).
-//   2. Auto-discovering every buildable subproject under mods/, packs/,
+//   2. Auto-discovering every buildable subproject under mods/ and
 //      examples/ and wiring it into the multi-project build.
 //
 // Nothing in this file should need editing when a new mod/pack subproject is
-// added - drop a build.gradle(.kts) anywhere under those three roots and it
+// added - drop a build.gradle(.kts) anywhere under those two roots and it
 // is picked up automatically. Edit EXCLUDED_PROJECT_DIRS below only when a
 // subproject must be deliberately kept out of the Gradle build.
 // =============================================================================
@@ -27,7 +27,7 @@ rootProject.name = 'vortaforge-core'
 // relative to the repo root; every build.gradle(.kts) found underneath it
 // (at any nesting depth) becomes a Gradle subproject.
 // -----------------------------------------------------------------------
-def SCAN_ROOTS = ['mods', 'packs', 'examples']
+def SCAN_ROOTS = ['mods', 'examples']
 
 // -----------------------------------------------------------------------
 // Subprojects to skip entirely (kept as files on disk, not wired into the
@@ -36,8 +36,7 @@ def SCAN_ROOTS = ['mods', 'packs', 'examples']
 // dig through git blame.
 // -----------------------------------------------------------------------
 def EXCLUDED_PROJECT_DIRS = [
-    'mods/datapack-fixer'               : 'legacy tool, not yet migrated to the shared build - see mods/datapack-fixer/README',
-    'packs/RTWrapper/rtwrapper-fabric'  : 'superseded by mods/rtwrapper-mod; kept only for historical reference',
+    'mods/datapack-fixer' : 'legacy tool, not yet migrated to the shared build - see mods/datapack-fixer/README',
 ]
 
 // Set debugSettings=1 on the command line (-PdebugSettings=1) for verbose

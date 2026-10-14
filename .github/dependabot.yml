@@ -1,5 +1,4 @@
 # Keeps GitHub Actions, Gradle, Python (pip) and npm dependencies up to date via PRs.
-# Packs under packs/ contain no ecosystem manifests Dependabot would touch.
 #
 # MAINTENANCE PAUSE (2026-10-04, expected until at least 2027-2028):
 # open-pull-requests-limit: 0 turns off Dependabot *version* updates for every ecosystem

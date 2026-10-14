@@ -4,7 +4,6 @@
 ## 📦 Affected Scope / Packages
 <!-- Select all affected areas within the monorepo -->
 - [ ] Core / Shared Libraries
-- [ ] Datapacks (`packs/`)
 - [ ] Fabric Mods / Services
 - [ ] Tooling / CI/CD (`.github/`, Gradle scripts, etc.)
 - [ ] Documentation / Specs

@@ -14,12 +14,7 @@ to be asking about.
 
 ## Response expectations
 
-**None are currently promised.** The repository is under a maintenance pause
-(see [Project status](https://github.com/vortaforge/core#project-status-maintenance-paused)),
-and the root [SECURITY.md](../../SECURITY.md) states that reports may not be
-read or answered and that no fixes should be expected. This file previously
-promised an acknowledgement within 72 hours and a status update within 7 days,
-which directly contradicted that. If you are starting a project from this
+**None are currently promised.** If you are starting a project from this
 template, put your real response targets here - but do not copy numbers you
 cannot meet.
 

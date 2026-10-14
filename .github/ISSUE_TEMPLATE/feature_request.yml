@@ -1,18 +1,13 @@
 name: "✨ Feature Request"
-description: Suggest a new feature or enhancement for a mod, pack, or script in this monorepo
+description: Suggest a new feature or enhancement for a mod or script in this monorepo
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        **⚠️ Maintenance paused (not permanently archived).** Since 2026-10-04 the maintainer is expected to be inactive on GitHub until at least 2027–2028. This issue may go unanswered for a long time and no fixes or releases are planned. Datapacks under `archived/` are reference-only. See [Project status](https://github.com/vortaforge/core#project-status-maintenance-paused).
   - type: dropdown
     id: area
     attributes:
       label: Area
       options:
         - mods/
-        - packs/
         - scripts/
         - examples/
         - Other / repo-wide
@@ -23,7 +18,7 @@ body:
     id: subproject
     attributes:
       label: Specific subproject (if applicable)
-      placeholder: "e.g. rtwrapper-mod, macroEngine-Datapack-v26.3, dp-depman"
+      placeholder: "e.g. rtwrapper-mod, join-throttle"
 
   - type: textarea
     id: problem
@@ -54,5 +49,5 @@ body:
       options:
         - label: This isn't a request to weaken macro/command safety checks or namespace isolation for convenience (see SECURITY.md)
           required: true
-        - label: If this touches a frozen/archived pack, I understand feature requests against frozen packs are generally not accepted (see SECURITY.md)
+        - label: If this touches anything under archived/, I understand feature requests against archived projects are generally not accepted (see SECURITY.md)
           required: false

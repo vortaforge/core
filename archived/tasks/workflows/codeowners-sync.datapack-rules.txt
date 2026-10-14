@@ -1,0 +1,6 @@
+# Datapack rules removed from .github/workflows/codeowners-sync.yml when the datapacks were archived.
+# Reference only (not a workflow). Original generated rules:
+#   /packs/merge-manifest.json
+#   /packs/*/data/*/function/_vc_origin.mcfunction
+#   /packs/*/data/*/functions/_vc_origin.mcfunction
+# Original validation step: grep -q '^/packs/merge-manifest\.json ' .github/CODEOWNERS
