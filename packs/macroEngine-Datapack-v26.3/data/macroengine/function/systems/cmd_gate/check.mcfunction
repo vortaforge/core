@@ -5,7 +5,10 @@
 # before it macro-executes its string (core/lib/once_cmd, the hook/wand/trigger
 # callers, the work queue, multi_cmd, region_watch and the command-block runners).
 #
-# FAIL-CLOSED. The command runs only when ALL of these hold:
+# FAIL-CLOSED - unless an operator has turned this gate off on purpose
+# (config cmd_gate_disabled, systems/cmd_gate/disable; audited, and the
+# module check below still applies). Otherwise the command runs only
+# when ALL of these hold:
 #   1. the cmd module is on (config module_cmd),
 #   2. dynamic commands are enabled at all (config dynamic_cmd, default 0b),
 #   3. @s passes api/perm/require for "cmd.dynamic" (a no-entity server/console
@@ -44,6 +47,8 @@ data modify storage macroengine:cmd_gate tmp set value {}
 
 execute if data storage macroengine:engine modules{cmd:0b} run data modify storage macroengine:cmd_gate out.error set value "module_cmd is off"
 execute if data storage macroengine:engine modules{cmd:0b} run return 0
+execute if data storage macroengine:engine config{cmd_gate_disabled:1b} run data modify storage macroengine:cmd_gate out set value {allowed:1b,error:"cmd_gate disabled by an operator",bypassed:1b}
+execute if data storage macroengine:engine config{cmd_gate_disabled:1b} run return 1
 execute unless data storage macroengine:engine config{dynamic_cmd:1b} run data modify storage macroengine:cmd_gate out.error set value "dynamic commands are disabled (config dynamic_cmd)"
 execute unless data storage macroengine:engine config{dynamic_cmd:1b} run return 0
 

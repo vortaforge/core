@@ -11,6 +11,7 @@
 #   queue_max_depth    -> #queue_cap (macroengine.tick)
 #   log_level          -> #macroengine.log_level (macroengine.log_level)
 #   dynamic_cmd        -> #dynamic_cmd (macroengine.tick_flags; read by systems/cmd_gate tests)
+#   cmd_gate_disabled  -> #cmd_gate_disabled (macroengine.tick_flags; read by api/settings/status)
 # The store_*, title_*, validate_max_name and reload_warn keys are read straight from storage.
 
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
@@ -48,6 +49,7 @@ execute store result score #sys_queue macroengine.tick_flags run data get storag
 execute store result score #sys_hud macroengine.tick_flags run data get storage macroengine:engine config.sys_hud
 execute store result score #sys_admin macroengine.tick_flags run data get storage macroengine:engine config.sys_admin
 execute store result score #dynamic_cmd macroengine.tick_flags run data get storage macroengine:engine config.dynamic_cmd
+execute store result score #cmd_gate_disabled macroengine.tick_flags run data get storage macroengine:engine config.cmd_gate_disabled
 
 execute store result score #cfg_v macroengine.tmp run data get storage macroengine:engine config.tick_rate
 execute if score #cfg_v macroengine.tmp matches ..0 run scoreboard players set #cfg_v macroengine.tmp 1

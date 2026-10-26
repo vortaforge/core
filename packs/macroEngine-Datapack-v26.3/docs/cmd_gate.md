@@ -38,8 +38,35 @@ next time the group is assigned to them.
 Turning dynamic commands back off is the same config call with `value:0b`;
 `macroengine:core/config/reset` also returns it to `0b`, like every other key.
 
+All of these values (the five pack gates, this switch, the blocklist and any
+other config key) can also be edited from the settings book - see
+[settings_book.md](settings_book.md).
+
+## Disabling the gate itself
+
+An operator who wants the pre-gate behaviour can switch the checks off
+entirely:
+
+```mcfunction
+function macroengine:systems/cmd_gate/disable   # stored strings run unchecked
+function macroengine:systems/cmd_gate/enable    # back to the checks below
+```
+
+Both are admin-only (`macroengine.admin` tag or the console), write an audit
+entry (`cmd_gate.disabled` / `cmd_gate.enabled`) and announce the change to
+online admins. The underlying config key is `cmd_gate_disabled` (default
+`0b`), so `core/config/list`, the settings book (`cmd_gate: 0`) and
+`api/settings/status` all show the state. Only the `module_cmd` module guard
+still applies while the gate is disabled - permission, length and the
+blocklist do not. This is deliberately loud rather than hidden: anyone who
+can run these functions could edit the datapack anyway, and a visible,
+audited switch is easier to review than a silently deleted check.
+
 ## What the gate checks (in order, fail-closed)
 
+0. `cmd_gate_disabled` is `0b` - if an operator disabled the gate (above),
+   the check allows everything that reaches it and reports
+   `out.bypassed:1b`.
 1. `module_cmd` config is on.
 2. `dynamic_cmd` config is `1b` (**default `0b`**).
 3. The executor passes `api/perm/require` for `cmd.dynamic`

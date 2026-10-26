@@ -3,6 +3,31 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-28 - feat: cmd_gate kill-switch and settings book
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/systems/cmd_gate/{enable,disable}.mcfunction`, `.../function/config.mcfunction`, `.../core/config/{apply,ensure}.mcfunction`, `.../systems/cmd_gate/check.mcfunction` | An operator can now turn the dynamic-command gate off on purpose: config key `cmd_gate_disabled` (default `0b`, `config_rev` 4), admin-only enable/disable functions through the validated config path, one audit entry and an admin warning per state change. The bypass sits after the `module_cmd` guard, so a disabled module stays disabled. The eleven `api/cmd`/`api/perm` runners that read the master switch directly honour the same key. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/api/settings/`, `.../core/internal/api/settings/`, `tags/function/input/writable_book.json` | Settings book: an input book (`settings:1b`) prefilled from the live gate scores and config storage as `Key: Value` lines; editing it and re-selecting it (existing writable-book capture) or running `api/settings/apply` applies the lines - five pack gates, permit, `cmd_gate`, any `cfg.<key>` via `core/config/set`, and `blocklist.add/remove/reset/clear`. Text is parsed as data only (never macro-substituted), non-admin captures are ignored silently, rejected lines are reported in `macroengine:settings result.errors`. `api/settings/status` prints the live state read-only. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/cmd_gate_disable_toggle.mcfunction`, `scripts/tests/test_settings_book.py` | Ward test for the kill-switch defaults/toggle via the config mirror score; offline invariant tests for bypass placement, admin guards, tag registration, no dynamic function selection and no macro-executed book text. |
+| `packs/macroEngine-Datapack-v26.3/docs/settings_book.md`, `docs/cmd_gate.md`, `docs/config.md`, `docs/dynamic-command-gate.md` | Book grammar, flow and limits; the disable contract and its audit trail; config table row; cross-pack inventory updated. |
+
+- **Verified:** `scripts/lint_datapacks.sh` (Mecha 0.101.0) passed; `./gradlew :checkPacks` on Temurin 25
+  (`--configure-on-demand`, memory-capped) checked 12 packs / 3248 functions with 0 errors and 0 warnings;
+  `python3 -m unittest discover scripts/tests` - 38 tests OK (10 new); `python3 scripts/origin_watermarks.py --check`,
+  `python3 scripts/audit_repo.py` (only the two pre-existing `pack.format-mixed` notes) and
+  `python3 scripts/build_release.py --check` passed; every static `function` reference in the changed files
+  resolves (the pre-existing `api/cmd/$(type)` dispatch in `action_run` aside), and the `_give` macro arguments
+  match the `_view` fields exactly. The change was also exported with `git format-patch`, re-applied to a fresh
+  clone with `git am`, and the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7). The book flow end to end (prefill,
+  newline splitting of a real edited page, capture timing, apply against live players), the kill-switch at
+  runtime and the new Ward test all still need their first execution - the `ward.yml` CI job for the test, the
+  `NOTICE.md` in-world acceptance pass for the flow. The full `verifyProject`/`ci` graph was not run (Fabric
+  Loom subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
 ## 2026-10-27 - feat: default-off dynamic command gate + deterministic release build
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

@@ -1,3 +1,5 @@
 {
-  "values": []
+  "values": [
+    "macroengine:core/internal/api/settings/_on_book"
+  ]
 }

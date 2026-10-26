@@ -13,7 +13,7 @@ $execute if data storage macroengine:engine _pr_tmp{result:0b} run execute as @a
 execute if data storage macroengine:engine _pr_tmp{result:0b} run return 0
 
 # Dynamic commands are off by default (config dynamic_cmd). See docs/cmd_gate.md.
-execute unless data storage macroengine:engine config{dynamic_cmd:1b} run return 0
+execute unless data storage macroengine:engine config{dynamic_cmd:1b} unless data storage macroengine:engine config{cmd_gate_disabled:1b} run return 0
 $execute as @a if score @s macroengine.pid = $pr_pid macroengine.tmp at @s run $(cmd)
 
 data remove storage macroengine:engine _pr_tmp

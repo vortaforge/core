@@ -135,6 +135,10 @@ Full contract, blocklist and permission examples: [cmd_gate.md](cmd_gate.md).
 |---|---|---|---|---|
 | `dynamic_cmd` | bool | `0b` | 0b / 1b | master switch for stored-string command execution; 0b makes every gated executor return 0 |
 | `dynamic_cmd_max_len` | int | `256` | 1 - 4096 | longest command string the gate accepts |
+| `cmd_gate_disabled` | bool | `0b` | 0b / 1b | operator kill-switch: 1b turns the gate checks (permission, length, blocklist) off entirely; set it via `systems/cmd_gate/disable|enable`, not by hand, so the change is audited |
+
+This section's keys - and every other key in this document - can also be
+edited from the in-game settings book; see [settings_book.md](settings_book.md).
 
 ## Not configurable (on purpose)
 
