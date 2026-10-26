@@ -1,0 +1,12 @@
+# macroengine:public/cmd/other/multi_cmd [MACRO]
+# Executes a list of commands in order.
+# INPUT (macro args): $(commands) — list of command strings/objects
+#
+
+execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
+execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
+execute if data storage macroengine:engine modules{cmd:0b} run return 0
+$data modify storage macroengine:engine _mcmd_queue set value $(commands)
+data modify storage macroengine:engine _mcmd_options set value {error_mode:"continue",profile:0b,spread:0}
+
+execute at @s run function macroengine:public/cmd/other/multi_cmd/run

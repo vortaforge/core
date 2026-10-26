@@ -40,22 +40,22 @@ runs the function as themselves.
 
 ```mcfunction
 data modify storage macroengine:title in set value {title:"Welcome %player%",subtitle:"Coins: %score:coins%"}
-function macroengine:api/title/show_p
+function macroengine:public/title/show_p
 
 # everyone, each with their own name
-function macroengine:api/title/broadcast_p
+function macroengine:public/title/broadcast_p
 
 # a team, a tag, an area
-function macroengine:api/title/show_team_p {team:"red"}
-function macroengine:api/title/show_tag_p {tag:"vip"}
-execute positioned 0 64 0 run function macroengine:api/title/show_area_p {radius:32}
+function macroengine:public/title/show_team_p {team:"red"}
+function macroengine:public/title/show_tag_p {tag:"vip"}
+execute positioned 0 64 0 run function macroengine:public/title/show_area_p {radius:32}
 
 # action bar with live values
 data modify storage macroengine:title in set value {text:"HP %health% | Lv %xp_level%"}
-function macroengine:api/title/actionbar_all_p
+function macroengine:public/title/actionbar_all_p
 
 # another player as the executor
-execute as Steve run function macroengine:api/title/show_p
+execute as Steve run function macroengine:public/title/show_p
 ```
 
 ## Which one to use

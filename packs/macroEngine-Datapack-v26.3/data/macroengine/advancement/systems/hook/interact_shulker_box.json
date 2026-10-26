@@ -33,7 +33,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_interact_shulker_box"
+    "function": "macroengine:modules/hook/on_interact_shulker_box"
   },
   "parent": "macroengine:hidden/root"
 }

@@ -1,10 +1,10 @@
 {
   "values": [
-    "macroengine:input/writable_book",
-    "macroengine:input/command_block_minecart",
-    "macroengine:input/name_tag",
-    "macroengine:input/anvil",
-    "macroengine:core/internal/api/cmd/freeze/tick",
-    "macroengine:input/private/cbm_align_tp"
+    "macroengine:gameplay/input/writable_book",
+    "macroengine:gameplay/input/command_block_minecart",
+    "macroengine:gameplay/input/name_tag",
+    "macroengine:gameplay/input/anvil",
+    "macroengine:internal/_api/cmd/freeze/tick",
+    "macroengine:gameplay/input/private/cbm_align_tp"
   ]
 }

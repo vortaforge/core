@@ -1,5 +1,5 @@
 {
   "values": [
-    "macroengine:core/dispatch/run"
+    "macroengine:engine/dispatch/run"
   ]
 }

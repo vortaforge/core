@@ -3,7 +3,7 @@
 Works on container blocks at absolute coordinates. Input is read from `macroengine:input`
 (`x`, `y`, `z`, plus `slot` / `slot2` / `tx ty tz` where noted); results go to
 `macroengine:output container`. Numbers are checked as numbers before any macro line runs.
-Close the module with `function macroengine:api/toggle/container/false`.
+Close the module with `function macroengine:public/toggle/container/false`.
 
 | Function | What it does |
 |---|---|
@@ -19,7 +19,7 @@ Close the module with `function macroengine:api/toggle/container/false`.
 data modify storage macroengine:input x set value 10
 data modify storage macroengine:input y set value 64
 data modify storage macroengine:input z set value -5
-function macroengine:api/container/info
+function macroengine:public/container/info
 # macroengine:output container -> {ok:1b,size:27,used:3,free:24,empty:0b,full:0b,first_free:0}
 ```
 

@@ -12,7 +12,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_killed_by_arrow"
+    "function": "macroengine:modules/hook/on_killed_by_arrow"
   },
   "parent": "macroengine:hidden/root"
 }

@@ -5,7 +5,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_item_use"
+    "function": "macroengine:modules/hook/on_item_use"
   },
   "parent": "macroengine:hidden/root"
 }

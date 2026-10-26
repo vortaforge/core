@@ -1,0 +1,6 @@
+{
+  "values": [
+    "#macroengine:internal/player/interact_block",
+    "#macroengine:internal/player/open_gui"
+  ]
+}

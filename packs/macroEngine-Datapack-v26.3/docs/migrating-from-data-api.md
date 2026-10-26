@@ -20,8 +20,8 @@ Notes:
 
 ```mcfunction
 data modify storage macroengine:store nbt.value set value {hp:20,name:"Steve"}
-function macroengine:api/store/nbt/set {storage:"mypack:data",path:"players.steve"}
-function macroengine:api/store/nbt/get {storage:"mypack:data",path:"players.steve.hp"}
+function macroengine:public/store/nbt/set {storage:"mypack:data",path:"players.steve"}
+function macroengine:public/store/nbt/get {storage:"mypack:data",path:"players.steve.hp"}
 # -> macroengine:store nbt.result
 ```
 

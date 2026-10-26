@@ -28,3 +28,4 @@ __pycache__/
 .pytest_cache/
 node_modules/
 /scripts/gui_generator/dist/
+*.zip

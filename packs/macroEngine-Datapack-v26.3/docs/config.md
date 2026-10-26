@@ -7,15 +7,15 @@ clamps numbers to the listed range and refuses unknown keys and unsafe strings.
 
 ```mcfunction
 data modify storage macroengine:engine config_in set value {key:"hud_rate",value:5}
-function macroengine:core/config/set          # validated, clamped, applied at once
+function macroengine:engine/config/set          # validated, clamped, applied at once
 
 data modify storage macroengine:engine config_in set value {key:"module_store",value:0b}
-function macroengine:core/config/set          # switches the whole api/store module off
+function macroengine:engine/config/set          # switches the whole api/store module off
 
 data modify storage macroengine:engine config_in set value {key:"hud_rate"}
-function macroengine:core/config/get          # macroengine:output result
-function macroengine:core/config/list         # prints everything to @s
-function macroengine:core/config/reset        # defaults for every key
+function macroengine:engine/config/get          # macroengine:output result
+function macroengine:engine/config/list         # prints everything to @s
+function macroengine:engine/config/reset        # defaults for every key
 ```
 
 | Function | Input | Result |

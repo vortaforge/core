@@ -5,7 +5,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_placed_block"
+    "function": "macroengine:modules/hook/on_placed_block"
   },
   "parent": "macroengine:hidden/root"
 }

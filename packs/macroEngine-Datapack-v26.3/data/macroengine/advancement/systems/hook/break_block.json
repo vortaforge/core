@@ -10,7 +10,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_break_block"
+    "function": "macroengine:modules/hook/on_break_block"
   },
   "parent": "macroengine:hidden/root"
 }

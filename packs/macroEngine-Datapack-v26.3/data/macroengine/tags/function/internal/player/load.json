@@ -1,0 +1,6 @@
+{
+  "values": [
+    "#macroengine:internal/player/enumerate",
+    "#macroengine:internal/player/resolve"
+  ]
+}

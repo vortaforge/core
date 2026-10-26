@@ -15,6 +15,6 @@
     }
   },
   "rewards": {
-    "function": "macroengine:input/private/anvil_open"
+    "function": "macroengine:gameplay/input/private/anvil_open"
   }
 }

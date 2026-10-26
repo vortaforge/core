@@ -1,0 +1,11 @@
+# macroengine:internal/text/scan_deny
+# INPUT  macroengine:text: s, tbl (name of a table in macroengine:text_map)
+# RETURN 1 if any character of s is a key of that table, else 0.
+# s must not contain a quote or backslash (check with safe first).
+execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
+execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
+execute store result score #macroengine.tx_len macroengine.tmp run data get storage macroengine:text s
+scoreboard players set #macroengine.tx_i macroengine.tmp 0
+scoreboard players set #macroengine.tx_hit macroengine.tmp 0
+execute if score #macroengine.tx_len macroengine.tmp matches 1.. run function macroengine:internal/text/scan_deny_loop
+return run scoreboard players get #macroengine.tx_hit macroengine.tmp

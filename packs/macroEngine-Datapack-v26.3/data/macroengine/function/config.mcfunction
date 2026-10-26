@@ -42,11 +42,11 @@ execute unless data storage macroengine:engine config.module_hook if data storag
 execute unless data storage macroengine:engine config.module_interaction if data storage macroengine:engine modules.interaction run data modify storage macroengine:engine config.module_interaction set from storage macroengine:engine modules.interaction
 execute unless data storage macroengine:engine config.module_perm if data storage macroengine:engine modules.perm run data modify storage macroengine:engine config.module_perm set from storage macroengine:engine modules.perm
 execute unless data storage macroengine:engine config.module_wand if data storage macroengine:engine modules.wand run data modify storage macroengine:engine config.module_wand set from storage macroengine:engine modules.wand
-execute unless data storage macroengine:engine config.sys_time if score #sys_time macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_time set value 0b
-execute unless data storage macroengine:engine config.sys_player if score #sys_player macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_player set value 0b
-execute unless data storage macroengine:engine config.sys_queue if score #sys_queue macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_queue set value 0b
-execute unless data storage macroengine:engine config.sys_hud if score #sys_hud macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_hud set value 0b
-execute unless data storage macroengine:engine config.sys_admin if score #sys_admin macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_admin set value 0b
+execute unless data storage macroengine:engine config.sys_time if score #macroengine.sys_time macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_time set value 0b
+execute unless data storage macroengine:engine config.sys_player if score #macroengine.sys_player macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_player set value 0b
+execute unless data storage macroengine:engine config.sys_queue if score #macroengine.sys_queue macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_queue set value 0b
+execute unless data storage macroengine:engine config.sys_hud if score #macroengine.sys_hud macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_hud set value 0b
+execute unless data storage macroengine:engine config.sys_admin if score #macroengine.sys_admin macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_admin set value 0b
 
 # Defaults
 execute unless data storage macroengine:engine config.module_cb run data modify storage macroengine:engine config.module_cb set value 1b

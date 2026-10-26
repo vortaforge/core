@@ -12,20 +12,22 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 function macroengine:gate/load_begin
 
 # Step 1: Internal Text Module
-function macroengine:core/internal/text/load
+function macroengine:internal/text/load
 
 # Step 2: Player Enumeration
-function macroengine:core/internal/player/enumerate
+function macroengine:internal/player/enumerate
 
 # Step 3: Player Resolution
-function macroengine:core/internal/player/resolve
+function macroengine:internal/player/resolve
 
 # Step 4: Player Initialization
-function macroengine:core/internal/player/init
+function macroengine:internal/player/init
 
 # Step 5: Core Main Load
-function macroengine:core/internal/load/main
+function macroengine:internal/load/main
 
 # Completion
 function macroengine:gate/load_end
-execute unless entity @a run say [MacroEngine] loaded
+# FIX (v26.3-r1): dropped a second "[MacroEngine] loaded" line — internal/load/final
+# already announces the load, so every load printed the banner twice.
+

@@ -30,7 +30,7 @@ the key is derived from the player's UUID. Non-player executors get return 0.
 
 ```mcfunction
 data modify storage macroengine:store in set value {name:"kills",by:1}
-execute as @a[tag=winner] run function macroengine:api/store/player/add
+execute as @a[tag=winner] run function macroengine:public/store/player/add
 ```
 
 `add` is for counters (ints). Do not use it on string values.
@@ -41,11 +41,11 @@ appear as written and numbers, lists and compounds as SNBT. Nothing is stored as
 
 ```mcfunction
 data modify storage macroengine:store in set value {name:"shop.price"}
-function macroengine:api/store/show
+function macroengine:public/store/show
 # [MACROENGINE] shop.price = 100
 
 data modify storage macroengine:store in set value {name:"coins"}
-execute as @p run function macroengine:api/store/player/show
+execute as @p run function macroengine:public/store/player/show
 ```
 
 Or print `out.value` yourself after any `get`:
@@ -59,13 +59,13 @@ tellraw @s {"storage":"macroengine:store","nbt":"out.value","interpret":false}
 ```mcfunction
 # define once (per language)
 data modify storage macroengine:store in set value {name:"shop.welcome",lang:"en_us",value:"Hi %player%, you have %p:coins% coins."}
-function macroengine:api/store/text/define
+function macroengine:public/store/text/define
 data modify storage macroengine:store in set value {name:"shop.welcome",lang:"tr_tr",value:"Merhaba %player%, %p:coins% paran var."}
-function macroengine:api/store/text/define
+function macroengine:public/store/text/define
 
 # use
 data modify storage macroengine:store in set value {name:"shop.welcome"}
-execute as @p run function macroengine:api/store/render
+execute as @p run function macroengine:public/store/render
 # -> macroengine:store out.string  (plain string)
 ```
 
@@ -137,7 +137,7 @@ and `path` (for example `"players.steve.kills"`) as **macro arguments**. Values 
 condition directly. Capture the return value with `execute store result` and test the score:
 
 ```mcfunction
-execute store result score #r mypack.tmp run function macroengine:api/store/nbt/pop {storage:"mypack:data",path:"stack"}
+execute store result score #r mypack.tmp run function macroengine:public/store/nbt/pop {storage:"mypack:data",path:"stack"}
 execute if score #r mypack.tmp matches 1 run say popped
 execute if score #r mypack.tmp matches 0 run say empty
 ```
@@ -149,19 +149,19 @@ Use your own objective (`mypack.tmp` here); `macroengine.tmp` is written by macr
 ```mcfunction
 # initialise once, never overwrite live data
 data modify storage macroengine:store nbt.value set value {kills:0,coins:100}
-function macroengine:api/store/nbt/set_default {storage:"mypack:data",path:"players.steve"}
+function macroengine:public/store/nbt/set_default {storage:"mypack:data",path:"players.steve"}
 
 # counters and flags
-function macroengine:api/store/nbt/add {storage:"mypack:data",path:"players.steve.kills",by:1}
-function macroengine:api/store/nbt/toggle {storage:"mypack:data",path:"settings.pvp"}
+function macroengine:public/store/nbt/add {storage:"mypack:data",path:"players.steve.kills",by:1}
+function macroengine:public/store/nbt/toggle {storage:"mypack:data",path:"settings.pvp"}
 
 # stack (pop) and queue (shift)
 data modify storage mypack:data stack set value ["a","b","c"]
-function macroengine:api/store/nbt/pop {storage:"mypack:data",path:"stack"}     # result = "c"
-function macroengine:api/store/nbt/shift {storage:"mypack:data",path:"stack"}   # result = "a"
+function macroengine:public/store/nbt/pop {storage:"mypack:data",path:"stack"}     # result = "c"
+function macroengine:public/store/nbt/shift {storage:"mypack:data",path:"stack"}   # result = "a"
 
 # read
-function macroengine:api/store/nbt/get {storage:"mypack:data",path:"players.steve.coins"}
+function macroengine:public/store/nbt/get {storage:"mypack:data",path:"players.steve.coins"}
 tellraw @s {"storage":"macroengine:store","nbt":"nbt.result"}
 ```
 

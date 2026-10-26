@@ -17,7 +17,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_interact_anvil"
+    "function": "macroengine:modules/hook/on_interact_anvil"
   },
   "parent": "macroengine:hidden/root"
 }

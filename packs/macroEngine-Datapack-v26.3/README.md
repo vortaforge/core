@@ -103,15 +103,23 @@ To check the default tick configuration, see `data/macroengine/function/config/`
 
 ## Usage
 
-Most functionality is exposed through the `api/` namespace, e.g.:
+Most functionality is exposed through the `public/` namespace, configuration through
+`engine/config/`, and the reusable helpers through `modules/`, e.g.:
 
 ```mcfunction
-function macroengine:api/cmd/actionbar
-function macroengine:api/perm/grant
-function macroengine:api/wand/give
+function macroengine:public/perm/grant
+function macroengine:public/wand/give {player:"Steve",tag:"my_wand",name:"Wand"}
+function macroengine:modules/math/clamp {value:50,min:1,max:10}
+function macroengine:engine/config/set          # data first: config_in {key,value}
 ```
 
-Internal systems under `systems/` are used by API functions and are not intended to be called directly by end users, though they remain accessible for advanced/custom integrations.
+> **FIX (v26.3-r1):** the previous README documented `macroengine:api/cmd/actionbar`,
+> `macroengine:api/perm/grant`, `macroengine:api/wand/give`, `macroengine:systems/...`
+> and `macroengine:core/config/set`. None of those paths exist in this build — every
+> one of them answers `Unknown function`. The real paths are `public/`, `modules/`,
+> `internal/`, `engine/` and `gameplay/`.
+
+Internal systems under `internal/` are used by the public functions and are not intended to be called directly by end users, though they remain accessible for advanced/custom integrations.
 
 ---
 
@@ -166,11 +174,56 @@ The diagrams above are generated from the source code. Real in-game captures (in
 
 ## Known Issues
 
-- **Single target.** Minecraft Java 26.3 (data pack format `121.0`). Other versions are not tested and may not load.
-- **Forceload side effects.** On load the pack runs `forceload add 0 0` and `forceload add -30000000 1600`. Cleanup only runs `forceload remove 0 0`, which also removes a `0 0` forceload the server owner added themselves, and `-30000000 1600` is **never removed** (if it lies outside the world border, the command may fail silently).
-- **Command-executing APIs do not check who is calling.** See "Is it safe?".
-- **NBT-filtered `@e[type=item]` scan every tick** (performance note above).
-- **License and file inconsistencies.** `LICENSE` and `THIRD_PARTY_LICENSES.md` are not in this zip (the statement "Both files ship inside the distributed zip" above is wrong). `_rt_origin.mcfunction` is claimed to be stripped from distribution zips but is present (the game ignores it, so it is harmless) and its license header contradicts the Unlicense.
+Verified on a real Minecraft **26.3** server (Java 25) while running this build — every
+item below was reproduced, not read off the source.
+
+- **Single target.** Minecraft Java 26.3 only (data pack format `121.0`).
+- **First install is inert until someone approves it.** `#macroengine.open` is `0`
+  after a fresh install because the permit gate (gate 2) has no score yet, so every
+  function returns 0 and the pack does nothing. `gate/permit_tick` keeps running
+  while closed, which is what makes the `/trigger macroengine.permit set 1`
+  button work — approving from the console (`function macroengine:gate/approve`)
+  is the operator path. The README line "no further setup commands are required for
+  the base install" is therefore wrong.
+- **`public/inventory/*` does not work.** `find_slot`, `has_item` and `move_stack`
+  are wrappers around six `internal/inventory/_*` functions that are comment-only
+  stubs. They used to return `slot:-1` / `count:0` / silence — indistinguishable
+  from a real answer. They now return `supported:0b` plus an error string.
+- **Command-executing APIs do not check who is calling.** `public/cmd/other/run_*`,
+  `public/perm/run`, `public/perm/exec` and `cb` run a caller-supplied string. Feeding
+  player-controlled text (sign, book, name tag) into them is command injection. The
+  input system itself only writes to storage, so nothing in this pack does that on
+  its own — but there is no authorization layer either.
+- **`forceload add 0 0` on every load, removed by cleanup.** Cleanup removes `0 0`
+  even when the server owner added it themselves. (The stray
+  `forceload add -30000000 1600` that used to reserve chunk `[-1875000, 100]` forever
+  has been removed in v26.3-r1.)
+- **Reload-loop gate.** Six loads within 1200 ticks trips gate 5 and the pack stays
+  inactive until `function macroengine:gate/clear_tripped`. Repeated `/reload` while
+  setting a world up is enough to trigger it.
+- **`time`, `player`, `queue` systems run every tick** while players are online;
+  `player_systems` also runs NBT-filtered `execute as @e`/`kill @e` scans over all
+  item entities every tick, so cost grows with dropped items.
+- **Documentation rot.** `docs/*.md` still refer to `core/config/*`, `api/*` and
+  `systems/*` paths that no longer exist. The `docs/` examples were not updated in
+  this pass; use the `public/`, `modules/` and `engine/` paths.
+
+## Changes in v26.3-r1 (this build)
+
+Every fix below was verified in-game on 26.3 before and after.
+
+| # | Where | Problem | Fix |
+|---|-------|---------|-----|
+| 1 | `internal/_api/cb/exec` | Callbacks were run by placing a real command block at (x,y,z) with `setblock` + `forceload`, then overwriting it with air 2t later. It destroyed whatever stood there, leaked the block when two callbacks fired in the same 2 ticks (shared `_cb_last`), and on 26.3 the command never ran at all (`SuccessCount: 0`) because an impulse command block with `auto:1b` does not execute on its own. | The command now runs via `execute positioned <x> <y> <z> run <cmd>` (`internal/_api/cb/run_cmd`). No blocks placed, no forceload, no race. `cb/reset*` became no-ops. |
+| 2 | `modules/math/mod` | `divisor < 0` was caught by the `matches ..0` guard, so `mod(7,-3)` returned 0 (as if dividing by zero). | Divisor is folded to its absolute value (INT_MIN saturates), remainder stays positive. |
+| 3 | `modules/math/pow` | Negative exponent fell through the loop guard and returned **1**, as if `n` were 0. | Negative exponent returns 0 and stops. |
+| 4 | `modules/math/abs` | `abs(-2147483648)` returned `-2147483648` (32-bit overflow). | Saturates to `2147483647`. |
+| 5 | `modules/math/clamp` | With `min > max` the value always ended at `max` (`clamp(5,10,1)` → 1). | Bounds are swapped first; `clamp(5,10,1)` → 5. |
+| 6 | `engine/config/_set_int`, `_set_bool` | A non-numeric value was coerced: `data get` on a string returns its **length**, so `hud_rate="abc"` stored **3**, contradicting "wrong value types change nothing". | The value is type-checked by expanding it into a scoreboard command; strings, compounds and lists leave a sentinel and are rejected. |
+| 7 | `internal/load/all` | `forceload add -30000000 1600` on every load, never removed; it really did reserve chunk `[-1875000, 100]` permanently. | Removed. |
+| 8 | `modules/format/duration_words` | `text` was documented but never produced — the four `_duration_words_render*` functions were comment-only stubs. | Implemented: `72000t` → `"1h 0m"`, `1500t` → `"1m 15s"`, `30t` → `"1s"`. |
+| 9 | `public/inventory/*` | Silent fake results (see Known Issues). | Fail closed with `supported:0b` and an explanatory `error` string. |
+| 10 | `setup` | Every load printed `[MacroEngine] loaded` twice (`internal/load/final` also announces). | Duplicate removed. |
 
 ## License
 

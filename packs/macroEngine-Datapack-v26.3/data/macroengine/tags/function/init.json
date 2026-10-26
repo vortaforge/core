@@ -1,5 +1,5 @@
 {
   "values": [
-    "#macroengine:events/on_load"
+    "#macroengine:gameplay/events/on_load"
   ]
 }

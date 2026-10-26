@@ -5,7 +5,7 @@
     }
   },
   "rewards": {
-    "function": "macroengine:systems/hook/on_trade"
+    "function": "macroengine:modules/hook/on_trade"
   },
   "parent": "macroengine:hidden/root"
 }
