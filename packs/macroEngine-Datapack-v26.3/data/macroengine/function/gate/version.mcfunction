@@ -8,11 +8,11 @@
 scoreboard objectives add vortaforge.gate dummy
 scoreboard objectives add macroengine.permit trigger
 scoreboard objectives add macroengine.consent trigger
-execute unless score #macroengine.gate.1 vortaforge.gate = #macroengine.gate.1 vortaforge.gate run scoreboard players set #macroengine.gate.1 vortaforge.gate 1
-execute unless score #macroengine.gate.2 vortaforge.gate = #macroengine.gate.2 vortaforge.gate run scoreboard players set #macroengine.gate.2 vortaforge.gate 1
-execute unless score #macroengine.gate.3 vortaforge.gate = #macroengine.gate.3 vortaforge.gate run scoreboard players set #macroengine.gate.3 vortaforge.gate 1
-execute unless score #macroengine.gate.4 vortaforge.gate = #macroengine.gate.4 vortaforge.gate run scoreboard players set #macroengine.gate.4 vortaforge.gate 1
-execute unless score #macroengine.gate.5 vortaforge.gate = #macroengine.gate.5 vortaforge.gate run scoreboard players set #macroengine.gate.5 vortaforge.gate 1
+execute unless score #macroengine.gate.1 vortaforge.gate = #macroengine.gate.1 vortaforge.gate run scoreboard players set #macroengine.gate.1 vortaforge.gate 0
+execute unless score #macroengine.gate.2 vortaforge.gate = #macroengine.gate.2 vortaforge.gate run scoreboard players set #macroengine.gate.2 vortaforge.gate 0
+execute unless score #macroengine.gate.3 vortaforge.gate = #macroengine.gate.3 vortaforge.gate run scoreboard players set #macroengine.gate.3 vortaforge.gate 0
+execute unless score #macroengine.gate.4 vortaforge.gate = #macroengine.gate.4 vortaforge.gate run scoreboard players set #macroengine.gate.4 vortaforge.gate 0
+execute unless score #macroengine.gate.5 vortaforge.gate = #macroengine.gate.5 vortaforge.gate run scoreboard players set #macroengine.gate.5 vortaforge.gate 0
 execute unless score #macroengine.installed vortaforge.gate = #macroengine.installed vortaforge.gate run scoreboard players set #macroengine.installed vortaforge.gate 0
 scoreboard players set #macroengine.expected vortaforge.gate 1
 scoreboard players set #macroengine.version vortaforge.gate 0
