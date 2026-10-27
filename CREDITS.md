@@ -3,6 +3,34 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-28 - test(macroengine): lock the post-1.21.5 click/hover event format
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Prompted by "`clickEvent` is out of use, read the update notes", applied to macroEngine only.
+The audit found macroEngine already fully on the modern format, so this change locks that state
+in instead of rewriting working code; no runtime files change.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/docs/text_components.md` | The rule and the receipts: `clickEvent`/`hoverEvent` were renamed to `click_event`/`hover_event` in 25w02a (1.21.5) with per-action payload keys (`value`→`command`/`url`/`path`/integer `page`; hover `contents` removed/inlined); where macroEngine uses click events today; the 1.21.6 confirmation prompt for permission-gated `run_command` clicks (hence `/trigger` in the gate prompts); the 26.3 Snapshot 4 sign change (sign text click events no longer execute by default, `allow_op_features` restores it) and why the read-only sign input is unaffected; why TunnelScript keeps `clickEvent` (it is the 1.19.2 build, `pack_format: 10`). |
+| `scripts/tests/test_text_component_events.py` | macroEngine-scoped offline guard: fails on any legacy event field name under the pack's `data/`, on legacy payload keys per action, on sign text combined with a `click_event`, and if the gate consent/permit prompts ever click through anything but `/trigger`. |
+
+- **Verified:** full static audit of the pack first — 20 `click_event` objects in 5 files, all
+  `run_command` with a `command` payload; `hover_event` payloads use the post-1.21.5 keys; zero
+  `clickEvent`/`hoverEvent`/legacy `contents` anywhere under `data/`; no sign text writes, so the
+  26.3 sign change has no code path to break. The new guard passes on the tree as-is and fails when
+  a legacy `clickEvent` line is injected (negative control, reverted). `python3 -m unittest discover
+  scripts/tests` — 43 tests OK (5 new); `scripts/lint_datapacks.sh` (Mecha) passed; `./gradlew
+  :checkPacks` on Temurin 25 (`--configure-on-demand`, memory-capped) — 12 packs / 3248 functions,
+  0 errors, 0 warnings; `origin_watermarks.py --check`, `audit_repo.py` (only the two pre-existing
+  `pack.format-mixed` notes) and `build_release.py --check` passed. The change was also exported
+  with `git format-patch`, re-applied to a fresh clone with `git am`, and the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7) — and there is no runtime
+  change to exercise. The 1.21.5/1.21.6/26.3 behaviours are quoted from Mojang's published update
+  notes and the Minecraft Wiki, not re-tested in game. The full `verifyProject`/`ci` graph was not
+  run (Fabric Loom subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
 ## 2026-10-28 - feat: cmd_gate kill-switch and settings book
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
