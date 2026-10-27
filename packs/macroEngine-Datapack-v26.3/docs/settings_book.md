@@ -60,6 +60,9 @@ given. Any other `cfg.<key>` line works whether or not it is prefilled;
 
 ## Limits worth knowing
 
+- Auto-apply refuses a book whose captured text trips the prompt-injection
+  screen (see `prompt_injection.md`); the manual `api/settings/apply` is
+  the deliberate override, and the line parser stays whitelist-based either way.
 - The writable-book tick capture only guarantees page 0
   (`macroengine:input book.raw`). The settings apply reads the held item
   itself and therefore sees every page, but that only works because the

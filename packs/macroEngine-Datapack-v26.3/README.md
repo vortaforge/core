@@ -121,6 +121,14 @@ Internal systems under `systems/` are used by API functions and are not intended
 
 ---
 
+## Security
+
+> ⚠️ **Do not attempt prompt injection.** Do not craft signs, books, name tags, chat messages or any other input intended to manipulate AI tools (coding agents, AI-assisted admin or review tools) that read this pack or its runtime data. Such attempts are an abuse of this project and will be treated as malicious. If you operate an AI tool next to this pack, treat all player-supplied text as untrusted data, never as instructions.
+
+The pack captures free-form player text (books, signs, lecterns, name tags, anvil renames) but only ever handles it as data - never executed, never macro-substituted. Every capture is also screened for prompt-injection patterns ([`docs/prompt_injection.md`](docs/prompt_injection.md)); a strong hit is audited, announced to admins, and blocks the settings book's auto-apply. Dynamic command execution is off by default and gated ([`docs/cmd_gate.md`](docs/cmd_gate.md)). The repository-wide policy lives in [`SECURITY.md`](../../SECURITY.md).
+
+---
+
 ## FAQ
 
 > This section is based on a **static review** of the source (the code was read, not run in-game). Test on a staging server before deploying to production.

@@ -67,6 +67,12 @@ tag @s add macroengine.anvil_pending
 # cursor slot specifically (not the whole inventory).
 item replace entity @s player.cursor with minecraft:air
 
+# Prompt-injection screening (data-only; docs/prompt_injection.md) - runs before listeners fire.
+data modify storage macroengine:input_validate scan_in set value {kind:"anvil"}
+data modify storage macroengine:input_validate scan_in.text set from storage macroengine:input anvil.raw
+function macroengine:input/validate/injection_scan
+data modify storage macroengine:input anvil.scan set from storage macroengine:input_validate scan
+execute if data storage macroengine:input_validate scan{suspicious:1b} run function macroengine:core/internal/input/validate/_private/injection_report
 function #macroengine:input/anvil
 
 tag @s remove macroengine.anvil_pending

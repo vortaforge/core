@@ -3,6 +3,36 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-27 - feat(macroengine): prompt-injection screening for captured player text
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Datapacks run unsandboxed with full command authority - there is no isolation and no JVM security
+boundary - so captured player prose (books, signs, name tags, renames) has always been treated as
+data here and never executed. The remaining risk is downstream: AI tools (coding agents, AI-assisted
+admin/review) that read this pack or its runtime data can mistake player prose for instructions.
+This change screens every text capture for canonical prompt-injection shapes before input listeners
+fire, marks the capture, audits strong hits, and refuses settings-book auto-apply for a flagged
+book. Detection is a tripwire, not the defense - the defense stays the data-only capture contract.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/input/validate/injection_scan.mcfunction` | New public screen: reads `macroengine:input_validate scan_in{text,kind}`, writes `scan{suspicious,watch,fold_failed,truncated,strong_count,hits:[{id,strong}]}`, returns 1 only on a strong match. Bounded work: 96-char screened prefix, longer text flagged `truncated` (never silently trusted), scan stops after 2 strong hits. |
+| `.../core/internal/input/validate/_private/injection_{patterns,loop,hit,report,sign,sign_loop}.mcfunction` | Scanner internals: 18 tiered patterns (12 strong, 6 watch) searched data-only via `core/lib/string/find`; report writes audit `input.injection_suspected` (detail = capture kind only, captured text is never echoed) + admin warning; sign helper screens all four lines under one shared 96-char budget. |
+| `.../input/private/{book,lectern,sign,name_tag,anvil}_capture.mcfunction` | Each capture scans first and stores the result on its payload (`.scan`) before firing the input tag. The command-block-minecart capture is unchanged (governed by `cmd_gate`, not prose screening). |
+| `.../core/internal/api/settings/_on_book.mcfunction` | Settings auto-apply refuses a book whose `scan` is `suspicious` (admin told why); the manual `api/settings/apply` call remains the deliberate override. |
+| `.../config.mcfunction`, `.../core/config/{ensure,apply}.mcfunction` | New default-on bool `injection_scan` (schema + defaults), `config_rev` 4->5, `#injection_scan` mirror in `macroengine.tick_flags`. Flipping it off makes every scan report clean. |
+| `packs/macroEngine-Datapack-v26.3/docs/prompt_injection.md` | Threat model, surface table, pattern tiers, settings gate, config opt-out, and the limits (prefix bound, cost, case-fold fallback, English-first heuristic). |
+| `packs/macroEngine-Datapack-v26.3/docs/{config,settings_book}.md`, pack `README.md` | Config key/rev history, the auto-apply refusal, and a Security section carrying the anti-prompt-injection notice. |
+| `SECURITY.md` | Same notice at repo level, with the no-sandbox/no-JVM-boundary rationale for why input handling is defensive by design. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/injection_scan_patterns.mcfunction` | New Ward test: clean prose, strong payload, watch-only phrase, padded-payload truncation, config opt-out. |
+| `scripts/tests/test_prompt_injection_scan.py` | Offline guards: data-only search path, pattern shape/bounds, the 96-char cap + early exit, capture wiring order, settings refusal order, config wiring, notice presence in SECURITY.md + README. |
+| `scripts/tests/test_settings_book.py` | Quiet-listener invariant refined: a `tellraw` in `_on_book` is allowed only after the admin early-return (the refusal message). |
+
+- **Design decisions:** results store pattern ids + tier only, never the matched prose; a failed case-fold (quotes/backslashes defeat the lowercase pass) falls back to searching the raw text and raises `fold_failed` + watch instead of erroring. An unbounded full-text scan was designed first and dropped: at ~20 commands per find window, 31 patterns over one 1024-char page would exceed the 65,536 command-chain limit by an order of magnitude; the bounded design's worst case is ~40k commands per capture, once per (debounced) hold session.
+- **Verified:** 63 Python tests OK (9 new; negative controls: deleting the book-capture scan call and widening the 96-char slice each fail the new suite, restoring passes); Mecha lint (`scripts/lint_datapacks.sh`) passed; `./gradlew :checkPacks` (isolated, `--configure-on-demand`): 12 packs, 295 JSON, 3256 functions, 0 errors/warnings; watermarks, `build_release.py --check` passed; audit unchanged (2 pre-existing MEDIUM `pack.format-mixed`); every static function reference in the new files resolves (remaining unresolved refs are pre-existing or dynamic macro dispatch).
+- **Not verified:** nothing was run in a Minecraft server (rule 7 - no server started here). The Ward test file is written but not executed; scanner runtime behavior (capture timing, the lowercase fallback, sign-line aggregation, the settings refusal end-to-end, actual per-capture command cost against the chain limit) still needs the in-world/CI pass. The full Gradle graph was not run (Fabric Loom configuration exceeds this sandbox's memory).
+
 ## 2026-10-28 - fix(macroengine): align datapack + resourcepack to 26.3 release
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

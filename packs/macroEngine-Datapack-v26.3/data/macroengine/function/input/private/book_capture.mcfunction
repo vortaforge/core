@@ -13,6 +13,8 @@
 # book.raw is a RAW, UNVALIDATED string — same contract as cbm.command. If the caller needs it as a number/bool/tag-safe literal,
 # run it through macroengine:input/validate/check first:
 #   function macroengine:input/validate/check with storage <yourpath> {source:"book.raw", type:"int"}
+# Every capture is also screened for prompt-injection patterns
+# (input/validate/injection_scan; the result lands in book.scan).
 # ======================================================================================
 
 # Already captured this hold-session — keep book, skip re-fire
@@ -24,6 +26,12 @@ data modify storage macroengine:input book.player set from entity @s UUID
 data modify storage macroengine:input book.raw set from entity @s SelectedItem.components."minecraft:writable_book_content".pages[0].raw
 
 # Same "raw, unvalidated, unexecuted" contract as command_block_minecart capture.
+# Prompt-injection screening (data-only; docs/prompt_injection.md) - runs before listeners fire.
+data modify storage macroengine:input_validate scan_in set value {kind:"book"}
+data modify storage macroengine:input_validate scan_in.text set from storage macroengine:input book.raw
+function macroengine:input/validate/injection_scan
+data modify storage macroengine:input book.scan set from storage macroengine:input_validate scan
+execute if data storage macroengine:input_validate scan{suspicious:1b} run function macroengine:core/internal/input/validate/_private/injection_report
 function #macroengine:input/writable_book
 
 # Debounce: book stays in hand; will not re-capture until they unselect the marked book

@@ -92,10 +92,17 @@ class SettingsBook(unittest.TestCase):
     def test_listener_is_quiet_for_non_admins(self):
         on_book = fn("core", "internal", "api", "settings",
                      "_on_book.mcfunction")
-        # Returns before reaching apply, and never prints (tick context).
+        # Returns before reaching apply. Printing is allowed only past the
+        # admin early-return (the prompt-injection refusal messages the
+        # holding admin) - non-admins must never see tick-context output.
         self.assertIn("unless entity @s[tag=macroengine.admin] run return 0",
                       on_book)
-        self.assertNotIn("tellraw", on_book)
+        if "tellraw" in on_book:
+            self.assertGreater(
+                on_book.index("tellraw"),
+                on_book.index("unless entity @s[tag=macroengine.admin] run return 0"),
+                "listener prints before the admin check - non-admins would see it",
+            )
 
     def test_book_text_never_reaches_a_macro_execution_line(self):
         # The parser must keep captured text as data: no internal settings

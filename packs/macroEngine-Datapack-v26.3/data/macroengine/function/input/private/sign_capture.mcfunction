@@ -52,5 +52,7 @@ execute if data storage macroengine:input {_t:""} run data modify storage macroe
 data remove storage macroengine:input _t
 data modify storage macroengine:input sign.player set from entity @s UUID
 data modify storage macroengine:input sign.pos set from entity @s Pos
+# Prompt-injection screening over all four lines (data-only; docs/prompt_injection.md).
+function macroengine:core/internal/input/validate/_private/injection_sign
 data modify storage macroengine:input sign.executed set value 0b
 execute if data storage macroengine:input sign{executed:0b} run function #macroengine:input/sign

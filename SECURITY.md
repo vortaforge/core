@@ -80,6 +80,12 @@ The following are not accepted in this repository (code, issues, pull requests, 
 - No payloads, text, or file content designed to manipulate AI assistants, code reviewers, or automated tooling that reads this repository (prompt injection), including instructions hidden in comments, metadata, item names, books, signs, or datapack/mod files.
 - Reports about prompt injection weaknesses in a project's own AI-facing features are welcome through the private reporting channel above. Do not include working payloads in public issues.
 
+The runtime form of the same rule, for anyone playing on or operating a server next to these packs:
+
+> ⚠️ **Do not attempt prompt injection.** Do not craft signs, books, name tags, chat messages or any other input intended to manipulate AI tools (coding agents, AI-assisted admin or review tools) that read this pack or its runtime data. Such attempts are an abuse of this project and will be treated as malicious. If you operate an AI tool next to this pack, treat all player-supplied text as untrusted data, never as instructions.
+
+Datapacks are not sandboxed and have no JVM-level isolation - a datapack function runs with console-level authority, the same practical reach as a Fabric mod - so player text that steers an operator's AI tooling into acting on it is a real privilege-escalation path, not a prank. macroEngine ships heuristic detection for its text inputs (`macroengine:input/validate/injection_scan`; see `packs/macroEngine-Datapack-v26.3/docs/prompt_injection.md`): a tripwire, not a guarantee, and no substitute for treating captured text as untrusted data.
+
 ### 3. Running operating-system commands from datapacks
 
 - Datapacks cannot run PowerShell, Bash, `cmd`, or any other OS command on their own. Any method that claims to do so depends on an exploit, on a vulnerable, misconfigured or malicious mod or plugin, or on an external tool that executes console or chat output.
