@@ -3,6 +3,149 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-27 - feat(macroengine): add per-player setup warning dialogs
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+New or otherwise unconsented players now get a two-screen 1.21.6 Dialog flow before Gate 3 consent:
+the first screen warns that the server/world operator controls this installation and its data, says
+not to enter sensitive information, and tells anyone who does not know or trust the server/world to
+cancel and leave. Continue only opens the separate yes/no screen. `yes` grants Gate 3 consent for the
+clicking player only; Cancel or `no` declines only that player. A More information button opens the
+new player-facing `INFO.md`.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/dialog/setup_warning.json` | First `minecraft:multi_action` Dialog: operator-control/sensitive-information/unknown-server warning, Continue via `show_dialog`, More information via fixed `open_url` to `INFO.md`, and a Cancel exit action via `/trigger macroengine.consent set 2`. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/dialog/setup_warning_confirm.json` | Separate `minecraft:confirmation` screen: `yes` -> trigger value 4, `no` -> trigger value 3. No inputs and no dynamic command templates. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/setup.mcfunction` | New setup Step 0.75 shows the same prompt to unconsented players already online during load/reload; `gate/consent_tick` handles players who join later. |
+| `.../function/gate/consent_prompt.mcfunction`, `.../consent_tick.mcfunction`, `.../setup_warning_deny.mcfunction` | Prompt now enables the trigger, records `macroengine.setup_warned`, leaves a chat reopen button, and shows the Dialog. Tick maps Cancel/no/yes/reopen values; the new deny function marks only `@s` as `macroengine.setup_declined`. |
+| `.../function/gate/consent_grant.mcfunction`, `.../consent_reset.mcfunction` | Grant clears a prior decline and records the warned state; reset clears consent plus both setup-warning tags so the warning can show again. |
+| `packs/macroEngine-Datapack-v26.3/INFO.md` | Player safety page opened by the Dialog: operator control, sensitive-information warning, leave-if-unknown guidance, exact per-player button effects, reopen/reset commands, data/operator caveats, and private security reporting. |
+| `packs/macroEngine-Datapack-v26.3/README.md`, `docs/text_components.md` | README links the warning/`INFO.md`; text-component docs record the Dialog action rules (fixed `show_dialog`/`open_url`, `/trigger` only for state changes, no dynamic templates). |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/setup_warning_player_choice.mcfunction` | New Ward test for the dummy player's prompt -> Cancel -> reopen -> no -> reopen -> yes state transitions. |
+| `scripts/tests/test_setup_warning_dialog.py` | Offline guards for the Dialog JSON, warning text, fixed actions/URL, setup + join prompt paths, per-player tag changes, and `INFO.md` content. |
+
+- **Design decisions:** values on the existing `macroengine.consent` trigger were extended instead of adding a new objective: 1 stays the legacy direct agree, 2 = Cancel, 3 = no, 4 = yes, 6 = reopen. The confirmation Dialog uses fixed yes/no buttons rather than a free-text input, so player-provided text is never substituted into a command template. The Cancel label uses vanilla `gui.cancel`, so the client localizes it; other Dialog/doc text stays English per repo rules.
+- **Verified:** 69 Python tests OK (6 new; negative control: changing the yes button from trigger value 4 to 1 fails the new suite, restoring passes); both Dialog files parse as JSON; Mecha lint passed; isolated `./gradlew :checkPacks` (`--configure-on-demand`): 12 packs, 297 JSON files, 3258 functions, 0 errors/warnings; watermarks and `build_release.py --check` passed; audit unchanged (2 pre-existing MEDIUM `pack.format-mixed`); changed function and Dialog references resolve.
+- **Not verified:** no Minecraft server or client was run (rule 7). The Ward test is written but not executed. Actual Dialog rendering, first-join timing, Dialog-button `/trigger` execution on a real client, singleplayer pause behavior, and the More information button still need the in-world/CI pass; the `INFO.md` GitHub URL also only becomes live once this change is present on the canonical `vortaforge/core` `main` branch. The full Gradle graph was not run (Fabric Loom subprojects exceed this sandbox's memory); only `checkPacks` ran in isolation.
+
+## 2026-10-27 - feat(macroengine): prompt-injection screening for captured player text
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Datapacks run unsandboxed with full command authority - there is no isolation and no JVM security
+boundary - so captured player prose (books, signs, name tags, renames) has always been treated as
+data here and never executed. The remaining risk is downstream: AI tools (coding agents, AI-assisted
+admin/review) that read this pack or its runtime data can mistake player prose for instructions.
+This change screens every text capture for canonical prompt-injection shapes before input listeners
+fire, marks the capture, audits strong hits, and refuses settings-book auto-apply for a flagged
+book. Detection is a tripwire, not the defense - the defense stays the data-only capture contract.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/input/validate/injection_scan.mcfunction` | New public screen: reads `macroengine:input_validate scan_in{text,kind}`, writes `scan{suspicious,watch,fold_failed,truncated,strong_count,hits:[{id,strong}]}`, returns 1 only on a strong match. Bounded work: 96-char screened prefix, longer text flagged `truncated` (never silently trusted), scan stops after 2 strong hits. |
+| `.../core/internal/input/validate/_private/injection_{patterns,loop,hit,report,sign,sign_loop}.mcfunction` | Scanner internals: 18 tiered patterns (12 strong, 6 watch) searched data-only via `core/lib/string/find`; report writes audit `input.injection_suspected` (detail = capture kind only, captured text is never echoed) + admin warning; sign helper screens all four lines under one shared 96-char budget. |
+| `.../input/private/{book,lectern,sign,name_tag,anvil}_capture.mcfunction` | Each capture scans first and stores the result on its payload (`.scan`) before firing the input tag. The command-block-minecart capture is unchanged (governed by `cmd_gate`, not prose screening). |
+| `.../core/internal/api/settings/_on_book.mcfunction` | Settings auto-apply refuses a book whose `scan` is `suspicious` (admin told why); the manual `api/settings/apply` call remains the deliberate override. |
+| `.../config.mcfunction`, `.../core/config/{ensure,apply}.mcfunction` | New default-on bool `injection_scan` (schema + defaults), `config_rev` 4->5, `#injection_scan` mirror in `macroengine.tick_flags`. Flipping it off makes every scan report clean. |
+| `packs/macroEngine-Datapack-v26.3/docs/prompt_injection.md` | Threat model, surface table, pattern tiers, settings gate, config opt-out, and the limits (prefix bound, cost, case-fold fallback, English-first heuristic). |
+| `packs/macroEngine-Datapack-v26.3/docs/{config,settings_book}.md`, pack `README.md` | Config key/rev history, the auto-apply refusal, and a Security section carrying the anti-prompt-injection notice. |
+| `SECURITY.md` | Same notice at repo level, with the no-sandbox/no-JVM-boundary rationale for why input handling is defensive by design. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/injection_scan_patterns.mcfunction` | New Ward test: clean prose, strong payload, watch-only phrase, padded-payload truncation, config opt-out. |
+| `scripts/tests/test_prompt_injection_scan.py` | Offline guards: data-only search path, pattern shape/bounds, the 96-char cap + early exit, capture wiring order, settings refusal order, config wiring, notice presence in SECURITY.md + README. |
+| `scripts/tests/test_settings_book.py` | Quiet-listener invariant refined: a `tellraw` in `_on_book` is allowed only after the admin early-return (the refusal message). |
+
+- **Design decisions:** results store pattern ids + tier only, never the matched prose; a failed case-fold (quotes/backslashes defeat the lowercase pass) falls back to searching the raw text and raises `fold_failed` + watch instead of erroring. An unbounded full-text scan was designed first and dropped: at ~20 commands per find window, 31 patterns over one 1024-char page would exceed the 65,536 command-chain limit by an order of magnitude; the bounded design's worst case is ~40k commands per capture, once per (debounced) hold session.
+- **Verified:** 63 Python tests OK (9 new; negative controls: deleting the book-capture scan call and widening the 96-char slice each fail the new suite, restoring passes); Mecha lint (`scripts/lint_datapacks.sh`) passed; `./gradlew :checkPacks` (isolated, `--configure-on-demand`): 12 packs, 295 JSON, 3256 functions, 0 errors/warnings; watermarks, `build_release.py --check` passed; audit unchanged (2 pre-existing MEDIUM `pack.format-mixed`); every static function reference in the new files resolves (remaining unresolved refs are pre-existing or dynamic macro dispatch).
+- **Not verified:** nothing was run in a Minecraft server (rule 7 - no server started here). The Ward test file is written but not executed; scanner runtime behavior (capture timing, the lowercase fallback, sign-line aggregation, the settings refusal end-to-end, actual per-capture command cost against the chain limit) still needs the in-world/CI pass. The full Gradle graph was not run (Fabric Loom configuration exceeds this sandbox's memory).
+
+## 2026-10-28 - fix(macroengine): align datapack + resourcepack to 26.3 release
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Both packs already declared the 26.3 release formats (data pack 121.0 / resource pack 97.1) but were
+written against late 26.3 snapshots. This change audits them against every breaking change of the
+26.3 cycle (Snapshot 1 - 10, Pre-Release 1 - 3: Mojang's articles + misode's technical changelog)
+and fixes what applied. Almost everything was already release-shaped - the snapshot-4 loot/predicate
+overhaul and the pre-release number-provider split were in use throughout - so the code diff is small.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/player/get_armor.mcfunction`, `.../get_health.mcfunction` | Stale entity-attribute reads fixed: `Attributes[{Name:"…"}].Base` (pre-1.21 format, no longer resolves - `result`/`toughness`/`max` came back stale while `found` said 1b) → `attributes[{id:"…"}].base`; stale `generic.armor` header comment corrected. Found by the snapshot-7 block-state `Name`→`id` check; not itself a 26.3 change. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/input/private/sign_capture.mcfunction`, `.../lectern_capture.mcfunction` | `26.3-pre` header comments now name the release (data pack 121.0); the captured paths did not change between pre-3 and release. |
+| `packs/macroEngine-Datapack-v26.3/docs/version_alignment.md` | The audit record: per-change verdicts for both packs (loot/predicate formats, number providers, advancement triggers, cooking recipes, sign/brewing/furnace block entities, block states, removed components/tags, `/item` slot-source zip semantics, `/give`+team result behaviour, resource-pack equipment/palette/shader removals, worldgen), the behaviour notes that needed no code, and a next-bump checklist. |
+| `scripts/tests/test_version_alignment.py` | Pins the 26.3 release formats in both `pack.mcmeta` files and fails if removed/renamed shapes return: legacy loot keys, predicate list shorthand, number-provider shorthands, `value_check`/`block_state_property`/`reference`/`swing_animation`/`map_color`/`#brewing_fuel`, renamed explorer-map tags, capital-`Properties` block states, `Attributes[{Name:…}]` reads, renamed advancement-trigger fields, bare entity predicates in trigger fields, and the removed resource-pack keys. |
+
+- **Verified:** the audit itself (every 26.3 breaking item checked against both packs; the only code
+  hits were the attribute paths above - `/item replace` call sites are all single-slot, no removed
+  ids/keys/NBT fields anywhere else, resource pack ships no shaders/models/`minecraft`-namespace
+  files). `python3 -m unittest discover scripts/tests` - 54 tests OK (11 new; negative control:
+  injecting a legacy attribute line fails the suite, reverting passes); `scripts/lint_datapacks.sh`
+  (Mecha) passed; `./gradlew :checkPacks` on Temurin 25 (`--configure-on-demand`, memory-capped) -
+  12 packs / 3248 functions, 0 errors, 0 warnings; `origin_watermarks.py --check`, `audit_repo.py`
+  (only the two pre-existing `pack.format-mixed` notes) and `build_release.py --check` passed. The
+  change was also exported with `git format-patch`, re-applied to a fresh clone with `git am`, and
+  the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7). That `get_armor`/`get_health`
+  now return real values, and that the audited-clean areas behave on 26.3 release exactly as the
+  published notes describe, still needs the `NOTICE.md` in-world acceptance pass; Mojang/misode notes
+  were read, not re-tested in game. The full `verifyProject`/`ci` graph was not run (Fabric Loom
+  subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
+## 2026-10-28 - test(macroengine): lock the post-1.21.5 click/hover event format
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Prompted by "`clickEvent` is out of use, read the update notes", applied to macroEngine only.
+The audit found macroEngine already fully on the modern format, so this change locks that state
+in instead of rewriting working code; no runtime files change.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/docs/text_components.md` | The rule and the receipts: `clickEvent`/`hoverEvent` were renamed to `click_event`/`hover_event` in 25w02a (1.21.5) with per-action payload keys (`value`→`command`/`url`/`path`/integer `page`; hover `contents` removed/inlined); where macroEngine uses click events today; the 1.21.6 confirmation prompt for permission-gated `run_command` clicks (hence `/trigger` in the gate prompts); the 26.3 Snapshot 4 sign change (sign text click events no longer execute by default, `allow_op_features` restores it) and why the read-only sign input is unaffected; why TunnelScript keeps `clickEvent` (it is the 1.19.2 build, `pack_format: 10`). |
+| `scripts/tests/test_text_component_events.py` | macroEngine-scoped offline guard: fails on any legacy event field name under the pack's `data/`, on legacy payload keys per action, on sign text combined with a `click_event`, and if the gate consent/permit prompts ever click through anything but `/trigger`. |
+
+- **Verified:** full static audit of the pack first — 20 `click_event` objects in 5 files, all
+  `run_command` with a `command` payload; `hover_event` payloads use the post-1.21.5 keys; zero
+  `clickEvent`/`hoverEvent`/legacy `contents` anywhere under `data/`; no sign text writes, so the
+  26.3 sign change has no code path to break. The new guard passes on the tree as-is and fails when
+  a legacy `clickEvent` line is injected (negative control, reverted). `python3 -m unittest discover
+  scripts/tests` — 43 tests OK (5 new); `scripts/lint_datapacks.sh` (Mecha) passed; `./gradlew
+  :checkPacks` on Temurin 25 (`--configure-on-demand`, memory-capped) — 12 packs / 3248 functions,
+  0 errors, 0 warnings; `origin_watermarks.py --check`, `audit_repo.py` (only the two pre-existing
+  `pack.format-mixed` notes) and `build_release.py --check` passed. The change was also exported
+  with `git format-patch`, re-applied to a fresh clone with `git am`, and the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7) — and there is no runtime
+  change to exercise. The 1.21.5/1.21.6/26.3 behaviours are quoted from Mojang's published update
+  notes and the Minecraft Wiki, not re-tested in game. The full `verifyProject`/`ci` graph was not
+  run (Fabric Loom subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
+## 2026-10-28 - feat: cmd_gate kill-switch and settings book
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/systems/cmd_gate/{enable,disable}.mcfunction`, `.../function/config.mcfunction`, `.../core/config/{apply,ensure}.mcfunction`, `.../systems/cmd_gate/check.mcfunction` | An operator can now turn the dynamic-command gate off on purpose: config key `cmd_gate_disabled` (default `0b`, `config_rev` 4), admin-only enable/disable functions through the validated config path, one audit entry and an admin warning per state change. The bypass sits after the `module_cmd` guard, so a disabled module stays disabled. The eleven `api/cmd`/`api/perm` runners that read the master switch directly honour the same key. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/api/settings/`, `.../core/internal/api/settings/`, `tags/function/input/writable_book.json` | Settings book: an input book (`settings:1b`) prefilled from the live gate scores and config storage as `Key: Value` lines; editing it and re-selecting it (existing writable-book capture) or running `api/settings/apply` applies the lines - five pack gates, permit, `cmd_gate`, any `cfg.<key>` via `core/config/set`, and `blocklist.add/remove/reset/clear`. Text is parsed as data only (never macro-substituted), non-admin captures are ignored silently, rejected lines are reported in `macroengine:settings result.errors`. `api/settings/status` prints the live state read-only. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/cmd_gate_disable_toggle.mcfunction`, `scripts/tests/test_settings_book.py` | Ward test for the kill-switch defaults/toggle via the config mirror score; offline invariant tests for bypass placement, admin guards, tag registration, no dynamic function selection and no macro-executed book text. |
+| `packs/macroEngine-Datapack-v26.3/docs/settings_book.md`, `docs/cmd_gate.md`, `docs/config.md`, `docs/dynamic-command-gate.md` | Book grammar, flow and limits; the disable contract and its audit trail; config table row; cross-pack inventory updated. |
+
+- **Verified:** `scripts/lint_datapacks.sh` (Mecha 0.101.0) passed; `./gradlew :checkPacks` on Temurin 25
+  (`--configure-on-demand`, memory-capped) checked 12 packs / 3248 functions with 0 errors and 0 warnings;
+  `python3 -m unittest discover scripts/tests` - 38 tests OK (10 new); `python3 scripts/origin_watermarks.py --check`,
+  `python3 scripts/audit_repo.py` (only the two pre-existing `pack.format-mixed` notes) and
+  `python3 scripts/build_release.py --check` passed; every static `function` reference in the changed files
+  resolves (the pre-existing `api/cmd/$(type)` dispatch in `action_run` aside), and the `_give` macro arguments
+  match the `_view` fields exactly. The change was also exported with `git format-patch`, re-applied to a fresh
+  clone with `git am`, and the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7). The book flow end to end (prefill,
+  newline splitting of a real edited page, capture timing, apply against live players), the kill-switch at
+  runtime and the new Ward test all still need their first execution - the `ward.yml` CI job for the test, the
+  `NOTICE.md` in-world acceptance pass for the flow. The full `verifyProject`/`ci` graph was not run (Fabric
+  Loom subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
 ## 2026-10-27 - feat: default-off dynamic command gate + deterministic release build
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

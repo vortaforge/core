@@ -54,6 +54,18 @@ executors, so the default-off switch does not cover them:
 permission check *and* now also require the `dynamic_cmd` switch, so the
 switch really is a master off for stored strings.
 
+macroEngine additionally has an explicit, admin-only kill-switch for its gate
+itself (`macroengine:systems/cmd_gate/disable|enable`, config
+`cmd_gate_disabled`, default `0b`): while disabled, stored strings run with
+no permission/length/blocklist check. It exists so that "turn the gate off"
+is a visible, audited operator decision instead of an edit to the pack, and
+`macroengine:api/settings/status` shows it in red. The same book that toggles
+it (`macroengine:api/settings/book`, a write-and-capture writable book of
+`Key: Value` lines) can edit the five pack gates, the blocklist and any
+runtime config key - all of it admin-only, all of it through the existing
+validated config and gate functions. See
+`packs/macroEngine-Datapack-v26.3/docs/settings_book.md`.
+
 ## Honest limits
 
 * A datapack is plain text. Anyone who can edit the pack can delete the gate;

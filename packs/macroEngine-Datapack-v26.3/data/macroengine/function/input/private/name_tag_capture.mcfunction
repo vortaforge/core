@@ -42,6 +42,12 @@ execute if data storage macroengine:input {name_tag:{raw:""}} run data modify st
 # Still empty after extract — do not fire hook
 execute if data storage macroengine:input {name_tag:{raw:""}} run return 0
 
+# Prompt-injection screening (data-only; docs/prompt_injection.md) - runs before listeners fire.
+data modify storage macroengine:input_validate scan_in set value {kind:"name_tag"}
+data modify storage macroengine:input_validate scan_in.text set from storage macroengine:input name_tag.raw
+function macroengine:input/validate/injection_scan
+data modify storage macroengine:input name_tag.scan set from storage macroengine:input_validate scan
+execute if data storage macroengine:input_validate scan{suspicious:1b} run function macroengine:core/internal/input/validate/_private/injection_report
 data modify storage macroengine:input name_tag.executed set value 0b
 execute if data storage macroengine:input name_tag{executed:0b} run function #macroengine:input/name_tag
 
