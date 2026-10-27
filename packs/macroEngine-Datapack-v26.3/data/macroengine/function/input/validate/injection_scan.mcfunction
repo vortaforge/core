@@ -34,6 +34,11 @@
 # after 2 strong hits; anything past the prefix is reported via
 # scan.truncated instead of being silently trusted. Typical captures
 # (signs, names, short notes) fit the prefix whole.
+# The pattern list is capped at 50 entries (enforced by
+# scripts/tests/test_prompt_injection_scan.py): cost scales with prefix length
+# x pattern count, and a clean text never hits the 2-strong early stop, so
+# the worst case walks the whole list. Raise the cap only together with this
+# note.
 #
 # The text is only compared as data by the in-house text engine; it is
 # never macro-substituted, never executed and never treated as an
