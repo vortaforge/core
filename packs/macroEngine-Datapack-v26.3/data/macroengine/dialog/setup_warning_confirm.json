@@ -1,19 +1,22 @@
 {
   "type": "minecraft:confirmation",
   "title": {
-    "text": "Use macroEngine here?",
+    "translate": "macroengine.dialog.setup_warning.confirm_title",
+    "fallback": "Use macroEngine here?",
     "color": "gold",
     "bold": true
   },
   "external_title": {
-    "text": "macroEngine yes/no confirmation",
+    "translate": "macroengine.dialog.setup_warning.confirm_external_title",
+    "fallback": "macroEngine yes/no confirmation",
     "color": "gold"
   },
   "body": [
     {
       "type": "minecraft:plain_message",
       "contents": {
-        "text": "Choose yes only if you understand the warning and trust this server/world.\n\nyes records consent for your player only. no keeps macroEngine inactive for your player only. Neither choice changes another player's setting.",
+        "translate": "macroengine.dialog.setup_warning.confirm_body",
+        "fallback": "Choose yes only if you understand the warning and trust this server/world.\n\nyes records consent for your player only. no keeps macroEngine inactive for your player only. Neither choice changes another player's setting.",
         "color": "white"
       },
       "width": 360
@@ -21,12 +24,14 @@
   ],
   "yes": {
     "label": {
-      "text": "yes",
+      "translate": "gui.yes",
+      "fallback": "Yes",
       "color": "green",
       "bold": true
     },
     "tooltip": {
-      "text": "Enable macroEngine for your player only.",
+      "translate": "macroengine.dialog.setup_warning.yes_tooltip",
+      "fallback": "Enable macroEngine for your player only.",
       "color": "gray"
     },
     "width": 160,
@@ -37,12 +42,14 @@
   },
   "no": {
     "label": {
-      "text": "no",
+      "translate": "gui.no",
+      "fallback": "No",
       "color": "red",
       "bold": true
     },
     "tooltip": {
-      "text": "Keep macroEngine inactive for your player only.",
+      "translate": "macroengine.dialog.setup_warning.keep_inactive",
+      "fallback": "Keep macroEngine inactive for your player only.",
       "color": "gray"
     },
     "width": 160,

@@ -3,4 +3,4 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 data modify storage macroengine:engine config.module_cb set value 1b
 function macroengine:core/config/apply
 
-tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"cb module: ","color":"aqua"},{"text":"enabled","color":"green"}]
+tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.toggle.cb_module_label","fallback":"cb module: ","color":"aqua"},{"translate":"macroengine.ui.enabled","fallback":"enabled","color":"green"}]

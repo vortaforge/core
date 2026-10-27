@@ -150,7 +150,7 @@ New or otherwise unconsented players first receive a per-player Dialog warning t
 Yes. It is a purely server-side datapack, and players do not need any mods. Requirements:
 
 1. **Version:** the pack targets `26.3` (pack format `121.0`).
-2. **Text rendering:** use it together with `macroEngine-Resourcepack-v26.3`.
+2. **Text rendering:** use it together with `macroEngine-Resourcepack-v26.3`. All fixed player/admin messages are translatable text components; the resource pack ships English and Turkish, and every message falls back to English when a translation is missing (see [`docs/localization.md`](docs/localization.md)).
 3. **Back up first** and try it on a test server.
 4. **Removal:** delete the pack from the world's `datapacks` folder (Realms: re-upload the world without it). The pack no longer ships server-administration commands (`/datapack`, `/op`, ...).
 

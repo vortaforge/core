@@ -40,9 +40,14 @@ def component_text(component):
         return " ".join(component_text(part) for part in component)
     if isinstance(component, dict):
         parts = []
-        for key in ("text", "translate"):
-            if isinstance(component.get(key), str):
-                parts.append(component[key])
+        # Localized components carry the English source in "fallback";
+        # prefer it so content assertions read the English wording.
+        if isinstance(component.get("fallback"), str):
+            parts.append(component["fallback"])
+        else:
+            for key in ("text", "translate"):
+                if isinstance(component.get(key), str):
+                    parts.append(component[key])
         for key in ("extra", "with"):
             if key in component:
                 parts.append(component_text(component[key]))
@@ -103,7 +108,7 @@ class SetupWarningDialog(unittest.TestCase):
         )
 
         cancel = dialog["exit_action"]
-        self.assertEqual("gui.cancel", component_text(cancel["label"]))
+        self.assertEqual("gui.cancel", cancel["label"]["translate"])
         self.assertEqual(
             "trigger macroengine.consent set 2", cancel["action"]["command"]
         )
@@ -125,12 +130,12 @@ class SetupWarningDialog(unittest.TestCase):
         self.assertIn("no keeps macroEngine inactive for your player only", body)
         self.assertIn("Neither choice changes another player's setting", body)
 
-        self.assertEqual("yes", component_text(dialog["yes"]["label"]))
+        self.assertEqual("gui.yes", dialog["yes"]["label"]["translate"])
         self.assertEqual(
             "trigger macroengine.consent set 4",
             dialog["yes"]["action"]["command"],
         )
-        self.assertEqual("no", component_text(dialog["no"]["label"]))
+        self.assertEqual("gui.no", dialog["no"]["label"]["translate"])
         self.assertEqual(
             "trigger macroengine.consent set 3",
             dialog["no"]["action"]["command"],

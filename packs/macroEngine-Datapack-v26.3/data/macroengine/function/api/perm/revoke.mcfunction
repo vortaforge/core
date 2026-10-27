@@ -2,7 +2,7 @@ execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{perm:0b} run return 0
 execute if entity @s unless entity @s[tag=macroengine.admin] run playsound macroengine:perm.denied master @s ~ ~ ~ 1 1
-execute if entity @s unless entity @s[tag=macroengine.admin] run return run tellraw @s ["",{"text":"\uE000","color":"#00AAAA"},{"text":" ","color":"#00AAAA"},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","color":"red"}]
+execute if entity @s unless entity @s[tag=macroengine.admin] run return run tellraw @s ["",{"text":"\uE000","color":"#00AAAA"},{"text":" ","color":"#00AAAA"},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","fallback":"Permission denied.","color":"red"}]
 
 $data remove storage macroengine:engine permissions.$(player).$(perm)
 

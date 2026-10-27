@@ -3,6 +3,48 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-27 - feat(macroengine): localize all fixed player/admin text (en_us + tr_tr)
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Every fixed message macroEngine shows to players or admins is now a translatable text component
+resolved in each player's own client language, instead of hard-coded English: chat/title output
+across the function tree, the two setup-warning Dialogs (titles, bodies, labels, tooltips), and the
+utility item names. Each component carries its English text as `fallback`, so the datapack stays
+readable without the resource pack and untranslated languages fall back to English. Sentences with
+live values (settings summary, cb queue size, the prompt-injection admin warning) use `%s`
+placeholders so translations control word order.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Resourcepack-v26.3/assets/macroengine/lang/en_us.json`, `tr_tr.json` | 18 -> 145 keys in both files: `macroengine.msg.*`, `macroengine.ui.*`, `macroengine.dialog.setup_warning.*`, `item.macroengine.*`. Turkish translations authored for every key. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/` (~100 files) | Hard-coded `"text"` prose converted to `{"translate":…,"fallback":…}`; pre-existing `macroengine.msg.*` usages gained fallbacks; duplicate literals in `api/perm/{clear,exec,run}` and friends now reuse `permission_denied`/`no_perm`. Only brand prefixes, module/`key=value` identifiers, and caller-supplied `$(…)` text remain literal. |
+| `.../function/core/internal/input/validate/_private/injection_report.mcfunction`, `.../api/settings/apply.mcfunction`, `.../api/cb/list.mcfunction` | Fragment-joined sentences restructured into single placeholder messages (`msg.security.injection_detected`, `msg.settings.summary`, `msg.cb.queue_entries`). |
+| `.../data/macroengine/dialog/setup_warning.json`, `setup_warning_confirm.json` | All titles/bodies/labels/tooltips keyed; yes/no use vanilla `gui.yes`/`gui.no` (Cancel already used `gui.cancel`). Actions and trigger values unchanged. |
+| `.../data/macroengine/recipe/util/{input_book,input_name_tag}.json`, `.../item_modifier/rename_to_custom.json`, `.../function/input/give_anvil{,_custom}.mcfunction` | Item names `Input Book`/`Input Tag`/`Custom Item`/`Anvil Input` are now `item.macroengine.*` keys; existing translatable recipe items (config key, marker tag, repair kit) gained fallbacks. `anvil_capture`'s header notes `anvil.old_name` now copies the translatable component. |
+| `packs/macroEngine-Datapack-v26.3/docs/localization.md` | New: how resolution works, adding a language, key layout, contributor rules, and the surfaces deliberately not localized (caller text, identifiers/`key=value` dumps, writable settings-book pages, console `say`, pack metadata/docs). |
+| `packs/macroEngine-Datapack-v26.3/README.md`, `docs/text_components.md` | Install notes mention en/tr + fallback and link the new doc; component rules pin the translate+fallback convention. |
+| `scripts/tests/test_localization.py` | New offline guard: identical en/tr key sets, placeholder parity, every used key exists in `en_us` with a matching fallback, no orphan keys, no hard-coded player text left in functions, Dialogs fully translatable. |
+| `scripts/tests/test_setup_warning_dialog.py` | Component reader now resolves English via `fallback`; button labels asserted as `gui.cancel`/`gui.yes`/`gui.no` keys. |
+
+- **Design decisions:** language is a per-client resource-pack concern — no server config and no
+  per-player language storage were added; the store module's server-side multilingual templates stay
+  the tool for caller-owned text. `fallback` duplicates the English string by design (guard-tested
+  to equal `en_us`), so keying text can never degrade a datapack-only install. Fragment keys with
+  significant leading/trailing spaces were kept where they wrap a live value in fixed `label: value`
+  layouts; full sentences with live values became placeholder messages instead.
+- **Verified:** 77 Python tests OK (8 new; negative controls: dropping the `%s` slots from the
+  Turkish settings summary and adding a hard-coded `tellraw` string each fail the new suite,
+  restoring passes); Mecha lint passed; isolated `./gradlew :checkPacks` (`--configure-on-demand`):
+  12 packs, 297 JSON files, 3258 functions, 0 errors/warnings; watermarks and
+  `build_release.py --check` passed; audit unchanged (2 pre-existing MEDIUM `pack.format-mixed`);
+  `git diff --check` clean; changes are confined to macroEngine plus the two test files.
+- **Not verified:** no Minecraft server or client was run (rule 7). Actual per-language rendering,
+  Turkish line layout in the Dialogs and lists, and a native-speaker proofread of the Turkish
+  strings still need the in-world pass. Translations resolve client-side, so no Ward test can assert
+  the rendered language; none was added. The full Gradle graph was not run (Fabric Loom subprojects
+  exceed this sandbox's memory); only `checkPacks` ran in isolation.
+
 ## 2026-10-27 - feat(macroengine): add per-player setup warning dialogs
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

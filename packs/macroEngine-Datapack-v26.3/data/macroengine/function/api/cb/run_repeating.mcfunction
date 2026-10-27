@@ -27,20 +27,20 @@
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{cb:0b} run return 0
-execute unless data storage macroengine:input cb.cmd run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"text":"cb.cmd not set","color":"red"}]
+execute unless data storage macroengine:input cb.cmd run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.cb.cmd_not_set","fallback":"cb.cmd not set","color":"red"}]
 execute unless data storage macroengine:input cb.cmd run return 0
-execute unless data storage macroengine:input cb.times run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"text":"cb.times not set","color":"red"}]
+execute unless data storage macroengine:input cb.times run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.cb.times_not_set","fallback":"cb.times not set","color":"red"}]
 execute unless data storage macroengine:input cb.times run return 0
 
 scoreboard players set #cb_rep_n macroengine.tmp 0
 execute store result score #cb_rep_n macroengine.tmp run data get storage macroengine:input cb.times
-execute unless score #cb_rep_n macroengine.tmp matches 1..100 run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"text":"cb.times must be a number from 1 to 100","color":"red"}]
+execute unless score #cb_rep_n macroengine.tmp matches 1..100 run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.cb.times_range","fallback":"cb.times must be a number from 1 to 100","color":"red"}]
 execute unless score #cb_rep_n macroengine.tmp matches 1..100 run return 0
 
 execute unless data storage macroengine:input cb.interval run data modify storage macroengine:input cb.interval set value 2
 scoreboard players set #cb_rep_i macroengine.tmp 0
 execute store result score #cb_rep_i macroengine.tmp run data get storage macroengine:input cb.interval
-execute unless score #cb_rep_i macroengine.tmp matches 1.. run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"text":"cb.interval must be a number >= 1","color":"red"}]
+execute unless score #cb_rep_i macroengine.tmp matches 1.. run tellraw @s [{"text":"[MACROENGINE/cb] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.cb.interval_min","fallback":"cb.interval must be a number >= 1","color":"red"}]
 execute unless score #cb_rep_i macroengine.tmp matches 1.. run return 0
 
 function macroengine:core/internal/api/cb/apply_defaults

@@ -24,11 +24,13 @@
         }
       },
       "minecraft:item_name": {
-        "translate": "item.macroengine.repair_kit"
+        "translate": "item.macroengine.repair_kit",
+        "fallback": "Repair Kit"
       },
       "minecraft:lore": [
         {
           "translate": "item.macroengine.repair_kit.lore",
+          "fallback": "macroEngine utility item",
           "color": "gray",
           "italic": true
         }

@@ -3,4 +3,4 @@ scoreboard players set #macroengine.loading vortaforge.gate 0
 scoreboard players set #macroengine.incomplete vortaforge.gate 0
 function macroengine:gate/refresh
 schedule function macroengine:gate/rerun_load 1t replace
-tellraw @a {"text":"[macroengine] Incomplete-load state cleared by an operator. Loading again.","color":"yellow"}
+tellraw @a {"translate":"macroengine.msg.gate.incomplete_cleared","fallback":"[macroengine] Incomplete-load state cleared by an operator. Loading again.","color":"yellow"}

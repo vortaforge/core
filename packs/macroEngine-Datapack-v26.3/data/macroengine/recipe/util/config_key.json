@@ -24,11 +24,13 @@
         }
       },
       "minecraft:item_name": {
-        "translate": "item.macroengine.config_key"
+        "translate": "item.macroengine.config_key",
+        "fallback": "Config Key"
       },
       "minecraft:lore": [
         {
           "translate": "item.macroengine.config_key.lore",
+          "fallback": "macroEngine utility item",
           "color": "gray",
           "italic": true
         }

@@ -64,6 +64,18 @@ Dialog action objects use a `type` field rather than a text component's
 actions only, `/trigger` for state changes, and no player-entered text is
 templated into a command in this flow.
 
+## Translatable components
+
+Fixed player/admin text is never a hard-coded `"text"` literal: it is a
+`{"translate":"macroengine.…","fallback":"<English>"}` component, in Dialogs
+just as in `tellraw`/`title` output and item names. The `fallback` duplicates
+the `en_us` string so the text stays readable without the resource pack;
+sentences with live values use `with` + `%s` placeholders instead of glued
+fragments. Key layout, how to add a client language, and the surfaces that
+stay untranslated are documented in
+[`localization.md`](localization.md); `scripts/tests/test_localization.py`
+pins the rule.
+
 ## Two update-notes consequences worth knowing
 
 **Confirmation prompts (1.21.6, 25w20a).** A `run_command` click whose command

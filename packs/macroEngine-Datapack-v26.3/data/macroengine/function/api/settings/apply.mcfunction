@@ -16,9 +16,9 @@
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute unless entity @s[type=minecraft:player] run return 0
-execute unless entity @s[tag=macroengine.admin] run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","color":"red"}]
+execute unless entity @s[tag=macroengine.admin] run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","fallback":"Permission denied.","color":"red"}]
 execute unless entity @s[tag=macroengine.admin] run return 0
-execute unless entity @s[nbt={SelectedItem:{components:{"minecraft:custom_data":{macroengine:{input:1b,inputItem:"writable_book",settings:1b}}}}}] run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ Hold the settings book (macroengine:api/settings/book) to apply it.","color":"red"}]
+execute unless entity @s[nbt={SelectedItem:{components:{"minecraft:custom_data":{macroengine:{input:1b,inputItem:"writable_book",settings:1b}}}}}] run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.settings.hold_book","fallback":"✘ Hold the settings book (macroengine:api/settings/book) to apply it.","color":"red"}]
 execute unless entity @s[nbt={SelectedItem:{components:{"minecraft:custom_data":{macroengine:{input:1b,inputItem:"writable_book",settings:1b}}}}}] run return 0
 
 data modify storage macroengine:settings result set value {applied:0,rejected:0,errors:[]}
@@ -35,7 +35,7 @@ execute store result storage macroengine:settings result.applied int 1 run score
 execute store result storage macroengine:settings result.rejected int 1 run scoreboard players get #stbk_err macroengine.tmp
 data modify storage macroengine:audit in set value {action:"settings.book_apply",detail:"settings book applied"}
 function macroengine:systems/audit/record
-tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"Settings: ","color":"gray"},{"score":{"name":"#stbk_ok","objective":"macroengine.tmp"},"color":"green"},{"text":" applied, ","color":"gray"},{"score":{"name":"#stbk_err","objective":"macroengine.tmp"},"color":"red"},{"text":" rejected.","color":"gray"}]
-execute if score #stbk_err macroengine.tmp matches 1.. run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"Rejected lines: ","color":"red"},{"plain":true,"storage":"macroengine:settings","nbt":"result.errors","interpret":false,"color":"yellow"}]
+tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.settings.summary","fallback":"Settings: %s applied, %s rejected.","with":[{"score":{"name":"#stbk_ok","objective":"macroengine.tmp"},"color":"green"},{"score":{"name":"#stbk_err","objective":"macroengine.tmp"},"color":"red"}],"color":"gray"}]
+execute if score #stbk_err macroengine.tmp matches 1.. run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.settings.rejected_lines","fallback":"Rejected lines: ","color":"red"},{"plain":true,"storage":"macroengine:settings","nbt":"result.errors","interpret":false,"color":"yellow"}]
 data remove storage macroengine:settings tmp
 return run scoreboard players get #stbk_ok macroengine.tmp

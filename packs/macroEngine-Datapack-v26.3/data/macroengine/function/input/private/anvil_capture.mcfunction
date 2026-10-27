@@ -22,9 +22,11 @@
 #   this copy step; it is cleared explicitly afterward.
 #
 # old_name — the carrier's pre-rename display name (minecraft:item_name,
-#            stamped by give_anvil / give_anvil_custom). Falls back to
-#            the literal string "Anvil Input" if item_name is somehow
-#            missing (should not happen via the give functions above).
+#            stamped by give_anvil / give_anvil_custom as the translatable
+#            component item.macroengine.anvil_input, English fallback
+#            "Anvil Input"). Falls back to the literal string
+#            "Anvil Input" if item_name is somehow missing (should not
+#            happen via the give functions above).
 # new_name — the post-rename name (minecraft:custom_name), i.e. whatever
 #            the player typed into the anvil. input/anvil only calls this for
 #            a renamed carrier, so it is normally non-empty; callers should

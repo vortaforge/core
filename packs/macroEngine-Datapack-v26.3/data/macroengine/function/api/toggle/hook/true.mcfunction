@@ -10,4 +10,4 @@ data modify storage macroengine:engine config.module_hook set value 1b
 function macroengine:core/config/apply
 
 
-tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"hook","color":"aqua"},{"text":" → ","color":"#555555"},{"text":"enabled","color":"green"}]
+tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"hook","color":"aqua"},{"text":" → ","color":"#555555"},{"translate":"macroengine.ui.enabled","fallback":"enabled","color":"green"}]

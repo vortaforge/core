@@ -39,7 +39,7 @@ execute unless data storage macroengine:output {result:1b} run function macroeng
 execute if data storage macroengine:output {result:1b} run return 1
 
 playsound macroengine:perm.denied master @s ~ ~ ~ 1 1
-tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","color":"red"}]
+tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"translate":"macroengine.msg.permission_denied","fallback":"Permission denied.","color":"red"}]
 data modify storage macroengine:audit in set value {action:"perm.denied"}
 data modify storage macroengine:audit in.detail set from storage macroengine:perm_require in.perm
 function macroengine:systems/audit/record

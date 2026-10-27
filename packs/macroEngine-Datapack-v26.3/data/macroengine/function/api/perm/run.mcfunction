@@ -9,7 +9,7 @@ data modify storage macroengine:engine _pr_tmp set value {result:0b}
 execute as @a if score @s macroengine.pid = $pr_pid macroengine.tmp run execute if entity @s[tag=macroengine.admin] run data modify storage macroengine:engine _pr_tmp.result set value 1b
 $execute as @a if score @s macroengine.pid = $pr_pid macroengine.tmp run execute if entity @s[tag=perm.$(perm)] run data modify storage macroengine:engine _pr_tmp.result set value 1b
 
-$execute if data storage macroengine:engine _pr_tmp{result:0b} run execute as @a if score @s macroengine.pid = $pr_pid macroengine.tmp run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"text":"$(perm)","color":"yellow"},{"text":" — you don't have this permission.","color":"red"}]
+$execute if data storage macroengine:engine _pr_tmp{result:0b} run execute as @a if score @s macroengine.pid = $pr_pid macroengine.tmp run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"text":"$(perm)","color":"yellow"},{"text":" ","color":"red"},{"translate":"macroengine.msg.no_perm","fallback":"— you don't have this permission.","color":"red"}]
 execute if data storage macroengine:engine _pr_tmp{result:0b} run return 0
 
 # Dynamic commands are off by default (config dynamic_cmd). See docs/cmd_gate.md.

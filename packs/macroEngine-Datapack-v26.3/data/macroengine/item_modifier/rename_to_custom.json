@@ -1,7 +1,8 @@
 {
   "target": "item_name",
   "name": {
-    "text": "Custom Item",
+    "translate": "item.macroengine.custom_item",
+    "fallback": "Custom Item",
     "italic": false,
     "color": "gold"
   },

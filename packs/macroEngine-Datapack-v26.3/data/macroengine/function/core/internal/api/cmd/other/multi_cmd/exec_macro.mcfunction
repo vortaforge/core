@@ -13,6 +13,6 @@ $data modify storage macroengine:input raw_command set value "$(cmd)"
 data modify storage macroengine:cmd_gate in.cmd set from storage macroengine:input raw_command
 execute unless function macroengine:systems/cmd_gate/check run return 0
 
-tellraw @a[tag=macroengine.admin] [{"selector":"@s","color":"gold"},{"text":" - command passed the dynamic-command gate","color":"yellow"}]
+tellraw @a[tag=macroengine.admin] [{"selector":"@s","color":"gold"},{"translate":"macroengine.msg.multi_cmd.gate_passed_suffix","fallback":" - command passed the dynamic-command gate","color":"yellow"}]
 
 $$(cmd)

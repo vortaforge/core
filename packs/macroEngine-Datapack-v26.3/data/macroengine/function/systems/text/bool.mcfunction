@@ -15,9 +15,9 @@ execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{text:0b} run return 0
 $execute store success score $text_bool_ok macroengine.tmp run data get storage $(storage) $(path)
-execute if score $text_bool_ok macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"no","color":"red"}]
+execute if score $text_bool_ok macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.ui.no","fallback":"no","color":"red"}]
 $execute if score $text_bool_ok macroengine.tmp matches 1 store result score $text_bool_val macroengine.tmp run data get storage $(storage) $(path)
-execute if score $text_bool_ok macroengine.tmp matches 1 if score $text_bool_val macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"no","color":"red"}]
-execute if score $text_bool_ok macroengine.tmp matches 1 unless score $text_bool_val macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"yes","color":"green"}]
+execute if score $text_bool_ok macroengine.tmp matches 1 if score $text_bool_val macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.ui.no","fallback":"no","color":"red"}]
+execute if score $text_bool_ok macroengine.tmp matches 1 unless score $text_bool_val macroengine.tmp matches 0 run tellraw @s [{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.ui.yes","fallback":"yes","color":"green"}]
 scoreboard players reset $text_bool_ok macroengine.tmp
 scoreboard players reset $text_bool_val macroengine.tmp

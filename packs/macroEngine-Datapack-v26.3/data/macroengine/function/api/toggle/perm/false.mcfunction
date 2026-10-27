@@ -8,4 +8,4 @@ data modify storage macroengine:engine config.module_perm set value 0b
 function macroengine:core/config/apply
 
 
-tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"perm","color":"aqua"},{"text":" → ","color":"#555555"},{"text":"disabled","color":"red"}]
+tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"perm","color":"aqua"},{"text":" → ","color":"#555555"},{"translate":"macroengine.ui.disabled","fallback":"disabled","color":"red"}]

@@ -5,4 +5,4 @@ tag @s add macroengine.setup_warned
 tag @s remove macroengine.setup_declined
 tag @s remove macroengine.prompted
 scoreboard players reset @s macroengine.consent
-tellraw @s {"text":"[macroengine] Consent recorded. An operator can withdraw it with /execute as <player> run function macroengine:gate/consent_reset","color":"green"}
+tellraw @s {"translate":"macroengine.msg.gate.consent_recorded","fallback":"[macroengine] Consent recorded. An operator can withdraw it with /execute as <player> run function macroengine:gate/consent_reset","color":"green"}

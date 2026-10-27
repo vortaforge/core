@@ -10,7 +10,7 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 execute if data storage macroengine:engine modules{color:0b} run return 0
 execute unless entity @s[tag=macroengine.admin] run return 0
 
-tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"━━━ Color Palette ","color":"aqua"},{"text":"━━━━━━━━━━━","color":"#555555"}]
+tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.color.palette_header","fallback":"━━━ Color Palette ","color":"aqua"},{"text":"━━━━━━━━━━━","color":"#555555"}]
 execute if data storage macroengine:engine color.palette run tellraw @s ["",{"text":" ","color":"#555555"},{"plain":true ,"storage":"macroengine:engine","nbt":"color.palette","interpret":false,"color":"green"}]
-execute unless data storage macroengine:engine color.palette run tellraw @s ["",{"text":" ","color":"#555555"},{"text":"(palette is empty)","color":"gray","italic":true}]
+execute unless data storage macroengine:engine color.palette run tellraw @s ["",{"text":" ","color":"#555555"},{"translate":"macroengine.msg.color.palette_empty","fallback":"(palette is empty)","color":"gray","italic":true}]
 tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━","color":"#555555"}]

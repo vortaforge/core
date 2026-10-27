@@ -1,7 +1,7 @@
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{log:0b} run return 0
-execute unless data storage macroengine:engine log_display[0] run tellraw @s {"text":"[Log] No entries.","color":"gray","italic":false}
+execute unless data storage macroengine:engine log_display[0] run tellraw @s {"translate":"macroengine.msg.log.empty","fallback":"[Log] No entries.","color":"gray","italic":false}
 execute unless data storage macroengine:engine log_display[0] run return 0
 
 function macroengine:core/lib/input_push

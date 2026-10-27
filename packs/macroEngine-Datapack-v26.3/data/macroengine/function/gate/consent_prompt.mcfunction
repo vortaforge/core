@@ -11,5 +11,5 @@
 tag @s add macroengine.prompted
 tag @s add macroengine.setup_warned
 scoreboard players enable @s macroengine.consent
-tellraw @s [{"text":"[macroengine] A server warning dialog was opened for you. If it closes before you choose, ","color":"yellow"},{"text":"[Open warning again]","color":"aqua","click_event":{"action":"run_command","command":"/trigger macroengine.consent set 6"}},{"text":" or type /trigger macroengine.consent set 6","color":"gray"}]
+tellraw @s [{"translate":"macroengine.msg.gate.consent_prompt_prefix","fallback":"[macroengine] A server warning dialog was opened for you. If it closes before you choose, ","color":"yellow"},{"translate":"macroengine.msg.gate.open_warning_again","fallback":"[Open warning again]","color":"aqua","click_event":{"action":"run_command","command":"/trigger macroengine.consent set 6"}},{"translate":"macroengine.msg.gate.consent_prompt_suffix","fallback":" or type /trigger macroengine.consent set 6","color":"gray"}]
 dialog show @s macroengine:setup_warning

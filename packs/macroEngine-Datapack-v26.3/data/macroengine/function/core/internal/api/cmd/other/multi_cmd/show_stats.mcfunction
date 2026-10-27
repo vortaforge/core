@@ -27,7 +27,7 @@ execute store result storage macroengine:engine _mcmd_stats.exec_time int 1 run 
 
 data modify storage macroengine:output stats set from storage macroengine:engine _mcmd_stats
 
-tellraw @a[tag=macroengine.admin] ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"multi_cmd profile ","color":"gray"},{"text":"→ ","color":"#555555"},{"plain":true,"interpret":false,"storage":"macroengine:engine","nbt":"_mcmd_stats","color":"white"}]
+tellraw @a[tag=macroengine.admin] ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"translate":"macroengine.msg.multi_cmd.profile_label","fallback":"multi_cmd profile ","color":"gray"},{"text":"→ ","color":"#555555"},{"plain":true,"interpret":false,"storage":"macroengine:engine","nbt":"_mcmd_stats","color":"white"}]
 
 scoreboard players reset $mcmd_total macroengine.tmp
 scoreboard players reset $mcmd_success macroengine.tmp

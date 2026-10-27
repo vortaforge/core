@@ -1,19 +1,22 @@
 {
   "type": "minecraft:multi_action",
   "title": {
-    "text": "macroEngine server warning",
+    "translate": "macroengine.dialog.setup_warning.title",
+    "fallback": "macroEngine server warning",
     "color": "gold",
     "bold": true
   },
   "external_title": {
-    "text": "macroEngine server warning",
+    "translate": "macroengine.dialog.setup_warning.title",
+    "fallback": "macroEngine server warning",
     "color": "gold"
   },
   "body": [
     {
       "type": "minecraft:plain_message",
       "contents": {
-        "text": "This copy of macroEngine was installed by, and is controlled by, the operator of this server or world - not by the macroEngine developers.\n\nThe operator controls this pack's settings and stored data. Do not enter passwords, tokens, verification codes, private messages, or any other sensitive information into chat, books, signs, name tags, anvils, or other inputs.\n\nIf you do not know or trust this server/world, choose Cancel and leave. Continue only opens the next screen; it does not grant consent by itself.",
+        "translate": "macroengine.dialog.setup_warning.body",
+        "fallback": "This copy of macroEngine was installed by, and is controlled by, the operator of this server or world - not by the macroEngine developers.\n\nThe operator controls this pack's settings and stored data. Do not enter passwords, tokens, verification codes, private messages, or any other sensitive information into chat, books, signs, name tags, anvils, or other inputs.\n\nIf you do not know or trust this server/world, choose Cancel and leave. Continue only opens the next screen; it does not grant consent by itself.",
         "color": "white"
       },
       "width": 380
@@ -22,12 +25,14 @@
   "actions": [
     {
       "label": {
-        "text": "Continue",
+        "translate": "macroengine.dialog.setup_warning.continue",
+        "fallback": "Continue",
         "color": "green",
         "bold": true
       },
       "tooltip": {
-        "text": "Open the separate yes/no screen. This does not enable macroEngine yet.",
+        "translate": "macroengine.dialog.setup_warning.continue_tooltip",
+        "fallback": "Open the separate yes/no screen. This does not enable macroEngine yet.",
         "color": "gray"
       },
       "width": 220,
@@ -38,12 +43,14 @@
     },
     {
       "label": {
-        "text": "More information",
+        "translate": "macroengine.dialog.setup_warning.more_info",
+        "fallback": "More information",
         "color": "aqua",
         "underlined": true
       },
       "tooltip": {
-        "text": "Open the macroEngine player safety information page.",
+        "translate": "macroengine.dialog.setup_warning.more_info_tooltip",
+        "fallback": "Open the macroEngine player safety information page.",
         "color": "gray"
       },
       "width": 220,
@@ -57,10 +64,12 @@
   "exit_action": {
     "label": {
       "translate": "gui.cancel",
+      "fallback": "Cancel",
       "color": "red"
     },
     "tooltip": {
-      "text": "Keep macroEngine inactive for your player only.",
+      "translate": "macroengine.dialog.setup_warning.keep_inactive",
+      "fallback": "Keep macroEngine inactive for your player only.",
       "color": "gray"
     },
     "width": 220,
