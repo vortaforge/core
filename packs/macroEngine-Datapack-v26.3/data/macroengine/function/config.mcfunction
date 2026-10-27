@@ -43,11 +43,11 @@ execute unless data storage macroengine:engine config.module_hook if data storag
 execute unless data storage macroengine:engine config.module_interaction if data storage macroengine:engine modules.interaction run data modify storage macroengine:engine config.module_interaction set from storage macroengine:engine modules.interaction
 execute unless data storage macroengine:engine config.module_perm if data storage macroengine:engine modules.perm run data modify storage macroengine:engine config.module_perm set from storage macroengine:engine modules.perm
 execute unless data storage macroengine:engine config.module_wand if data storage macroengine:engine modules.wand run data modify storage macroengine:engine config.module_wand set from storage macroengine:engine modules.wand
-execute unless data storage macroengine:engine config.sys_time if score #sys_time macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_time set value 1b
-execute unless data storage macroengine:engine config.sys_player if score #sys_player macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_player set value 1b
-execute unless data storage macroengine:engine config.sys_queue if score #sys_queue macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_queue set value 1b
-execute unless data storage macroengine:engine config.sys_hud if score #sys_hud macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_hud set value 1b
-execute unless data storage macroengine:engine config.sys_admin if score #sys_admin macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_admin set value 1b
+execute unless data storage macroengine:engine config.sys_time if score #sys_time macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_time set value 0b
+execute unless data storage macroengine:engine config.sys_player if score #sys_player macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_player set value 0b
+execute unless data storage macroengine:engine config.sys_queue if score #sys_queue macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_queue set value 0b
+execute unless data storage macroengine:engine config.sys_hud if score #sys_hud macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_hud set value 0b
+execute unless data storage macroengine:engine config.sys_admin if score #sys_admin macroengine.tick_flags matches 0 run data modify storage macroengine:engine config.sys_admin set value 0b
 
 # Defaults
 execute unless data storage macroengine:engine config.module_cb run data modify storage macroengine:engine config.module_cb set value 1b
@@ -107,11 +107,11 @@ execute unless data storage macroengine:engine config.title_fade_in run data mod
 execute unless data storage macroengine:engine config.title_stay run data modify storage macroengine:engine config.title_stay set value 70
 execute unless data storage macroengine:engine config.title_fade_out run data modify storage macroengine:engine config.title_fade_out set value 20
 # Stored-string command execution is OFF by default; see docs/cmd_gate.md.
-execute unless data storage macroengine:engine config.dynamic_cmd run data modify storage macroengine:engine config.dynamic_cmd set value 1b
+execute unless data storage macroengine:engine config.dynamic_cmd run data modify storage macroengine:engine config.dynamic_cmd set value 0b
 execute unless data storage macroengine:engine config.dynamic_cmd_max_len run data modify storage macroengine:engine config.dynamic_cmd_max_len set value 256
-execute unless data storage macroengine:engine config.cmd_gate_disabled run data modify storage macroengine:engine config.cmd_gate_disabled set value 1b
+execute unless data storage macroengine:engine config.cmd_gate_disabled run data modify storage macroengine:engine config.cmd_gate_disabled set value 0b
 # Prompt-injection screening of captured player text is ON by default; see docs/prompt_injection.md.
-execute unless data storage macroengine:engine config.injection_scan run data modify storage macroengine:engine config.injection_scan set value 0b
+execute unless data storage macroengine:engine config.injection_scan run data modify storage macroengine:engine config.injection_scan set value 1b
 
 # Revision marker: core/config/ensure compares it, so adding a key means bumping this number.
 data modify storage macroengine:engine config_rev set value 5
