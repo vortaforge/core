@@ -3,6 +3,33 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-27 - feat(macroengine): add per-player setup warning dialogs
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+New or otherwise unconsented players now get a two-screen 1.21.6 Dialog flow before Gate 3 consent:
+the first screen warns that the server/world operator controls this installation and its data, says
+not to enter sensitive information, and tells anyone who does not know or trust the server/world to
+cancel and leave. Continue only opens the separate yes/no screen. `yes` grants Gate 3 consent for the
+clicking player only; Cancel or `no` declines only that player. A More information button opens the
+new player-facing `INFO.md`.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/dialog/setup_warning.json` | First `minecraft:multi_action` Dialog: operator-control/sensitive-information/unknown-server warning, Continue via `show_dialog`, More information via fixed `open_url` to `INFO.md`, and a Cancel exit action via `/trigger macroengine.consent set 2`. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/dialog/setup_warning_confirm.json` | Separate `minecraft:confirmation` screen: `yes` -> trigger value 4, `no` -> trigger value 3. No inputs and no dynamic command templates. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/setup.mcfunction` | New setup Step 0.75 shows the same prompt to unconsented players already online during load/reload; `gate/consent_tick` handles players who join later. |
+| `.../function/gate/consent_prompt.mcfunction`, `.../consent_tick.mcfunction`, `.../setup_warning_deny.mcfunction` | Prompt now enables the trigger, records `macroengine.setup_warned`, leaves a chat reopen button, and shows the Dialog. Tick maps Cancel/no/yes/reopen values; the new deny function marks only `@s` as `macroengine.setup_declined`. |
+| `.../function/gate/consent_grant.mcfunction`, `.../consent_reset.mcfunction` | Grant clears a prior decline and records the warned state; reset clears consent plus both setup-warning tags so the warning can show again. |
+| `packs/macroEngine-Datapack-v26.3/INFO.md` | Player safety page opened by the Dialog: operator control, sensitive-information warning, leave-if-unknown guidance, exact per-player button effects, reopen/reset commands, data/operator caveats, and private security reporting. |
+| `packs/macroEngine-Datapack-v26.3/README.md`, `docs/text_components.md` | README links the warning/`INFO.md`; text-component docs record the Dialog action rules (fixed `show_dialog`/`open_url`, `/trigger` only for state changes, no dynamic templates). |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/test/setup_warning_player_choice.mcfunction` | New Ward test for the dummy player's prompt -> Cancel -> reopen -> no -> reopen -> yes state transitions. |
+| `scripts/tests/test_setup_warning_dialog.py` | Offline guards for the Dialog JSON, warning text, fixed actions/URL, setup + join prompt paths, per-player tag changes, and `INFO.md` content. |
+
+- **Design decisions:** values on the existing `macroengine.consent` trigger were extended instead of adding a new objective: 1 stays the legacy direct agree, 2 = Cancel, 3 = no, 4 = yes, 6 = reopen. The confirmation Dialog uses fixed yes/no buttons rather than a free-text input, so player-provided text is never substituted into a command template. The Cancel label uses vanilla `gui.cancel`, so the client localizes it; other Dialog/doc text stays English per repo rules.
+- **Verified:** 69 Python tests OK (6 new; negative control: changing the yes button from trigger value 4 to 1 fails the new suite, restoring passes); both Dialog files parse as JSON; Mecha lint passed; isolated `./gradlew :checkPacks` (`--configure-on-demand`): 12 packs, 297 JSON files, 3258 functions, 0 errors/warnings; watermarks and `build_release.py --check` passed; audit unchanged (2 pre-existing MEDIUM `pack.format-mixed`); changed function and Dialog references resolve.
+- **Not verified:** no Minecraft server or client was run (rule 7). The Ward test is written but not executed. Actual Dialog rendering, first-join timing, Dialog-button `/trigger` execution on a real client, singleplayer pause behavior, and the More information button still need the in-world/CI pass; the `INFO.md` GitHub URL also only becomes live once this change is present on the canonical `vortaforge/core` `main` branch. The full Gradle graph was not run (Fabric Loom subprojects exceed this sandbox's memory); only `checkPacks` ran in isolation.
+
 ## 2026-10-27 - feat(macroengine): prompt-injection screening for captured player text
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

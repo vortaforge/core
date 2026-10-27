@@ -127,6 +127,8 @@ Internal systems under `systems/` are used by API functions and are not intended
 
 The pack captures free-form player text (books, signs, lecterns, name tags, anvil renames) but only ever handles it as data - never executed, never macro-substituted. Every capture is also screened for prompt-injection patterns ([`docs/prompt_injection.md`](docs/prompt_injection.md)); a strong hit is audited, announced to admins, and blocks the settings book's auto-apply. Dynamic command execution is off by default and gated ([`docs/cmd_gate.md`](docs/cmd_gate.md)). The repository-wide policy lives in [`SECURITY.md`](../../SECURITY.md).
 
+New or otherwise unconsented players first receive a per-player Dialog warning that the server/world operator controls this installation, that sensitive information must not be entered, and that they should cancel and leave an unknown or untrusted server/world. The player-facing explanation is [`INFO.md`](INFO.md).
+
 ---
 
 ## FAQ

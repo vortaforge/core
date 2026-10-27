@@ -11,6 +11,13 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 # Step 0.5: Load Begin
 function macroengine:gate/load_begin
 
+# Step 0.75: Per-player server warning
+# Players who are already online during setup/reload get the same Dialog
+# warning that Gate 3 shows to players who join afterwards. The prompt sets
+# macroengine.setup_warned on @s, so this stays player-by-player and does not
+# reopen on every reload.
+execute unless score #macroengine.gate.3 vortaforge.gate matches 0 as @a[tag=!macroengine.consented,tag=!macroengine.setup_warned] run function macroengine:gate/consent_prompt
+
 # Step 1: Internal Text Module
 function macroengine:core/internal/text/load
 

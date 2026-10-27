@@ -38,12 +38,31 @@ click/hover behaviour — which is exactly why the rule is enforced statically
 
 All of them are `run_command` with a `command` payload:
 
-- `gate/consent_prompt`, `gate/permit_prompt` — shown to every player, so they
-  click through `/trigger ...` (see the confirmation note below).
+- `gate/consent_prompt`, `gate/setup_warning_deny`, `gate/permit_prompt` —
+  shown to players without operator rights, so they click through
+  `/trigger ...` (see the confirmation note below).
 - `api/toggle/show`, `core/internal/tui/button_send` — operator surfaces;
   `button_send`'s `/function $(fn)` target is validated as data by
   `systems/validate/function_id` before it is ever pasted into a component.
 - `core/internal/load/main` — load message.
+
+## Dialogs (1.21.6+)
+
+The per-player setup warning uses data-driven Dialogs instead of a book or a
+chat-only form:
+
+- `data/macroengine/dialog/setup_warning.json` is the operator-control and
+  sensitive-information warning. Its Continue button uses `show_dialog`, its
+  information button uses a fixed `open_url` to `INFO.md`, and its Cancel exit
+  action runs `/trigger macroengine.consent set 2`.
+- `data/macroengine/dialog/setup_warning_confirm.json` is the separate
+  yes/no screen. `yes` and `no` run fixed `/trigger` values (4 and 3), never a
+  `/function` click and never a dynamic command template.
+
+Dialog action objects use a `type` field rather than a text component's
+`click_event.action` field, but the player-facing rule is the same: fixed
+actions only, `/trigger` for state changes, and no player-entered text is
+templated into a command in this flow.
 
 ## Two update-notes consequences worth knowing
 
@@ -83,5 +102,8 @@ under this pack's `data/`:
 - sign text fields are combined with a `click_event`, or
 - the gate consent/permit prompts click through anything but `/trigger`.
 
-Run it with the rest of the offline suite:
+`scripts/tests/test_setup_warning_dialog.py` additionally pins the two Dialog
+definitions and their fixed trigger/open-url/show-dialog actions.
+
+Run them with the rest of the offline suite:
 `python3 -m unittest discover scripts/tests`.
