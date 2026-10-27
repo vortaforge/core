@@ -65,7 +65,7 @@ becomes a second home for the payload phrases themselves.
 ## Patterns (two tiers)
 
 Defined in `core/internal/input/validate/_private/injection_patterns`
-(18 needles — small on purpose, see the cost bound above). **Strong** —
+(48 needles incl. localized tr/es/fr/de/pt/it/ru/zh/ja/ko/ar variants; capped at 50 by the test suite, see the cost bound above). **Strong** —
 treated as an injection attempt: instruction-override shapes ("ignore
 previous instructions", "ignore all previous", "forget your instructions",
 "your new instructions", "execute the following"), role markers ("system

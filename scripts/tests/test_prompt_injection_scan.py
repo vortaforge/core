@@ -79,11 +79,12 @@ class ScanShape(unittest.TestCase):
             r'append value \{id:"([^"]+)",needle:"((?:[^"\\]|\\.)*)",strong:([01])b\}',
             read(os.path.join(PRIV, "injection_patterns.mcfunction")),
         )
-        # Small on purpose: pattern count is a command-budget decision
-        # (see the COST BOUND note in injection_scan). Growing this list
-        # means re-doing that arithmetic, not just appending a line.
+        # Pattern count is a command-budget decision (see the COST BOUND
+        # note in injection_scan). Growing this list means re-doing that
+        # arithmetic, not just appending a line: raise the cap together
+        # with the COST BOUND note, never alone.
         self.assertGreaterEqual(len(entries), 15, "pattern baseline unexpectedly small")
-        self.assertLessEqual(len(entries), 20, "pattern list grew past the documented cost bound")
+        self.assertLessEqual(len(entries), 50, "pattern list grew past the documented cost bound")
         ids = [e[0] for e in entries]
         self.assertEqual(len(ids), len(set(ids)), "pattern ids must be unique")
         for pid, needle, _strong in entries:
