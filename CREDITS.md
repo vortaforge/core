@@ -3,6 +3,39 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-28 - fix(macroengine): align datapack + resourcepack to 26.3 release
+
+**Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.
+
+Both packs already declared the 26.3 release formats (data pack 121.0 / resource pack 97.1) but were
+written against late 26.3 snapshots. This change audits them against every breaking change of the
+26.3 cycle (Snapshot 1 - 10, Pre-Release 1 - 3: Mojang's articles + misode's technical changelog)
+and fixes what applied. Almost everything was already release-shaped - the snapshot-4 loot/predicate
+overhaul and the pre-release number-provider split were in use throughout - so the code diff is small.
+
+| Path | Change |
+|---|---|
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/player/get_armor.mcfunction`, `.../get_health.mcfunction` | Stale entity-attribute reads fixed: `Attributes[{Name:"…"}].Base` (pre-1.21 format, no longer resolves - `result`/`toughness`/`max` came back stale while `found` said 1b) → `attributes[{id:"…"}].base`; stale `generic.armor` header comment corrected. Found by the snapshot-7 block-state `Name`→`id` check; not itself a 26.3 change. |
+| `packs/macroEngine-Datapack-v26.3/data/macroengine/function/input/private/sign_capture.mcfunction`, `.../lectern_capture.mcfunction` | `26.3-pre` header comments now name the release (data pack 121.0); the captured paths did not change between pre-3 and release. |
+| `packs/macroEngine-Datapack-v26.3/docs/version_alignment.md` | The audit record: per-change verdicts for both packs (loot/predicate formats, number providers, advancement triggers, cooking recipes, sign/brewing/furnace block entities, block states, removed components/tags, `/item` slot-source zip semantics, `/give`+team result behaviour, resource-pack equipment/palette/shader removals, worldgen), the behaviour notes that needed no code, and a next-bump checklist. |
+| `scripts/tests/test_version_alignment.py` | Pins the 26.3 release formats in both `pack.mcmeta` files and fails if removed/renamed shapes return: legacy loot keys, predicate list shorthand, number-provider shorthands, `value_check`/`block_state_property`/`reference`/`swing_animation`/`map_color`/`#brewing_fuel`, renamed explorer-map tags, capital-`Properties` block states, `Attributes[{Name:…}]` reads, renamed advancement-trigger fields, bare entity predicates in trigger fields, and the removed resource-pack keys. |
+
+- **Verified:** the audit itself (every 26.3 breaking item checked against both packs; the only code
+  hits were the attribute paths above - `/item replace` call sites are all single-slot, no removed
+  ids/keys/NBT fields anywhere else, resource pack ships no shaders/models/`minecraft`-namespace
+  files). `python3 -m unittest discover scripts/tests` - 54 tests OK (11 new; negative control:
+  injecting a legacy attribute line fails the suite, reverting passes); `scripts/lint_datapacks.sh`
+  (Mecha) passed; `./gradlew :checkPacks` on Temurin 25 (`--configure-on-demand`, memory-capped) -
+  12 packs / 3248 functions, 0 errors, 0 warnings; `origin_watermarks.py --check`, `audit_repo.py`
+  (only the two pre-existing `pack.format-mixed` notes) and `build_release.py --check` passed. The
+  change was also exported with `git format-patch`, re-applied to a fresh clone with `git am`, and
+  the same checks re-run there.
+- **Not verified:** no Minecraft server was started (CLAUDE.md rule 7). That `get_armor`/`get_health`
+  now return real values, and that the audited-clean areas behave on 26.3 release exactly as the
+  published notes describe, still needs the `NOTICE.md` in-world acceptance pass; Mojang/misode notes
+  were read, not re-tested in game. The full `verifyProject`/`ci` graph was not run (Fabric Loom
+  subprojects exhaust the sandbox's 2 GiB of RAM); only `checkPacks` ran in isolation.
+
 ## 2026-10-28 - test(macroengine): lock the post-1.21.5 click/hover event format
 
 **Tool:** Arena.ai Agent Mode, working from a prompt by the maintainer. Review status: _pending - update when reviewed_.

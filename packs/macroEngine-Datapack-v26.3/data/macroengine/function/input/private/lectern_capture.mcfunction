@@ -1,6 +1,6 @@
 # ======================================================================================
 # macroengine:input/private/lectern_capture  [INTERNAL]
-# MC 26.3-pre: Book.components writable/written_book_content pages as {raw}|{text}|string
+# MC 26.3 (release; data pack 121.0): Book.components writable/written_book_content pages as {raw}|{text}|string
 # ======================================================================================
 
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
