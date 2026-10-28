@@ -78,6 +78,12 @@ jobs:
         # one daemon stays within the standard hosted runner budget.
         run: ./gradlew ci -PconfirmZip=yes --console=plain --max-workers=2
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
       - name: Collect release assets
         shell: bash
         run: |
