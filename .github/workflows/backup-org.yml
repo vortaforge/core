@@ -57,9 +57,7 @@ concurrency:
 
 jobs:
   backup:
-    # Named for consistency with build.yml, which names both of its jobs
-    # (`CI • guigenmc • build • lint`, `Publish • packs-latest`). Without this
-    # the run page showed the bare job id "backup".
+    # Named so the run page shows what the job does instead of the bare id.
     name: Back up organization
     runs-on: ubuntu-latest
     timeout-minutes: 180

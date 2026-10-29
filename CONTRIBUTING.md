@@ -73,6 +73,13 @@ probably two commits. Reference related issues or PRs in the body
 - Make sure the **`CI`** workflow is green before requesting review. Inside its `Verify, test and package` job, the one step that can fail you is `Run canonical project CI task graph` (`./gradlew ci -PconfirmZip=yes`), which runs `verifyProject` and `packageProject`; `publish` then only runs after that job succeeds on a `main` push.
 - Describe what changed and why in the PR description — and whether the change touches `mods/`, `packs/`, or both; `ci` covers both, while `buildAll` alone only covers `mods/`.
 - Run through the checklist at the bottom of [NOTICE.md](NOTICE.md) before requesting review.
+- Request a reviewer with write access; for paths listed in
+  [`.github/CODEOWNERS`](.github/CODEOWNERS), request one of the named code
+  owners. A PR author cannot approve their own PR, and a bot comment is not
+  an approval. If no independent reviewer is available and a maintainer uses
+  a ruleset bypass, say **“not independently reviewed (Anti-Review)”** in the
+  PR and merge record. Never describe a bypass, a green CI run or an AI/tool
+  comment as a human review.
 
 ## Security
 

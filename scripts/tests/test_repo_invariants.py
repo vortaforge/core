@@ -172,5 +172,71 @@ class DailyBonusFirstClaim(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(base, "test", "first_login_is_granted.mcfunction")))
 
 
+class DownloadPageFallback(unittest.TestCase):
+    """The static page must not advertise packs the build cannot produce."""
+
+    def test_fallback_zip_names_match_pack_mcmeta_directories(self):
+        packs_root = os.path.join(ROOT, "packs")
+        expected = []
+        for current, _dirs, files in os.walk(packs_root):
+            if "pack.mcmeta" not in files:
+                continue
+            relative = os.path.relpath(current, packs_root)
+            expected.append(relative.replace(os.sep, "-") + ".zip")
+
+        with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as fh:
+            listed = re.findall(r'zip: "([^"]+\.zip)"', fh.read())
+
+        self.assertEqual(sorted(listed), sorted(expected))
+
+
+class AIAgentToolPolicy(unittest.TestCase):
+    """Keep the Actions AI agent from regaining shell-equivalent tools."""
+
+    def test_only_fixed_tools_and_manual_dispatch_writes_remain(self):
+        with open(os.path.join(ROOT, ".github", "scripts", "ai-agent.js"),
+                  encoding="utf-8") as fh:
+            source = fh.read()
+
+        self.assertIn('const ALLOW_WRITES = EVENT === "workflow_dispatch";', source)
+        for protected in ('".git/"', '".github/"', '"build.gradle"',
+                          '"scripts/audit_repo.py"', '"scripts/lint_datapacks.sh"'):
+            self.assertIn(protected, source)
+
+        for removed in ("run_python", "run_node", "run_command", "web_search", "fetch_url"):
+            self.assertNotRegex(source, rf"(?m)^\s+(?:async\s+)?{removed}\s*\(")
+            self.assertNotIn(f'{{"tool":"{removed}"', source)
+
+
+class AuditFullRobustness(unittest.TestCase):
+    """A GitHub API failure must become an audit finding, not a traceback."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import audit_full
+        cls.audit_full = audit_full
+
+    def setUp(self):
+        self.original_get = self.audit_full.get
+        self.audit_full.FINDINGS.clear()
+        self.addCleanup(setattr, self.audit_full, "get", self.original_get)
+        self.addCleanup(self.audit_full.FINDINGS.clear)
+
+    def test_list_endpoint_error_is_reported_without_raising(self):
+        self.audit_full.get = lambda path: {"_error": "HTTP 403 rate limit"}
+        self.audit_full.audit_prs_issues("vortaforge/core")
+        ids = {finding["id"] for finding in self.audit_full.FINDINGS}
+        self.assertEqual(ids, {"prs.unreadable", "issues.unreadable"})
+
+    def test_missing_local_clone_is_reported_without_raising(self):
+        with tempfile.TemporaryDirectory() as workdir:
+            self.audit_full.audit_local("vortaforge/core", workdir)
+        self.assertEqual(
+            [finding["id"] for finding in self.audit_full.FINDINGS],
+            ["local.not-cloned"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

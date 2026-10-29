@@ -31,11 +31,11 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/guigenmc/guigenmc"
-Documentation = "https://github.com/guigenmc/guigenmc#readme"
-Repository = "https://github.com/guigenmc/guigenmc"
-Issues = "https://github.com/guigenmc/guigenmc/issues"
-Changelog = "https://github.com/guigenmc/guigenmc/releases"
+Homepage = "https://github.com/vortaforge/core/tree/main/scripts/gui_generator"
+Documentation = "https://github.com/vortaforge/core/tree/main/scripts/gui_generator#readme"
+Repository = "https://github.com/vortaforge/core"
+Issues = "https://github.com/vortaforge/core/issues"
+Changelog = "https://github.com/vortaforge/core/commits/main/scripts/gui_generator"
 
 [project.scripts]
 guigenmc = "guigenmc.cli:main"

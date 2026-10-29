@@ -29,12 +29,15 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Fetch members and generate CODEOWNERS
+      - name: Fetch write-access collaborators and generate CODEOWNERS
         env:
-          # Fine-grained PAT or GitHub App token.
-          # The token must be able to read organization members.
+          # Fine-grained PAT or GitHub App token. CODEOWNERS entries are only
+          # honoured for people with write access to this repository, so the
+          # token must be able to list repository collaborators; an
+          # organization-member list is not enough because membership alone
+          # does not prove repository write access.
           GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
-          ORG: vortaforge
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -61,19 +64,19 @@ jobs:
 
           echo "Authenticated as: $GH_USER"
 
-          echo "Fetching organization members..."
+          echo "Fetching repository collaborators with push access..."
 
           members_file="$(mktemp)"
 
           if ! gh api \
             --paginate \
             --header "X-GitHub-Api-Version: 2022-11-28" \
-            "orgs/${ORG}/members" \
-            --jq '.[].login' \
-            > "$members_file" 2>/tmp/gh-members-error; then
+            "repos/${REPOSITORY}/collaborators?affiliation=all" \
+            --jq '.[] | select(.permissions.push == true) | .login' \
+            > "$members_file" 2>/tmp/gh-collaborators-error; then
 
-            echo "::error::Failed to fetch members of organization '${ORG}'."
-            cat /tmp/gh-members-error
+            echo "::error::Failed to fetch collaborators for '${REPOSITORY}'."
+            cat /tmp/gh-collaborators-error
             rm -f "$members_file"
             exit 1
           fi
@@ -83,16 +86,16 @@ jobs:
           sort -u "$members_file" -o "$members_file"
 
           if [ ! -s "$members_file" ]; then
-            echo "::error::GitHub returned an empty member list for '${ORG}'."
-            echo "::error::Check that ORG_READ_TOKEN has organization-member read access."
-            echo "::error::Also verify that the token belongs to an account/app allowed to see the organization's members."
+            echo "::error::GitHub returned no collaborators with push access for '${REPOSITORY}'."
+            echo "::error::Check that ORG_READ_TOKEN can list repository collaborators."
+            echo "::error::The authenticated account/app must also be allowed to see those collaborators."
             rm -f "$members_file"
             exit 1
           fi
 
           member_count="$(wc -l < "$members_file" | tr -d ' ')"
 
-          echo "Found ${member_count} organization member(s)."
+          echo "Found ${member_count} collaborator(s) with push access."
 
           # Convert:
           # alice
@@ -181,20 +184,42 @@ jobs:
           set -euo pipefail
 
           if git diff --quiet -- .github/CODEOWNERS; then
-            echo "No CODEOWNERS changes."
+            echo "No CODEOWNERS changes against main."
             exit 0
           fi
 
           git config user.name "codeowners-sync[bot]"
           git config user.email "codeowners-sync@users.noreply.github.com"
 
-          git checkout -B chore/codeowners-sync
+          # Preserve the generated file while switching to the existing sync
+          # branch, if there is one. Appending a normal commit keeps the PR
+          # history intact; this workflow must not force-push (CLAUDE.md rule 1).
+          generated_file="$(mktemp)"
+          cp .github/CODEOWNERS "$generated_file"
+          rm -f .github/CODEOWNERS
+
+          git fetch origin main
+          git fetch origin chore/codeowners-sync || true
+          if git show-ref --verify --quiet refs/remotes/origin/chore/codeowners-sync; then
+            git checkout -B chore/codeowners-sync origin/chore/codeowners-sync
+          else
+            git checkout -B chore/codeowners-sync origin/main
+          fi
+
+          mkdir -p .github
+          cp "$generated_file" .github/CODEOWNERS
+          rm -f "$generated_file"
+
+          if git diff --quiet -- .github/CODEOWNERS; then
+            echo "No CODEOWNERS changes against chore/codeowners-sync."
+            exit 0
+          fi
 
           git add .github/CODEOWNERS
 
           git commit -m "chore: update CODEOWNERS owner list"
 
-          git push --force-with-lease origin chore/codeowners-sync
+          git push origin chore/codeowners-sync
 
           # Do not create a duplicate PR if one already exists.
           existing_pr="$(
@@ -215,4 +240,4 @@ jobs:
             --base main \
             --head chore/codeowners-sync \
             --title "chore: update CODEOWNERS owner list" \
-            --body "Auto-generated. The CODEOWNERS list was synchronized from the members of the vortaforge organization. Please review and merge this PR."
+            --body "Auto-generated. The CODEOWNERS list was synchronized from repository collaborators with push access. Please review and merge this PR."

@@ -220,7 +220,7 @@ Examples:
   depend_edit.py add dataLib --source github --repo vortaforge/core --version '>=6.0.0' --asset dataLib-full.zip --sha256 <64-char-hex>
 
   # Add a submodule dependency
-  depend_edit.py add cbplus --source submodule --url https://github.com/vortaforge/CBPlus.git --version '>=1.0.0'
+  depend_edit.py add cbplus --source submodule --url https://example.com/cbplus.git --version '>=1.0.0'
 
   # Update the version constraint
   depend_edit.py update dataLib --version '>=6.1.0'

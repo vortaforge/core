@@ -1,11 +1,13 @@
 # Keeps GitHub Actions, Gradle, Python (pip) and npm dependencies up to date via PRs.
 # Packs under packs/ contain no ecosystem manifests Dependabot would touch.
 #
-# MAINTENANCE PAUSE (2026-10-04, expected until at least 2027-2028):
-# open-pull-requests-limit: 0 turns off Dependabot *version* updates for every ecosystem
-# below so nobody has to triage PRs while the project is unattended. Dependabot alerts and
-# security updates are controlled separately in the repository settings and are not affected.
-# To resume: set the limits back to 5.
+# Dependabot *version* updates are enabled weekly below, capped at 9 open PRs
+# per ecosystem. (A previous revision of this comment described a maintenance
+# pause with `open-pull-requests-limit: 0`, while the configured limits were 9
+# and update PRs were being merged; the configuration, not that comment, was
+# the behaviour GitHub ran.) Dependabot alerts and security updates are
+# controlled separately in the repository settings and are not affected by
+# these limits. To pause version updates, set every limit below to 0.
 version: 2
 updates:
   - package-ecosystem: "github-actions"

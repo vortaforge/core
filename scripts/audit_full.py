@@ -120,6 +120,27 @@ def add(cat, sev, fid, target, msg, fix=None):
                      "target": target, "msg": msg, "fix": fix})
 
 
+def get_list(path, cat, fid, target, label):
+    """GET a list endpoint without letting an API error crash the audit.
+
+    `get()` returns ``{"_error": ...}`` for failures such as an exhausted
+    anonymous rate limit. Iterating that dictionary yields its keys, so a
+    caller that expects response objects fails with a misleading type error
+    instead of reporting that one section could not be audited. Return an
+    empty list after recording the API failure as a finding.
+    """
+    result = get(path)
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        detail = result.get("_error") or f"unexpected response keys: {sorted(result)}"
+    else:
+        detail = f"unexpected response type: {type(result).__name__}"
+    add(cat, "medium", fid, target,
+        f"could not list {label}; this section was not audited: {detail}")
+    return []
+
+
 def sh(args, cwd=None):
     r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
     return r.returncode, r.stdout, r.stderr
@@ -287,7 +308,8 @@ def audit_refs(repo, r):
         else:
             add("D", "info", "branch.extra", f"{repo}@{name}", "unmerged branch present")
 
-    for t in get(f"/repos/{repo}/tags") or []:
+    for t in get_list(f"/repos/{repo}/tags", "D",
+                      "tags.unreadable", repo, "repository tags"):
         name = t.get("name", "")
         if name.startswith("audit-backup/"):
             add("D", "info", "tag.backup", f"{repo}@{name}",
@@ -349,20 +371,35 @@ def audit_actions(repo):
 # --------------------------------------------------------------------------- #
 
 
+def _age_days(item):
+    created = item.get("created_at") if isinstance(item, dict) else None
+    if not created:
+        return 0
+    try:
+        return (time.time() - time.mktime(
+            time.strptime(created, "%Y-%m-%dT%H:%M:%SZ"))) / 86400
+    except (TypeError, ValueError):
+        return 0
+
+
 def audit_prs_issues(repo):
-    for p in get(f"/repos/{repo}/pulls?state=open") or []:
-        age = (time.time() - time.mktime(
-            time.strptime(p["created_at"], "%Y-%m-%dT%H:%M:%SZ"))) / 86400
+    pulls = get_list(f"/repos/{repo}/pulls?state=open", "F",
+                     "prs.unreadable", repo, "open pull requests")
+    for p in pulls:
+        if not isinstance(p, dict) or "number" not in p:
+            continue
+        age = _age_days(p)
         sev = "medium" if age > 14 else "info"
         add("F", sev, "pr.open", f"{repo}#{p['number']}",
-            f"open PR '{p.get('title','')[:60]}' by {p.get('user',{}).get('login')} "
+            f"open PR '{p.get('title','')[:60]}' by {(p.get('user') or {}).get('login')} "
             f"({age:.0f} day(s) old, {p.get('state')})")
 
-    for i in get(f"/repos/{repo}/issues?state=open") or []:
-        if "pull_request" in i:
+    issues = get_list(f"/repos/{repo}/issues?state=open", "F",
+                      "issues.unreadable", repo, "open issues")
+    for i in issues:
+        if not isinstance(i, dict) or "pull_request" in i or "number" not in i:
             continue
-        age = (time.time() - time.mktime(
-            time.strptime(i["created_at"], "%Y-%m-%dT%H:%M:%SZ"))) / 86400
+        age = _age_days(i)
         if age > 30:
             add("F", "low", "issue.stale", f"{repo}#{i['number']}",
                 f"issue open for {age:.0f} day(s): '{i.get('title','')[:60]}'")
@@ -412,6 +449,10 @@ def audit_local(repo, workdir):
     if not os.path.exists(script):
         return
     local = os.path.join(workdir, "core")
+    if not os.path.isdir(local):
+        add("H", "info", "local.not-cloned", repo,
+            "no local core clone in --workdir, skipping local content audit")
+        return
     rc, text, err = sh([sys.executable, script, "--json"], cwd=local)
     if rc != 0:
         add("H", "medium", "local.audit-failed", repo,

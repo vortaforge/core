@@ -1,6 +1,10 @@
 # Agent Guidelines
 
-Context the AI agent reads on every run. Keep it short and factual.
+Context for the repository AI agent. Keep it short and factual.
+
+> **Live setting checked 2026-10-29:** the `AI Agent` and `Ward` workflows
+> were manually disabled in GitHub Actions. Do not claim that either one ran
+> for a change unless a current Actions run proves it.
 
 ## Project
 - Minecraft Java Edition datapacks and Fabric mods (Mojang mappings).

@@ -88,8 +88,52 @@ jobs:
           body: |
             Built by the read-only reusable quality workflow from the current
             `packs/` tree: individual pack archives plus the merged datapack.
-            Publication only runs after the explicit quality gate succeeds and
-            the configured `release` environment approves it.
+            Publication runs only after the explicit quality gate succeeds.
+            The publish job also runs in the `release` environment; GitHub
+            requests a manual approval there only when required reviewers are
+            configured for that environment.
           files: release-assets/*.zip
           fail_on_unmatched_files: true
           make_latest: true
+
+      # action-gh-release updates the rolling packs-latest release in place,
+      # so an asset whose pack was renamed or removed would otherwise stay
+      # downloadable forever (guikit-demo.zip and RTWrapper-1.21.1.zip did).
+      # Mirror the verified asset set after a successful upload. This removes
+      # only release assets, never repository history or source files.
+      - name: Remove stale packs-latest assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          expected_file="$(mktemp)"
+          actual_file="$(mktemp)"
+          trap 'rm -f "$expected_file" "$actual_file"' EXIT
+
+          (
+            cd release-assets
+            printf '%s\n' *.zip
+          ) | sort > "$expected_file"
+
+          release_id="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/packs-latest" --jq '.id'
+          )"
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+            --jq '.[].name' | sort > "$actual_file"
+
+          stale_assets="$(comm -13 "$expected_file" "$actual_file")"
+          if [ -z "$stale_assets" ]; then
+            echo "No stale packs-latest assets."
+            exit 0
+          fi
+
+          while IFS= read -r asset; do
+            [ -n "$asset" ] || continue
+            echo "Removing stale release asset: $asset"
+            gh release delete-asset packs-latest "$asset" \
+              --repo "$GITHUB_REPOSITORY" --yes
+            echo "- Removed stale asset \`$asset\`" >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$stale_assets"
