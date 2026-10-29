@@ -77,7 +77,6 @@ jobs:
 
             echo "::error::Failed to fetch collaborators for '${REPOSITORY}'."
             cat /tmp/gh-collaborators-error
-            rm -f "$members_file"
             exit 1
           fi
 
@@ -89,7 +88,6 @@ jobs:
             echo "::error::GitHub returned no collaborators with push access for '${REPOSITORY}'."
             echo "::error::Check that ORG_READ_TOKEN can list repository collaborators."
             echo "::error::The authenticated account/app must also be allowed to see those collaborators."
-            rm -f "$members_file"
             exit 1
           fi
 
@@ -111,7 +109,6 @@ jobs:
 
           if [ -z "$owners" ]; then
             echo "::error::Failed to generate CODEOWNERS owners."
-            rm -f "$members_file"
             exit 1
           fi
 
@@ -147,7 +144,7 @@ jobs:
           # Remove YAML heredoc indentation.
           sed -i 's/^          //' .github/CODEOWNERS
 
-          rm -f "$members_file"
+          # The ephemeral runner discards temporary files after the job.
 
           echo "Generated CODEOWNERS:"
           echo "----------------------------------------"
@@ -191,35 +188,32 @@ jobs:
           git config user.name "codeowners-sync[bot]"
           git config user.email "codeowners-sync@users.noreply.github.com"
 
-          # Preserve the generated file while switching to the existing sync
-          # branch, if there is one. Appending a normal commit keeps the PR
-          # history intact; this workflow must not force-push (CLAUDE.md rule 1).
+          # Work in a separate detached worktree so the generated file in the
+          # current checkout is never removed or overwritten during a switch.
+          # The runner is ephemeral; no explicit cleanup or force-push is used.
           generated_file="$(mktemp)"
+          sync_dir="$(mktemp -d)"
           cp .github/CODEOWNERS "$generated_file"
-          rm -f .github/CODEOWNERS
 
           git fetch origin main
           git fetch origin chore/codeowners-sync || true
           if git show-ref --verify --quiet refs/remotes/origin/chore/codeowners-sync; then
-            git checkout -B chore/codeowners-sync origin/chore/codeowners-sync
+            git worktree add --detach "$sync_dir" refs/remotes/origin/chore/codeowners-sync
           else
-            git checkout -B chore/codeowners-sync origin/main
+            git worktree add --detach "$sync_dir" refs/remotes/origin/main
           fi
 
-          mkdir -p .github
-          cp "$generated_file" .github/CODEOWNERS
-          rm -f "$generated_file"
+          mkdir -p "$sync_dir/.github"
+          cp "$generated_file" "$sync_dir/.github/CODEOWNERS"
 
-          if git diff --quiet -- .github/CODEOWNERS; then
+          if git -C "$sync_dir" diff --quiet -- .github/CODEOWNERS; then
             echo "No CODEOWNERS changes against chore/codeowners-sync."
             exit 0
           fi
 
-          git add .github/CODEOWNERS
-
-          git commit -m "chore: update CODEOWNERS owner list"
-
-          git push origin chore/codeowners-sync
+          git -C "$sync_dir" add .github/CODEOWNERS
+          git -C "$sync_dir" commit -m "chore: update CODEOWNERS owner list"
+          git -C "$sync_dir" push origin HEAD:refs/heads/chore/codeowners-sync
 
           # Do not create a duplicate PR if one already exists.
           existing_pr="$(

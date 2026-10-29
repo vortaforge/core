@@ -3,6 +3,29 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-29 - fix: pause destructive release publication
+
+**Tool:** Arena.ai Agent Mode. Review status: _pending independent review_.
+
+- **Incident and correction:** the earlier governance change introduced automatic removal of release assets that were absent from the current build. Following the merge of PR #53, the `Remove stale packs-latest assets` step in CI run `40905618629` completed successfully; `guikit-demo.zip` and `RTWrapper-1.21.1.zip`, previously inventoried in that release, were no longer listed. This conflicted with the maintainer's no-deletion instruction. The agent accepts responsibility for proposing that step; this entry preserves rather than rewrites the earlier record.
+- The publishing job is disabled while the read-only quality workflow remains enabled. The explicit deletion step has been replaced by a report that preserves older assets. `overwrite_files: false` is a further guard, **not** proof that the upstream release action has no destructive cleanup paths; publication must remain paused until a separately reviewed append-only design is ready.
+- The earlier CODEOWNERS sync change explicitly removed `.github/CODEOWNERS` inside its runner before switching branches. The sync step now uses a separate detached worktree and a normal non-force push instead; explicit runner-temporary `rm` commands were also removed.
+- Historical copies of the two ZIPs were located in CI artifact `12555914631` (CI run `40085083586`) built from commit `9b89eb11c9dee7bf09cb838cb0e52d2fa2210b0d` on 2026-10-24. The artifact archive matched GitHub's recorded SHA-256 digest and its two inner ZIPs matched its own `SHA256SUMS`. They have not been proven byte-identical to the removed release assets, and their original download counts cannot be recovered by a simple re-upload.
+- **Historical-source correction:** `git ls-tree 58c05eb9^ -- packs/guikit-demo packs/RTWrapper-1.21.1` confirms that both pack directories did exist in the repository history before commit `58c05eb9`. The older claim below that they had never existed in the monorepo was wrong and remains below only as the original audit trail.
+- **Verified locally:** the CODEOWNERS sync step was exercised against an isolated bare remote for a new branch, a fast-forward update, a no-op, and preservation of the original checkout; the release report was exercised with mock API results including an API failure; changed Bash blocks passed `bash -n`; actionlint 1.7.12 passed with its warning about the deliberate constant-false publish guard explicitly ignored; `pytest -q scripts/tests/test_repo_invariants.py` passed (16 tests).
+- **Not verified:** release recovery to GitHub, the deleted assets' original byte digests, any future append-only publisher, the full Gradle CI graph, or Minecraft runtime behavior.
+
+## 2026-10-29 - fix: CODEOWNERS access and review record follow-up
+
+**Tool:** Arena.ai Agent Mode. Review status: _pending independent review_.
+
+- **Correction to the governance entry below:** the claim that both named code owners had repository write access was not established. The previous empty `codeowners/errors` response was obtained while the default branch did not contain the restored CODEOWNERS file; an empty result in that state is not proof that a proposed owner has write access. After PR #53 was merged, GitHub's endpoint reported eight `Unknown owner` errors for `@IronCrest-sudo` on the restored rules.
+- The same eight path patterns remain. The active owner is `@tickwarden`, the owner that GitHub did not flag in that response. `@IronCrest-sudo` remains documented for historical context, not as an active code owner, until repository write access is verified. Re-check access before changing owners; listing an account does not establish independent review or successor acceptance.
+- PR #53 was merged by `tickwarden` on 2026-10-29. The GitHub reviews API returned no reviews when checked after the merge. **Anti-Review:** no independent approval is recorded on GitHub; this statement does not rule out discussion or review outside GitHub. This follow-up does not manufacture an approval and does not claim that a ruleset bypass was used.
+- A PR authored by the only active code owner still needs an independent reviewer where review is required. Neither this correction nor successful CI supplies a human review.
+- **Verified locally:** the eight CODEOWNERS path patterns are unchanged and the historical account name remains in a comment; `git diff --check`, `check_archive.py`, and `origin_watermarks.py --check` passed; `scripts/audit_repo.py` reported only the two pre-existing `pack.format-mixed` medium findings; `pytest -q scripts/tests/test_repo_invariants.py` passed (14 tests).
+- **Not verified:** a live GitHub CODEOWNERS validation for this follow-up branch, because the branch had not yet been pushed when this entry was prepared; runtime Minecraft behavior and the full Gradle CI graph were not tested for this documentation/configuration-only change.
+
 ## 2026-10-29 - docs: maintainer handover preparation
 
 **Tool:** Arena.ai Agent Mode, working from the maintainer's request to prepare the project and organization for transfer to a successor. Review status: _pending independent review_.

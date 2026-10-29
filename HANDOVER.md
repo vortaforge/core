@@ -102,7 +102,7 @@ Workflow files are in `.github/workflows/`:
 
 | Workflow | Purpose / handover note |
 |---|---|
-| `build.yml` (`CI`) | Calls the read-only reusable quality workflow. Only its publish job gets `contents: write`; publish runs in the `release` environment and publishes the artifact from the quality job to the rolling release. |
+| `build.yml` (`CI`) | Calls the read-only reusable quality workflow. **Automatic publishing is paused** after release assets were deleted contrary to the preservation requirement. The quality workflow still runs; resume publication only after an independently reviewed, append-only design and recovery procedure are ready. |
 | `quality.yml` (`Reusable Quality`) | Runs `./gradlew ci -PconfirmZip=yes` and the guigenmc package checks. Its output is evidence only when a real run is linked. |
 | `codeql.yml` | CodeQL Advanced analysis on push, pull request, and schedule. |
 | `codeowners-sync.yml` | Manual workflow that derives code owners from repository collaborators with push access. It reads through `ORG_READ_TOKEN`; confirm the token's owner, scope, and expiry privately. |
