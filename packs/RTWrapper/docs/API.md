@@ -99,9 +99,15 @@ function rtwrapper:api/commands/give_item
 
 For `give_item`, `components:""` is allowed because it is concatenated directly to `item`, not appended as a separate trailing token.
 
-## vortacraftmc loaded-pack registry
+## vortacraftmc loaded-pack registry (not shipped)
 
-RTWrapper includes a shared `vortacraftmc` namespace for vortacraftmc datapack discovery:
+> **Status (2026-10-29 audit):** the current RTWrapper tree does **not**
+> include a `data/vortacraftmc/` namespace or a
+> `vortacraftmc:api/status` function. Do not call that function against this
+> pack. The material below is retained only as a historical interop design
+> example; it is not a description of files shipped here.
+
+The unshipped design used a shared `vortacraftmc` namespace for datapack discovery:
 
 ```text
 data/vortacraftmc/function/core/load.mcfunction
@@ -113,7 +119,7 @@ data/vortacraftmc/advancement/packs/rtwrapper.json
 
 The visual registry uses advancements with the `minecraft:tick` trigger and does not revoke them. After `/reload`, open **Advancements > Installed Datapacks** to see loaded packs/modules.
 
-Status helper:
+Proposed status helper (not present in this tree):
 
 ```mcfunction
 function vortacraftmc:api/status

@@ -49,19 +49,20 @@ actually runs, and what each tool does and does not prove:
 
 | Tool | Invoked by | Checks | Does **not** check |
 |---|---|---|---|
-| `scripts/lint_datapacks.sh` (Mecha 0.101.0) | `build.yml`, step `Lint datapacks` - enforced | `.mcfunction` **command syntax** for every pack not in `IGNORE_PATHS` | Whether the pack **loads**, whether references resolve, whether behaviour is correct |
+| `scripts/lint_datapacks.sh` (Mecha 0.101.0) | `build.yml` -> `quality.yml` -> `./gradlew ci`, Gradle task `lintDatapacks` - enforced | `.mcfunction` **command syntax** for every pack not in `IGNORE_PATHS` | Whether the pack **loads**, whether references resolve, whether behaviour is correct |
 | `python3 scripts/build_release.py --check` | manual (not a CI step yet) | release ZIPs are deterministic and the release minifier is idempotent; the build also inventories dynamic command-execution surfaces (`docs/dynamic-command-gate.md`) | Runtime behaviour; whether a listed surface is reachable by an untrusted player |
-| `./gradlew checkPacks` | `build.yml` via `check` | `pack.mcmeta` shape and format range, JSON validity, cross-references between packs | Command semantics |
-| `./gradlew checkOriginWatermarks` | `build.yml` via `zipPacks` | every pack carries `data/<namespace>/function/_vc_origin.mcfunction` | Content of the watermark (covered by the next row) |
-| `python3 scripts/origin_watermarks.py --check` | `build.yml`, step `Check provenance watermark content` | every watermark equals what the template generates for its pack and namespace, and contains only comments (a no-op) | That the pack's code is what the watermark claims; it proves consistency, not authorship |
-| `./gradlew mergeDatapacks` | `build.yml`, step `Build merged datapack` | load/tick reference resolution (`strictLoadRefs`), pack-format agreement across the merged set | Runtime behaviour |
-| `./gradlew buildAll` / `lint` | `build.yml` | the **Gradle** side only (`mods/`) | Anything under `packs/` |
-| `scripts/ward_ci.sh` (mcward 1.4.0, Ward) | `ward.yml` - **starts a Minecraft test server**, CI only | Behaviour of datapack functions through `data/<namespace>/test/**.mcfunction` tests, on an isolated loopback-only server (`scripts/ward_guard.py` proves it before and after) | Anything without a Ward test; mods; multi-player behaviour |
+| `./gradlew checkPacks` | `quality.yml` via `verifyProject` in the `ci` graph | `pack.mcmeta` shape and format range, JSON validity, cross-references between packs | Command semantics |
+| `./gradlew checkOriginWatermarks` | `quality.yml` via `verifyProject`; `zipPacks` also runs its provenance guard during packaging | every pack carries `data/<namespace>/function/_vc_origin.mcfunction` | Content of the watermark (covered by the next row) |
+| `python3 scripts/origin_watermarks.py --check` | `quality.yml` via Gradle task `checkProvenance` in `verifyProject` | every watermark equals what the template generates for its pack and namespace, and contains only comments (a no-op) | That the pack's code is what the watermark claims; it proves consistency, not authorship |
+| `./gradlew mergeDatapacks` | `quality.yml` via `packageProject` -> root `build` in the `ci` graph | load/tick reference resolution (`strictLoadRefs`), pack-format agreement across the merged set | Runtime behaviour |
+| `./gradlew buildAll` | `quality.yml` via `packageProject` in the `ci` graph | the **Gradle** subprojects (mods and other discovered Gradle projects) | Datapack behaviour. The root `lint` task is a narrower local Checkstyle task and is not a separate CI step |
+| `scripts/ward_ci.sh` (mcward 1.4.0, Ward) | `ward.yml` when that workflow is enabled - **starts a Minecraft test server**, CI only. It was manually disabled at the 2026-10-29 audit | Behaviour of datapack functions through `data/<namespace>/test/**.mcfunction` tests, on an isolated loopback-only server (`scripts/ward_guard.py` proves it before and after) | Anything without a Ward test; mods; multi-player behaviour |
 
 > **⚠️ Warning:** `ward.yml` is the only place in this repository that starts a Minecraft server. It runs on GitHub-hosted runners only, binds to `127.0.0.1`, enforces an empty whitelist, fails if any socket is reachable outside loopback, and deletes the server afterwards. It downloads Fabric, mods and a JRE from third-party hosts (listed in the workflow header), so a compromised upstream is a supply-chain risk for that job. It has no secrets and a read-only token.
 
-A green CI run therefore says the repository *parses and builds* (and, for packs that
-have Ward tests, that those tests passed). It has never
+A green CI run therefore says the repository *parses and builds*. Ward tests
+add behaviour evidence only when `ward.yml` is enabled and that separate run
+is green. A green `build.yml` run has never
 said a datapack behaves correctly - that still needs a load test in a real
 world, which is what the `NOTICE.md` checklist asks for.
 

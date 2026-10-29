@@ -6,7 +6,7 @@ Frozen, reference-only projects. **Do not deploy on a live server without review
 > `runtoolkit/suite` repository, registered with `"path": null` because its
 > code lives elsewhere - so there is no archived code in this directory, only
 > this README, the registry and its schema. The rules below describe what
-> happens *when* a project is moved here; today `packs/` holds all 14 live
+> happens *when* a project is moved here; today `packs/` holds all 12 live
 > packs and nothing has been retired into `archived/`.
 Nothing here is built, zipped or merged: `packs/` is the only tree the Gradle
 tasks (`zipPacks`, `checkPacks`, `mergeDatapacks`) scan, and `archived/` is

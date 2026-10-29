@@ -7,18 +7,20 @@
  * -> (optional) open a PR if the agent wrote files.
  *
  * Security model:
- *  - The model never gets a shell. Tools use execFile / controlled fetch only.
+ *  - The model never gets a shell or a generic code runner. It can only call
+ *    the fixed allowlisted tools below; the named checks use execFile without
+ *    a shell.
  *  - Child processes run without secrets.
- *  - Writes use a BLOCKLIST of protected paths (not a tiny allowlist).
- *  - run_command uses a BLOCKLIST of dangerous binaries / arg patterns.
+ *  - Writes are enabled only for an explicit workflow_dispatch task and
+ *    cannot touch CI, Git metadata, build-control files, the named check
+ *    scripts or credential-looking paths. Every other event is read/comment
+ *    only, even though the workflow token is shared by the single job.
  *  - Issue/PR/comment text is untrusted data.
  */
 
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const os = require("node:os");
-const { randomBytes } = require("node:crypto");
 
 // ---------------------------------------------------------------- config ----
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
@@ -28,13 +30,25 @@ const MAX_OUTPUT_CHARS = 12_000;
 const MAX_COMMENT_CHARS = 6500;
 const MAX_WRITE_FILES = 15;
 const MAX_WRITE_BYTES = 300_000;
-const MAX_CODE_CHARS = 50_000;
-const MAX_FETCH_BYTES = 250_000;
 const MAX_SEARCH_HITS = 40;
 
-// ---------- BLOCKLISTS (instead of narrow allowlists) ----------
-/** Paths the agent must never write to (prefix match after normalize). */
+// ---------- write policy ----------
+/** Paths the agent must never write to (substring/prefix match after normalize). */
 const WRITE_BLOCKLIST = [
+  ".git/",
+  ".github/",
+  "build.gradle",
+  "settings.gradle",
+  "gradle.properties",
+  "gradle/",
+  "build-logic/",
+  "gradlew",
+  "gradlew.bat",
+  "scripts/audit_repo.py",
+  "scripts/lint_datapacks.sh",
+  "scripts/origin_watermarks.py",
+  "scripts/ward_ci.sh",
+  "scripts/ward_guard.py",
   ".env",
   ".env.",
   "node_modules/",
@@ -49,27 +63,16 @@ const WRITE_BLOCKLIST = [
   "secret.",
 ];
 
-/** Binaries never allowed via run_command. */
-const BINARY_BLOCKLIST = new Set([
-  "unlink", "dd", "mkfs", "parted",
- "chgrp","doas",
-  "nc", "ncat", "netcat", "ssh", "scp", "sftp",
-  "zsh", "dash", "ksh", "csh", "tcsh", "fish",
-  "eval",
- "killall","reboot", "shutdown", "poweroff",
-  "iptables", "nft", "ufw", "service",
-  "podman", "kubectl", "helm",
-  "chown"
-]);
-
-/** Argument substrings that are rejected (command injection / destructive). */
-const ARG_BLOCKLIST = [
-  "--no-permission-root",
-  "-R 777",
-  "rm -f",
-  "> /dev/sda",
-  " -type f -exec rm {} \\;",
-  "| sudo",
+/** Paths the agent must not read through its file tools. */
+const SENSITIVE_READ_PATTERNS = [
+  ".env",
+  "id_rsa",
+  "id_ed25519",
+  ".pem",
+  ".key",
+  "credentials",
+  "secrets.",
+  "secret.",
 ];
 
 // Named checks remain fixed (model only picks the name).
@@ -87,7 +90,10 @@ const [OWNER, REPO] = process.env.GITHUB_REPOSITORY.split("/");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GH_TOKEN = process.env.GH_TOKEN;
 
-const ALLOW_WRITES = EVENT !== "pull_request";
+// A manually dispatched task is the only event whose operator intent is
+// unambiguous. Issues, comments, reviews and PR synchronizations may be
+// prompt-injected, so they can inspect and comment but can never write files.
+const ALLOW_WRITES = EVENT === "workflow_dispatch";
 
 const CHILD_ENV = {
   PATH: process.env.PATH,
@@ -155,7 +161,17 @@ function safePath(rel, forWrite = false) {
   if (path.isAbsolute(rel)) throw new Error("absolute paths are not allowed");
   const abs = path.resolve(ROOT, rel);
   const norm = path.relative(ROOT, abs).split(path.sep).join("/");
+  if (!norm && !forWrite) return { abs, rel: "." };
   if (!norm || norm === ".." || norm.startsWith("../")) throw new Error("path escapes the repository");
+  if (norm === ".git" || norm.startsWith(".git/")) {
+    throw new Error("Git metadata is not available to the agent");
+  }
+  const lowerForRead = norm.toLowerCase();
+  for (const blocked of SENSITIVE_READ_PATTERNS) {
+    if (lowerForRead.includes(blocked)) {
+      throw new Error(`path blocked by policy: matches "${blocked}"`);
+    }
+  }
 
   if (forWrite) {
     const lower = norm.toLowerCase();
@@ -166,19 +182,6 @@ function safePath(rel, forWrite = false) {
     }
   }
   return { abs, rel: norm };
-}
-
-function makeTempFile(ext) {
-  return path.join(os.tmpdir(), `agent-${process.pid}-${randomBytes(6).toString("hex")}${ext}`);
-}
-
-function assertSafeArgs(args) {
-  for (const arg of args) {
-    const s = String(arg);
-    for (const bad of ARG_BLOCKLIST) {
-      if (s.includes(bad)) throw new Error(`argument blocked (contains "${bad}")`);
-    }
-  }
 }
 
 async function gh(method, endpoint, body) {
@@ -247,164 +250,23 @@ const TOOLS = {
     const { abs, rel } = safePath(a.path, true); // blocklist applied here
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     assertRealInside(path.dirname(abs));
+    if (fs.existsSync(abs)) assertRealInside(abs);
     fs.writeFileSync(abs, a.content, "utf8");
     if (!written.includes(rel)) written.push(rel);
     return `wrote ${rel} (${a.content.length} chars)`;
   },
 
-  run_python(a) {
-    let scriptPath;
-    let cleanup = null;
-    const extraArgs = Array.isArray(a.args) ? a.args.map(String).slice(0, 20) : [];
-    assertSafeArgs(extraArgs);
-
-    if (a.path) {
-      const { abs, rel } = safePath(a.path);
-      assertRealInside(abs);
-      if (!rel.endsWith(".py")) throw new Error("only .py files are allowed");
-      scriptPath = abs;
-    } else if (typeof a.code === "string") {
-      if (a.code.length > MAX_CODE_CHARS) throw new Error("code too large");
-      scriptPath = makeTempFile(".py");
-      fs.writeFileSync(scriptPath, a.code, "utf8");
-      cleanup = scriptPath;
-    } else {
-      throw new Error("provide either path or code");
-    }
-
-    try {
-      const r = runSafe("python3", [scriptPath, ...extraArgs], { timeout: 90_000 });
-      return truncate(`[${r.ok ? "ok" : "failed"}]\n${r.out}`, MAX_OUTPUT_CHARS);
-    } finally {
-      if (cleanup) try { fs.unlinkSync(cleanup); } catch {}
-    }
-  },
-
-  run_node(a) {
-    let scriptPath;
-    let cleanup = null;
-    const extraArgs = Array.isArray(a.args) ? a.args.map(String).slice(0, 20) : [];
-    assertSafeArgs(extraArgs);
-
-    if (a.path) {
-      const { abs, rel } = safePath(a.path);
-      assertRealInside(abs);
-      if (!/\.(js|mjs|cjs)$/.test(rel)) throw new Error("only .js/.mjs/.cjs files are allowed");
-      scriptPath = abs;
-    } else if (typeof a.code === "string") {
-      if (a.code.length > MAX_CODE_CHARS) throw new Error("code too large");
-      scriptPath = makeTempFile(".js");
-      fs.writeFileSync(scriptPath, a.code, "utf8");
-      cleanup = scriptPath;
-    } else {
-      throw new Error("provide either path or code");
-    }
-
-    try {
-      const r = runSafe("node", [scriptPath, ...extraArgs], { timeout: 90_000 });
-      return truncate(`[${r.ok ? "ok" : "failed"}]\n${r.out}`, MAX_OUTPUT_CHARS);
-    } finally {
-      if (cleanup) try { fs.unlinkSync(cleanup); } catch {}
-    }
-  },
-
   /**
-   * Run an external binary with args (NO shell).
-   * Blocklist on binary name + argument content.
-   * a = { bin: string, args?: string[] }
-   */
-  run_command(a) {
-    const bin = String(a.bin || "").trim();
-    if (!bin || bin.includes("/") || bin.includes("\\") || bin.includes("..")) {
-      throw new Error("bin must be a simple command name (no path)");
-    }
-    if (BINARY_BLOCKLIST.has(bin.toLowerCase())) {
-      throw new Error(`binary "${bin}" is blocked by policy`);
-    }
-    const args = Array.isArray(a.args) ? a.args.map(String).slice(0, 30) : [];
-    assertSafeArgs(args);
-
-    const r = runSafe(bin, args, { timeout: 60_000 });
-    return truncate(`[${r.ok ? "ok" : "failed"}]\n${r.out}`, MAX_OUTPUT_CHARS);
-  },
-
-  async web_search(a) {
-    const q = String(a.query || "").trim();
-    if (!q || q.length > 300) throw new Error("query required (max 300 chars)");
-    const n = Math.min(Math.max(Number(a.num_results) || 5, 1), 8);
-
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15_000);
-
-    try {
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "repo-ai-agent/1.0 (GitHub Actions)",
-          Accept: "text/html",
-        },
-      });
-      if (!res.ok) throw new Error(`search HTTP ${res.status}`);
-      const html = await res.text();
-
-      const results = [];
-      const re =
-        /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?(?:class="result__snippet"[^>]*>([\s\S]*?)<\/)/gi;
-      let m;
-      while ((m = re.exec(html)) !== null && results.length < n) {
-        const link = m[1].replace(/&amp;/g, "&");
-        const title = m[2].replace(/[<>]/g, "").trim();
-        const snippet = (m[3] || "").replace(/[<>]/g, "").trim();
-        if (title) results.push({ title, link, snippet: snippet.slice(0, 280) });
-      }
-
-      if (results.length === 0) {
-        const ia = await fetch(
-          `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`,
-          { signal: controller.signal, headers: { "User-Agent": "repo-ai-agent/1.0" } }
-        );
-        if (ia.ok) {
-          const data = await ia.json();
-          if (data.AbstractText) {
-            results.push({
-              title: data.Heading || q,
-              link: data.AbstractURL || "",
-              snippet: data.AbstractText.slice(0, 400),
-            });
-          }
-          for (const t of (data.RelatedTopics || []).slice(0, n - results.length)) {
-            if (t.Text)
-              results.push({
-                title: t.Text.slice(0, 80),
-                link: t.FirstURL || "",
-                snippet: t.Text.slice(0, 280),
-              });
-          }
-        }
-      }
-
-      return truncate(JSON.stringify({ query: q, results }, null, 2), MAX_OUTPUT_CHARS);
-    } finally {
-      clearTimeout(timer);
-    }
-  },
-
-  // -------------------- 3 NEW TOOLS --------------------
-
-  /**
-   * 1) search_files — text search in the repo (rg preferred, grep fallback).
+   * search_files — text search in the repo (rg preferred, grep fallback).
    * a = { pattern: string, path?: string, glob?: string, max_hits?: number }
    */
   search_files(a) {
     const pattern = String(a.pattern || "");
     if (!pattern || pattern.length > 200) throw new Error("pattern required (max 200 chars)");
-    assertSafeArgs([pattern]);
 
     const searchRoot = a.path ? safePath(a.path).rel : ".";
     const maxHits = Math.min(Math.max(Number(a.max_hits) || 25, 1), MAX_SEARCH_HITS);
     const glob = a.glob ? String(a.glob).slice(0, 80) : null;
-    if (glob) assertSafeArgs([glob]);
 
     // Prefer ripgrep if available
     let r = runSafe(
@@ -434,60 +296,7 @@ const TOOLS = {
   },
 
   /**
-   * 2) fetch_url — HTTP(S) GET, text only, size-limited.
-   * a = { url: string, max_chars?: number }
-   */
-  async fetch_url(a) {
-    const url = String(a.url || "").trim();
-    if (!/^https?:\/\//i.test(url)) throw new Error("only http/https URLs are allowed");
-    if (url.length > 2000) throw new Error("url too long");
-
-    const maxChars = Math.min(Math.max(Number(a.max_chars) || 12_000, 500), 30_000);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20_000);
-
-    try {
-      const res = await fetch(url, {
-        signal: controller.signal,
-        redirect: "follow",
-        headers: {
-          "User-Agent": "repo-ai-agent/1.0 (GitHub Actions)",
-          Accept: "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.1",
-        },
-      });
-
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (ct.includes("image/") || ct.includes("octet-stream") || ct.includes("video/") || ct.includes("audio/")) {
-        throw new Error(`binary content-type not allowed: ${ct}`);
-      }
-
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > MAX_FETCH_BYTES) {
-        throw new Error(`response too large (${buf.length} bytes, limit ${MAX_FETCH_BYTES})`);
-      }
-
-      let text = buf.toString("utf8");
-      // crude HTML → text
-      if (ct.includes("html")) {
-        text = text
-          .replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, " ")
-          .replace(/<style\b[\s\S]*?<\/style\b[^>]*>/gi, " ")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-      }
-
-      return truncate(
-        `HTTP ${res.status} ${res.statusText}\nContent-Type: ${ct}\n\n${text}`,
-        maxChars
-      );
-    } finally {
-      clearTimeout(timer);
-    }
-  },
-
-  /**
-   * 3) stat_file — metadata for a path (size, type, mtime, mode).
+   * stat_file — metadata for a path (size, type, mtime, mode).
    * a = { path: string }
    */
   stat_file(a) {
@@ -519,7 +328,7 @@ function executeActions(actions) {
   return Promise.all(
     actions.slice(0, MAX_ACTIONS_PER_STEP).map(async (a) => {
       const tool = a && a.tool;
-      log(`  tool: ${tool} ${a?.path || a?.name || a?.bin || a?.query || a?.pattern || a?.url || ""}`);
+      log(`  tool: ${tool} ${a?.path || a?.name || a?.pattern || ""}`);
       try {
         if (!Object.prototype.hasOwnProperty.call(TOOLS, tool)) {
           throw new Error(`unknown tool "${tool}"`);
@@ -531,17 +340,14 @@ function executeActions(actions) {
           input: {
             path: a.path,
             name: a.name,
-            bin: a.bin,
-            query: a.query,
             pattern: a.pattern,
-            url: a.url,
           },
           output: redact(String(output)),
         };
       } catch (e) {
         return {
           tool,
-          input: { path: a?.path, name: a?.name, bin: a?.bin },
+          input: { path: a?.path, name: a?.name, pattern: a?.pattern },
           output: `ERROR: ${e.message}`,
         };
       }
@@ -558,13 +364,8 @@ Tools (put them in "actions"):
   {"tool":"list_dir","path":"relative/dir"}
   {"tool":"git_diff","path":"optional/relative/path"}
   {"tool":"run_check","name":"audit"|"lint"}
-  {"tool":"write_file","path":"any/repo/path","content":"..."}   // blocked: .git, .github, secrets, node_modules, ...
-  {"tool":"run_python","path":"file.py"}  OR  {"tool":"run_python","code":"..."}
-  {"tool":"run_node","path":"file.js"}    OR  {"tool":"run_node","code":"..."}
-  {"tool":"run_command","bin":"ls","args":["-la","packs/"]}     // blocklisted binaries rejected
-  {"tool":"web_search","query":"...","num_results":5}
+  {"tool":"write_file","path":"any/repo/path","content":"..."}   // workflow_dispatch only; blocked: .git, .github, build controls, check scripts, secrets, node_modules
   {"tool":"search_files","pattern":"regex or text","path":"optional","glob":"*.py"}
-  {"tool":"fetch_url","url":"https://..."}
   {"tool":"stat_file","path":"relative/path"}
 
 Rules:

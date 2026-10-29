@@ -47,7 +47,7 @@ as they are.
 | `scripts/` | `lint_datapacks.sh` (Mecha), `origin_watermarks.py`, `gui_generator`, `dpgen`, `dp-depman`, audit helpers |
 | `examples/` | Example mods |
 | `archived/` | Reference only. Do not deploy and do not fix |
-| `index.html`, `robots.txt`, `sitemap.xml`, `banner.png` | The GitHub Pages download page and its SEO files |
+| `index.html`, `robots.txt`, `sitemap.xml`, `banner.png` | Source files for the intended GitHub Pages download page and its SEO files. Pages was not enabled at the 2026-10-29 audit (`vortaforge.github.io/core/` returned 404), so do not describe the site as live until Settings -> Pages says otherwise |
 
 ## Commands
 
@@ -65,9 +65,17 @@ python3 -m pytest scripts/gui_generator/tests scripts/tests   # offline tests; `
 
 CI (`.github/workflows/build.yml`) delegates to the read-only reusable
 `.github/workflows/quality.yml`, whose canonical check is `./gradlew ci
--PconfirmZip=yes` on Java 25 and Python 3.12; guigenmc also has a Python 3.9
-compatibility job. Only the artifact-only publish job receives write permission.
-Actions are pinned by commit SHA; keep it that way and keep `permissions` minimal.
+-PconfirmZip=yes` on Java 25 and Python 3.12. guigenmc declares Python 3.9+
+support, but no Python 3.9 CI job currently exists; do not describe the
+minimum version as CI-tested. Only the artifact-only publish job receives
+write permission. Actions are pinned by commit SHA; keep it that way and keep
+`permissions` minimal.
+
+GitHub-side workflow enablement is not in git. At the 2026-10-29 audit,
+`ai-agent.yml` and `ward.yml` were manually disabled in GitHub Actions. Their
+files may be edited and statically checked, but no run, review or Ward test
+must be claimed for that period unless the Actions settings were changed and
+a run is linked as evidence.
 
 Known: the pinned Mecha reports two errors on `time query minecraft:day` (26.3 World Clocks syntax it does not
 know yet). They are not bugs in the pack.
