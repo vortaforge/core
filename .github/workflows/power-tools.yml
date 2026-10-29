@@ -22,13 +22,12 @@ on:
           - checksum
           - json-format
           - ping-webhook
-          - matrix-test
       file:
         description: "Target file or path"
         required: false
         type: string
       extra:
-        description: "Extra arguments (pattern, size, versions, script, webhook url...)"
+        description: "Extra arguments (pattern, size, script, webhook url...)"
         required: false
         type: string
       commit_changes:
@@ -44,7 +43,6 @@ on:
 
 jobs:
   tools:
-    if: inputs.action != 'matrix-test'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -59,7 +57,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -202,7 +200,7 @@ jobs:
           fi
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@834a144ee9954ad0fbb1604c606370f1a92e9b0b # v7.0.0
         if: always()
         with:
           name: result-${{ inputs.action }}
@@ -212,24 +210,4 @@ jobs:
             repacked.zip
             checksum.txt
           if-no-files-found: ignore
-          retention-days: 3
-
-  matrix:
-    if: inputs.action == 'matrix-test'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        version: ${{ fromJson(inputs.extra || '["1.21"]') }}
-    
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
-
-      - name: Test Version
-        run: |
-          set -euo pipefail
-          echo "Testing version: ${{ matrix.version }}"
-          if [ -n "${{ inputs.file }}" ]; then
-            unzip -l "${{ inputs.file }}" | head -n 40
-          fi
+          retention-days: 9
