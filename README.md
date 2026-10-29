@@ -14,6 +14,15 @@ vortacraftmc ecosystem."), which is circular - the organization *is*
 the project name, so the description said nothing about what is in here.
 -->
 
+## Maintenance status
+
+As of 2026-10-29, a maintainer handover is being prepared. The current
+maintainer remains responsible until a successor has explicitly accepted and
+the transfer checklist in [HANDOVER.md](HANDOVER.md) is complete. Developers
+interested in maintaining the Fabric mods, datapacks, or tooling should read
+that document and `CONTRIBUTING.md` before taking on release or organization
+administration work.
+
 ## Structure
 
 - `mods/`        — Fabric mods (Gradle subprojects, auto-discovered by `settings.gradle`)

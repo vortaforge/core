@@ -3,6 +3,18 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-29 - docs: maintainer handover preparation
+
+**Tool:** Arena.ai Agent Mode, working from the maintainer's request to prepare the project and organization for transfer to a successor. Review status: _pending independent review_.
+
+| Path | Change |
+|---|---|
+| `HANDOVER.md` | New transfer runbook: preferred organization-owner handover model, asset and automation inventory, credential-name inventory without values, successor acceptance criteria, transfer-day checklist, post-transfer verification, and abort conditions. It states explicitly that preparation is not a completed transfer and that no successor is the owner until they accept and the checklist is recorded. |
+| `README.md` | Added a dated maintenance-status note linking to `HANDOVER.md` and keeping responsibility with the current maintainer until the handover completes. |
+
+- **Verified:** public GitHub account, organization, repository, contributor, fork, open-pull-request, and branch-head data were re-checked on 2026-10-29; the governance commit was replayed onto the then-current `main`, which had deleted `.github/CODEOWNERS`, and the corrected CODEOWNERS file was restored deliberately rather than accepting the delete side of the conflict. Documentation and credential-name claims were checked against the workflow tree.
+- **Not verified / not performed:** no branch was pushed and no GitHub membership, billing, repository ownership, secret, environment, Pages, ruleset, or pull-request state was changed from the preparation environment. No candidate has accepted ownership merely by being named in an outreach draft. No Minecraft server was started.
+
 ## 2026-10-29 - fix: governance, workflow-security and consistency pass
 
 **Tool:** Arena.ai Agent Mode, working from the maintainer's request to audit PR #52, the phantom review gate, repository inconsistencies and stale references. Review status: _pending - update when reviewed_.
