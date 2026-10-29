@@ -12,7 +12,7 @@
 # and the player receives the macroengine.frozen tag.
 #
 # The per-tick teleport back is handled by:
-#   macroengine:api/cmd/freeze/internal/tick  (hooked via #macroengine:events/on_tick)
+#   macroengine:core/internal/api/cmd/freeze/tick  (hooked via #macroengine:loop)
 #
 # Use macroengine:api/cmd/unfreeze to release.
 #

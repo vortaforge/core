@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────
 # macroengine:player/is_online
 # Checks whether the player is on the server.
-#  Girdi : $(player) → player name
+#  Input : $(player) → player name
 # Output: macroengine:output result → 1b (online) / 0b (offline)
 # ─────────────────────────────────────────────────────────────────
 

@@ -6,7 +6,7 @@
 # INPUT (storage macroengine:input):
 # advancement → advancement ID (e.g. "story/mine_stone")
 #
-# KULLANIM:
+# USAGE:
 # 1) Define a function as the reward in your advancement JSON:
 # "rewards": {"function": "mypack:advancements/mine_stone"}
 #

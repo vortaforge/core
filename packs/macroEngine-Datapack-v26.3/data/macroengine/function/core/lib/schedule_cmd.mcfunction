@@ -2,7 +2,7 @@
 # macroengine:core/lib/schedule_cmd
 # Repeating command scheduler at a fixed interval.
 #
-# Girdi (macroengine:input):
+# Input (macroengine:input):
 # key — scheduler name (unique identifier)
 # cmd — raw command to run on each trigger
 # interval — repeat interval in ticks

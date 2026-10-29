@@ -8,9 +8,10 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 scoreboard objectives add macroengine.meta dummy
 scoreboard players set #vortacraftmc.packs.macroengine.version macroengine.meta 263
 
-# Archived flag: set to 1 to show archive warning on every /reload
+# Archived flag: opt-in, default 0 (the pack is in active development). Set it to 1 by hand to mark a copy as archived:
 # scoreboard players set #vortacraftmc.archivedpacks.macroengine macroengine.meta 1
-execute unless score #vortacraftmc.archivedpacks.macroengine macroengine.meta matches -2147483648..2147483647 run scoreboard players set #vortacraftmc.archivedpacks.macroengine macroengine.meta 1
+# Worlds that loaded an earlier build keep the value that build stored (it defaulted to 1); reset it with the line above and 0.
+execute unless score #vortacraftmc.archivedpacks.macroengine macroengine.meta matches -2147483648..2147483647 run scoreboard players set #vortacraftmc.archivedpacks.macroengine macroengine.meta 0
 
 # ── Engine defaults (only fill missing keys — preserves live data) ─
 execute unless data storage macroengine:engine global run data modify storage macroengine:engine global set value {}

@@ -71,10 +71,10 @@ switch really is a master off for stored strings.
   containing a double quote or backslash cannot pass through those specific
   executors at all. The command-block runners copy from storage and are not
   subject to that limit.
-* The Ward tests for the macroEngine defaults
-  (`data/macroengine/test/cmd_gate_*.mcfunction`) run only in the isolated CI
-  job (`.github/workflows/ward.yml`); nothing about this gate has been
-  executed on a server outside that job.
+* macroEngine ships no Ward tests: `data/macroengine/test/` does not exist
+  (the `cmd_gate_*` tests this paragraph used to cite were never added to the
+  tree). The gate has been checked statically only (Mecha lint and the source
+  scan above); nothing about it has been executed on a server.
 
 ## Why not obfuscation instead?
 
