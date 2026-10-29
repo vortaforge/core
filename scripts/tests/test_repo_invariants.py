@@ -106,6 +106,30 @@ class ReusableQualityWorkflowInvariants(unittest.TestCase):
         self.assertNotIn("actions/checkout@", build)
 
 
+class ReleaseAssetPreservationInvariants(unittest.TestCase):
+    """Do not publish automatically until the no-deletion design is reviewed."""
+
+    def test_publish_job_is_paused_and_does_not_delete_assets(self):
+        path = os.path.join(ROOT, ".github", "workflows", "build.yml")
+        with open(path, encoding="utf-8") as fh:
+            build = fh.read()
+        self.assertIn("\n  publish:\n", build)
+        publish = build.split("\n  publish:\n", 1)[1]
+        publish = re.split(r"(?m)^  [A-Za-z_][A-Za-z0-9_-]*:\s*$", publish, maxsplit=1)[0]
+        self.assertRegex(publish, r"(?m)^    if: \$\{\{ false \}\}$")
+        self.assertIn("          overwrite_files: false", publish)
+        self.assertNotIn("gh release delete-asset", publish)
+        self.assertIn("Retained older release assets", publish)
+
+    def test_codeowners_sync_preserves_checkout_and_never_force_pushes(self):
+        path = os.path.join(ROOT, ".github", "workflows", "codeowners-sync.yml")
+        with open(path, encoding="utf-8") as fh:
+            workflow = fh.read()
+        self.assertIn("git worktree add --detach", workflow)
+        self.assertNotIn("rm -f .github/CODEOWNERS", workflow)
+        self.assertNotIn("git push --force", workflow)
+
+
 class WardServerSafetyInvariants(unittest.TestCase):
     """The Ward job is the one place that starts a Minecraft server. These tests
     stop later edits from quietly loosening its isolation or dropping its warnings."""

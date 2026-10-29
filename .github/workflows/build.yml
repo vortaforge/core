@@ -25,10 +25,12 @@ jobs:
   publish:
     name: Publish packs-latest
     needs: quality
-    if: >
-      needs.quality.outputs.verified == 'true' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Safety pause: publishing previously deleted release assets. Keep the
+    # quality job active, but do not publish until an append-only release
+    # design and its recovery procedure receive independent review.
+    # Previous eligibility (preserved for the future redesign): verified
+    # quality output, main branch, and push or workflow_dispatch events.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -86,54 +88,49 @@ jobs:
           tag_name: packs-latest
           name: Latest packs
           body: |
-            Built by the read-only reusable quality workflow from the current
-            `packs/` tree: individual pack archives plus the merged datapack.
-            Publication runs only after the explicit quality gate succeeds.
+            New uploads are built by the read-only reusable quality workflow.
+            Older assets may remain and must not be assumed to match the
+            current `packs/` tree. Automatic publication is paused pending a
+            reviewed append-only design; the quality checks still run.
             The publish job also runs in the `release` environment; GitHub
             requests a manual approval there only when required reviewers are
             configured for that environment.
           files: release-assets/*.zip
+          # This does not make the upstream action fully non-destructive.
+          # The publish job remains disabled until it is safely redesigned.
+          overwrite_files: false
           fail_on_unmatched_files: true
           make_latest: true
 
-      # action-gh-release updates the rolling packs-latest release in place,
-      # so an asset whose pack was renamed or removed would otherwise stay
-      # downloadable forever (guikit-demo.zip and RTWrapper-1.21.1.zip did).
-      # Mirror the verified asset set after a successful upload. This removes
-      # only release assets, never repository history or source files.
-      - name: Remove stale packs-latest assets
+      # This diagnostic is intentionally non-destructive. The publish job is
+      # paused above; keep old assets even if their source pack is no longer in
+      # the current tree. Do not re-enable publication without a reviewed
+      # append-only design, including upstream action failure/cleanup behavior.
+      - name: Report retained older release assets
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
 
-          expected_file="$(mktemp)"
-          actual_file="$(mktemp)"
-          trap 'rm -f "$expected_file" "$actual_file"' EXIT
-
-          (
-            cd release-assets
-            printf '%s\n' *.zip
-          ) | sort > "$expected_file"
-
+          expected_assets="$(cd release-assets && printf '%s\n' *.zip | LC_ALL=C sort)"
           release_id="$(
             gh api "repos/${GITHUB_REPOSITORY}/releases/tags/packs-latest" --jq '.id'
           )"
-          gh api --paginate \
+          actual_assets="$(gh api --paginate \
             "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
-            --jq '.[].name' | sort > "$actual_file"
-
-          stale_assets="$(comm -13 "$expected_file" "$actual_file")"
-          if [ -z "$stale_assets" ]; then
-            echo "No stale packs-latest assets."
+            --jq '.[].name' | LC_ALL=C sort)"
+          older_assets="$(comm -13 <(printf '%s\n' "$expected_assets") <(printf '%s\n' "$actual_assets"))"
+          if [ -z "$older_assets" ]; then
+            echo "No extra release assets were found."
             exit 0
           fi
-
-          while IFS= read -r asset; do
-            [ -n "$asset" ] || continue
-            echo "Removing stale release asset: $asset"
-            gh release delete-asset packs-latest "$asset" \
-              --repo "$GITHUB_REPOSITORY" --yes
-            echo "- Removed stale asset \`$asset\`" >> "$GITHUB_STEP_SUMMARY"
-          done <<< "$stale_assets"
+          {
+            echo "### Retained older release assets"
+            echo "The following assets were preserved and may differ from the current source tree:"
+            while IFS= read -r asset; do
+              [ -n "$asset" ] || continue
+              printf -- '- `%s`\n' "$asset"
+            done <<< "$older_assets"
+          } >> "$GITHUB_STEP_SUMMARY"
