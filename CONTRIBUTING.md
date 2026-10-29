@@ -7,7 +7,9 @@ Gradle/datapack split in this monorepo (what's covered by `ci`/`buildAll`
 and what isn't), what a PR should contain, and what will get a PR closed
 (obfuscated code, undisclosed behavior, misuse of the macro/command
 tooling for griefing or exploit purposes). This guide assumes you've
-already read it.
+already read it. The [maintainer guide](docs/MAINTAINER_GUIDE.md) contains
+project-wide preservation, credential, review and testing rules; it applies to
+all contributors as well as maintainers.
 
 > **⚠️ Warning - a Minecraft server is started in exactly one place.** `.github/workflows/ward.yml` (via `scripts/ward_ci.sh`) runs datapack tests with mcward on a throw-away Fabric server on a GitHub-hosted runner. It is bound to `127.0.0.1`, whitelist enforced and empty, verified loopback-only by `scripts/ward_guard.py` before and after the tests, and deleted afterwards. Nothing else in this repository starts, connects to or tests against a Minecraft server. Never run that script on a developer machine, a production host or next to a real world.
 
@@ -70,16 +72,20 @@ probably two commits. Reference related issues or PRs in the body
 ## Pull requests
 
 - Open a PR against the `main` branch.
-- Make sure the **`CI`** workflow is green before requesting review. Inside its `Verify, test and package` job, the one step that can fail you is `Run canonical project CI task graph` (`./gradlew ci -PconfirmZip=yes`), which runs `verifyProject` and `packageProject`; `publish` then only runs after that job succeeds on a `main` push.
+- When the **`CI`** workflow is enabled, wait for a real green run before
+  requesting review. CI was manually disabled in GitHub at the 2026-10-29
+  check; if it is still disabled, report the missing CI run rather than
+  claiming success. The separate `publish` job is paused in its workflow file.
 - Describe what changed and why in the PR description — and whether the change touches `mods/`, `packs/`, or both; `ci` covers both, while `buildAll` alone only covers `mods/`.
 - Run through the checklist at the bottom of [NOTICE.md](NOTICE.md) before requesting review.
-- Request a reviewer with write access; for paths listed in
-  [`.github/CODEOWNERS`](.github/CODEOWNERS), request one of the named code
-  owners. A PR author cannot approve their own PR, and a bot comment is not
-  an approval. If no independent reviewer is available and a maintainer uses
-  a ruleset bypass, say **“not independently reviewed (Anti-Review)”** in the
-  PR and merge record. Never describe a bypass, a green CI run or an AI/tool
-  comment as a human review.
+- Request an independent reviewer with write access where required. At the
+  2026-10-29 check there was no CODEOWNERS file on `main`; do not claim an
+  owner review was requested or passed solely because one existed in history.
+  A PR author cannot approve their own PR, and a bot comment is not an approval.
+  If no independent reviewer is available and a maintainer uses a ruleset
+  bypass, say **“not independently reviewed (Anti-Review)”** in the PR and
+  merge record. Never describe a bypass, a green CI run or an AI/tool comment
+  as a human review.
 
 ## Security
 

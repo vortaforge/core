@@ -3,7 +3,7 @@
 # WARNING - THIS SCRIPT STARTS A MINECRAFT SERVER.
 #
 # This repository normally never starts, connects to or tests against a
-# Minecraft server (CLAUDE.md rule 7). The ONLY exception is this script, which
+# Minecraft server (see docs/MAINTAINER_GUIDE.md). The ONLY exception is this script, which
 # is meant to run inside the isolated GitHub Actions job
 # .github/workflows/ward.yml. It uses mcward (Ward) to run datapack tests on a
 # throw-away Fabric server that is

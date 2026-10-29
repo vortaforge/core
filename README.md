@@ -80,8 +80,10 @@ tasks. `writeProjectInventory` writes a deterministic build report at
 
 ### CI
 
-Pushes, pull requests and manual dispatches trigger `build.yml`, named
-**CI**. Its read-only `quality` job calls `quality.yml`, the reusable workflow
+When enabled in GitHub, pushes, pull requests and manual dispatches can trigger
+`build.yml`, named **CI**. The workflow was manually disabled at the
+2026-10-29 status check; historical successful runs do not prove new runs are
+occurring. Its read-only `quality` job calls `quality.yml`, the reusable workflow
 that runs the canonical `./gradlew ci -PconfirmZip=yes` graph on Python 3.12
 and a guigenmc source/wheel package check. guigenmc declares Python 3.9+
 support, but there is currently no Python 3.9 CI job, so the minimum version
@@ -90,19 +92,20 @@ explicit quality gate must pass before its `verified` output is true; whether
 GitHub *requires* that gate for a merge is a repository-ruleset setting, not
 something this file can prove.
 
-Only a successful `main` push or manual run can reach `publish`. That job has
-`contents: write`, runs in the `release` environment, does not check out or
-execute repository code, and publishes only the release-candidate artifact
-produced by the read-only quality job. An environment name alone is not an
-approval: manual approval happens only if required reviewers are configured
-for `release` in GitHub settings. Keeping code execution and publication in
-separate jobs is the enforced part of this design.
+The `publish` job is **paused in the workflow file** pending a reviewed,
+append-only design and recovery plan. Its disabled implementation has
+`contents: write`, runs in the `release` environment and consumes the
+release-candidate artifact rather than checking out repository code. An
+environment name alone is not an approval: manual approval happens only if
+required reviewers are configured for `release` in GitHub settings.
 
-Workflow *enablement* is also a GitHub setting and is not stored in git. At
-the 2026-10-29 audit, the **AI Agent** and **Ward** workflows were manually
-disabled in GitHub Actions. Their files and safety rules remain in the tree,
-but a green PR from that period must not be described as AI-reviewed or
-Ward-tested. Check Settings -> Actions before relying on either workflow.
+Workflow *enablement* is also a GitHub setting and is not stored in git. At the
+2026-10-29 status check, CI, CodeQL, Reusable Quality, Organization Backup,
+CODEOWNERS Sync and Ward were manually disabled. Check the current GitHub
+settings and actual run records before claiming coverage. This change retires
+the separate AI Agent workflow and implementation; previous green runs or AI
+comments are not independent human reviews. See the
+[maintainer guide](docs/MAINTAINER_GUIDE.md) for preserved project rules.
 
 `verifyProject` enforces provenance, the repository audit, offline tests,
 dpgen tests, datapack syntax, and pack/archive metadata checks. `packageProject`

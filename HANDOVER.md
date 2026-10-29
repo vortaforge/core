@@ -23,7 +23,9 @@ organization ownership:
    name, billing ownership, and recovery access.
 5. The new owner updates or removes the outgoing owner's billing payment
    method if one exists. Leaving the organization does not update billing.
-6. Only after those checks does the outgoing owner step down or leave.
+6. Only after those checks does the outgoing owner step down or leave. An owner
+   cannot change their own role: another owner must demote them, or they may
+   leave the organization after a replacement owner is verified.
 
 Keeping the repositories under the same organization avoids changing repository
 URLs, package namespaces, organization-level settings, and the intended GitHub
@@ -49,8 +51,8 @@ namespace.
 
 ## Non-negotiable project rules
 
-The successor takes over subject to the repository rules in `CLAUDE.md`. In
-particular:
+The successor takes over subject to the repository rules in
+[`docs/MAINTAINER_GUIDE.md`](docs/MAINTAINER_GUIDE.md). In particular:
 
 - Never delete or rewrite git history, repositories, or organizations. No
   force-push and no `git filter-repo`; archive instead.
@@ -74,7 +76,7 @@ particular:
 
 ## Build and validation map
 
-Canonical commands from `README.md` and `CLAUDE.md`:
+Canonical commands from `README.md` and `docs/MAINTAINER_GUIDE.md`:
 
 ```bash
 ./gradlew verifyProject
@@ -102,20 +104,31 @@ Workflow files are in `.github/workflows/`:
 
 | Workflow | Purpose / handover note |
 |---|---|
-| `build.yml` (`CI`) | Calls the read-only reusable quality workflow. **Automatic publishing is paused** after release assets were deleted contrary to the preservation requirement. The quality workflow still runs; resume publication only after an independently reviewed, append-only design and recovery procedure are ready. |
-| `quality.yml` (`Reusable Quality`) | Runs `./gradlew ci -PconfirmZip=yes` and the guigenmc package checks. Its output is evidence only when a real run is linked. |
-| `codeql.yml` | CodeQL Advanced analysis on push, pull request, and schedule. |
-| `codeowners-sync.yml` | Manual workflow that derives code owners from repository collaborators with push access. It reads through `ORG_READ_TOKEN`; confirm the token's owner, scope, and expiry privately. |
-| `backup-org.yml` | Manual organization backup. It uses `ORG_READ_TOKEN`, `BACKUP_ARCHIVE_PASSWORD`, and `BACKUP_ORG`. Confirm where encrypted backups and the password are held; neither belongs in git. |
-| `ai-agent.yml` | AI automation. At the 2026-10-29 audit this workflow was manually disabled in GitHub. Before enabling it, confirm the model, API key account, spend limits, and the hardened tool policy in `.github/scripts/ai-agent.js`. |
-| `ward.yml` | Isolated datapack server tests in CI. At the 2026-10-29 audit this workflow was manually disabled in GitHub. Do not claim Ward coverage for that period. |
+| `build.yml` (`CI`) | Calls the read-only reusable quality workflow. GitHub showed CI manually disabled at the 2026-10-29 status check. **Automatic publishing is separately paused in the file** after release assets were deleted contrary to the preservation requirement; resume only after an independently reviewed, append-only design and recovery procedure are ready. |
+| `quality.yml` (`Reusable Quality`) | Defines `./gradlew ci -PconfirmZip=yes` and the guigenmc package checks. GitHub showed it manually disabled at the check; a reusable workflow's call behaviour must be assessed separately. Treat output as evidence only when an actual run is linked. |
+| `codeql.yml` | CodeQL Advanced analysis; GitHub showed it manually disabled at the check. |
+| `codeowners-sync.yml` | Manual workflow that derives code owners from write-access collaborators. GitHub showed it manually disabled. It reads `ORG_READ_TOKEN`; confirm owner, scope and expiry privately. No CODEOWNERS file was present on `main` at the check. |
+| `backup-org.yml` | Manual organization backup; GitHub showed it manually disabled. The script can remove old backups and has unguarded deletion paths even in dry-run mode; do not run it against real data until independently redesigned and tested. It uses `ORG_READ_TOKEN`, `BACKUP_ARCHIVE_PASSWORD`, and `BACKUP_ORG`. |
+| `ward.yml` | Isolated datapack server tests on GitHub-hosted runners only. GitHub showed this manually disabled at the check; do not claim Ward coverage without an actual run. |
 
-Credential and variable **names** referenced by the current tree:
+The former `ai-agent.yml` workflow was removed in this change at the maintainer's
+request, along with its `.github/scripts/ai-agent.js` implementation. Their
+history and AI contribution disclosures remain. Retiring code does not revoke
+GitHub secrets or the provider-side API key; see the credential note below.
 
-- Secrets: `BACKUP_ARCHIVE_PASSWORD`, `GEMINI_API_KEY`, `GITHUB_TOKEN`
-  (GitHub-provided), `ORG_READ_TOKEN`.
-- Variables: `BACKUP_ORG`, `GEMINI_MODEL`.
+Credential and variable **names** referenced by the remaining automation:
+
+- Secrets: `BACKUP_ARCHIVE_PASSWORD`, `GITHUB_TOKEN` (GitHub-provided),
+  `ORG_READ_TOKEN`.
+- Variable: `BACKUP_ORG`.
 - Environment: `release`.
+
+The removed AI workflow formerly referenced `GEMINI_API_KEY` and
+`GEMINI_MODEL`. Their presence and ownership in GitHub or the provider account
+were not verified. An authorized person should check each applicable secret and
+variable scope, assess other consumers, and revoke or rotate the provider key
+as appropriate; deleting a GitHub secret alone does not revoke that key.
+Never record or share its value in the handover.
 
 For each non-GitHub-provided secret, the incoming owner must record outside git:
 the issuing service, account owner, purpose, scope, creation/expiry dates,
@@ -126,10 +139,10 @@ and revoking outgoing-owner credentials afterwards.
 
 ## Known open items at preparation time
 
-- PR #52 proposes a "Power Tools" workflow with arbitrary shell and history
-  rewriting operations. The audit recommendation is to close it without
-  merging; if a successor disagrees, they should require a fresh read-only,
-  artifact-only design and tests in a new pull request.
+- PR #52 proposed a "Power Tools" workflow with arbitrary shell and history
+  rewriting operations. It was closed without merging. Any future proposal
+  needs a fresh, independently reviewed design consistent with the project
+  safety rules; do not reopen or merge the original proposal.
 - The repository audit reports two pre-existing medium `pack.format-mixed`
   findings. Do not guess pack formats; decide the authoritative field from the
   targeted Minecraft version and verify loading through the approved Ward path.
@@ -180,8 +193,10 @@ Before Owner access is granted, the candidate should be able to:
 - [ ] Confirm the current default branch heads and the latest successful CI and
       release runs.
 - [ ] Confirm billing contact/payment ownership and any paid plan features.
-- [ ] Run the Organization Backup workflow or another verified backup and
-      record its non-secret location and checksum.
+- [ ] Preserve an existing suitable backup and record its non-secret location,
+      retention and checksum. Do not run the current Organization Backup script,
+      including its dry-run mode, against real data until its deletion paths
+      have been independently redesigned and tested.
 - [ ] Freeze merges and releases during the access change.
 
 ### Access change
@@ -194,16 +209,20 @@ Before Owner access is granted, the candidate should be able to:
       manager.
 - [ ] Replace outgoing-owner credentials with successor-owned credentials where
       practical; otherwise record a rotation owner and deadline.
-- [ ] Update `CODEOWNERS`, release-environment reviewers, and security contact
-      documentation to name people who actually hold the roles.
+- [ ] Review release-environment reviewers and security contact documentation
+      so they name people who actually hold the roles. `CODEOWNERS` was absent
+      at the last check; do not restore it without a maintainer decision.
 
 ### Verification after access change
 
 - [ ] `git ls-remote` both repositories and confirm default branch heads.
-- [ ] Open a harmless test pull request and confirm required checks, code-owner
-      review requests, rulesets, and merge behaviour.
-- [ ] Confirm `codeowners/errors` returns no errors for `core`.
-- [ ] Run or dispatch a non-publishing CI validation and confirm artifacts.
+- [ ] Review rulesets and the actual status of required checks on a harmless
+      test PR. Do not claim a code-owner review or an automatic run occurred if
+      CODEOWNERS or CI is absent or disabled.
+- [ ] If a future authorized change adds CODEOWNERS, validate its entries and
+      permissions; an API 404 for a missing file is not a successful validation.
+- [ ] If CI is intentionally enabled later, run a non-publishing validation and
+      confirm its artifacts without enabling the paused publication job.
 - [ ] Confirm the release environment protection and reviewers before any
       publish to `packs-latest`.
 - [ ] Confirm Pages state and the canonical site URL.
