@@ -4,11 +4,11 @@
     "description": "Merged VortaForge datapack",
     "min_format": [
       121,
-      1
+      0
     ],
     "max_format": [
       121,
-      1
+      0
     ]
   },
   "include": [

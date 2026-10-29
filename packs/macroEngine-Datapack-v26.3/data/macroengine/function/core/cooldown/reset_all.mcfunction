@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────
 # macroengine:core/cooldown/reset_all
 # Clears all active cooldowns for a player.
-#  Girdi : $(player) → player name
+#  Input : $(player) → player name
 # Output: (side effect only)
 #
 # Example:

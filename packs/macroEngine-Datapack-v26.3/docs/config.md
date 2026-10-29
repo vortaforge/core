@@ -45,6 +45,8 @@ Public functions of a disabled module return 0 without doing anything. Tick scan
 | `module_title` | bool | `1b` | 0b / 1b | api/title/*: 0b makes every public function return 0 |
 | `module_trigger` | bool | `1b` | 0b / 1b | api/trigger/*: 0b makes every public function return 0 |
 | `module_wand` | bool | `1b` | 0b / 1b | api/wand/*: 0b makes every public function return 0 |
+| `module_block` | bool | `1b` | 0b / 1b | api/block/*: 0b makes every public function return 0 (`api/toggle/block/true\|false` writes this key) |
+| `module_container` | bool | `1b` | 0b / 1b | api/container/*: 0b makes every public function return 0 (`api/toggle/container/true\|false` writes this key) |
 | `module_audit` | bool | `1b` | 0b / 1b | systems/audit/*: 0b makes every public function return 0 |
 | `module_geo` | bool | `1b` | 0b / 1b | systems/geo/*: 0b makes every public function return 0 |
 | `module_hook` | bool | `1b` | 0b / 1b | systems/hook/*: 0b makes every public function return 0 |

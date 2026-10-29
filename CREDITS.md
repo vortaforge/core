@@ -3,6 +3,26 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-29 - fix: macroEngine consistency pass (docs vs code, archive flag, cross-pack notes)
+
+**Tool:** Claude (Anthropic), claude.ai chat, working from the maintainer's request to review `packs/macroEngine-Datapack-v26.3`, fix inconsistencies and make it work with the other packs. Review status: _pending - update when reviewed_.
+**Not verified:** nothing was run in a Minecraft server (repo rule). Checked statically only: Mecha lint (`scripts/lint_datapacks.sh`), `origin_watermarks.py --check`, `audit_repo.py`, JSON parse of `merge-manifest.json`, and a reference scan of every `function` / function-tag target in `packs/`. The Gradle build (`verifyProject`, `mergeDatapacks`) was **not** run (no network access to the Gradle distribution here). Mecha skips the `$` lines of macro functions, so the one macro line changed (`api/interaction/remove`) was read, not validated.
+
+| Path | Change |
+|---|---|
+| `.../function/config.mcfunction` | The archive flag `#vortacraftmc.archivedpacks.macroengine` defaulted to `1` although its comment called it opt-in, and the banner that reads it (`core/internal/load/main`) uses `@s` in a load context with no executor, so it never reaches anyone. Default is now `0`. Worlds that already stored `1` keep it; the banner code is unchanged. |
+| `.../function/api/interaction/remove.mcfunction` | `$kill` now also requires `tag=macroengine.interaction`, so a tag shared with another pack's interaction entities is not removed. **Behaviour change** for callers that relied on removing non-macroEngine interactions by tag. |
+| `.../api/cmd/freeze.mcfunction`, `.../core/internal/api/cmd/freeze/tick.mcfunction` | Comments pointed at a non-existent `#macroengine:events/on_tick` and a wrong function path; they now name `#macroengine:loop` and the real path. Comment-only. |
+| 5 function files (`core/cooldown/reset_all`, `core/lib/once_per_player_reset`, `core/lib/schedule_cmd`, `player/is_online`, `systems/hook/on_advancement_fire`) | Remaining Turkish comment words translated (repo rule: English only). Comment-only. |
+| `docs/config.md` | Added the `module_block` and `module_container` rows (both keys exist in the schema, are seeded and applied, and are guarded by 8 and 9 functions, but were undocumented). |
+| `THIRD_PARTY_LICENSES.md` | Link to `playeraction-rewrite-plan.md` pointed at `docs/`; the file is in the pack root. |
+| `README.md` | Removed the claim that VortaForge is "temporarily archived" (reverted by the 2026-10 unarchive pass); linked the new interop page. |
+| `docs/interop.md` (new) | Cross-pack surface that already exists in the code: `gate/is_open`, extension tags, storage rules, known conflicts. Documentation only. |
+| `docs/dynamic-command-gate.md` (repo root) | Removed the claim that Ward tests `data/macroengine/test/cmd_gate_*` exist; that directory does not. |
+| `packs/merge-manifest.json` | `output.min_format` / `max_format` `[121,1]` -> `[121,0]` to match the included packs (AGENT.md rule; 26.3 is data pack format 121.0 per public sources). |
+
+- **Not changed on purpose:** the `player_action.*` runtime identifiers (see `docs/interop.md` section 5; needs a migration plan under CLAUDE.md rule 8), the `#vortacraftmc.*` fake players (rule 8), and the 13 `$(invoke)` helper functions that `docs/dynamic-command-gate.md` already lists as deliberately outside the gate.
+
 ## 2026-10-28 - fix: macroEngine test findings (uuid output, summon_cbm position, consent screen, permission switches)
 
 **Tool:** Claude (Anthropic), claude.ai chat, working from the maintainer's written test report (five findings, tested on Minecraft 26.3 with two accounts). Review status: _pending - update when reviewed_.

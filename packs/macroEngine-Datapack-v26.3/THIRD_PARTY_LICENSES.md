@@ -11,7 +11,7 @@ copyright and permission notice to ship with copies or substantial portions).
 - Copyright holder: Michael Weatherby. `ICY105` is only the GitHub account that hosts the repository.
 - License: MIT (verified against upstream `LICENSE`, "Copyright (c) 2022 Michael Weatherby")
 - Status: **current dependency, scheduled for removal.** A phased, independent rewrite plan
-  exists for `core/internal/player/` — see `docs/playeraction-rewrite-plan.md`. This section
+  exists for `core/internal/player/` — see `playeraction-rewrite-plan.md` (pack root). This section
   is deleted together with the dependency; once no distributed copy of the pack contains
   PlayerAction code, this file only needs the "Not third-party" notes below.
 

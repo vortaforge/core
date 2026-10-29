@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
-# macroengine:api/cmd/freeze/internal/tick  [INTERNAL — runs via on_tick]
-# Hooked into #macroengine:events/on_tick (called every game tick).
+# macroengine:core/internal/api/cmd/freeze/tick  [INTERNAL — runs via #macroengine:loop]
+# Hooked into #macroengine:loop (listed in tags/function/loop.json; core/tick runs that tag as every online player each tick).
 #
 # Early-exit if no frozen players exist — zero cost when the
 # freeze system is idle.
