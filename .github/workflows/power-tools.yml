@@ -1,0 +1,235 @@
+name: "Power Tools"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        type: choice
+        options:
+          - unzip
+          - split
+          - merge
+          - extract
+          - rename
+          - repack
+          - lfs
+          - filter-repo
+          - force-push
+          - bash
+          - release
+          - checksum
+          - json-format
+          - ping-webhook
+          - matrix-test
+      file:
+        description: "Target file or path"
+        required: false
+        type: string
+      extra:
+        description: "Extra arguments (pattern, size, versions, script, webhook url...)"
+        required: false
+        type: string
+      commit_changes:
+        description: "Commit and push changes back to the repository"
+        required: true
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run (prevent destructive remote updates)"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  tools:
+    if: inputs.action != 'matrix-test'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      releases: write
+    
+    env:
+      INPUT_ACTION: ${{ inputs.action }}
+      INPUT_FILE: ${{ inputs.file }}
+      INPUT_EXTRA: ${{ inputs.extra }}
+      INPUT_COMMIT: ${{ inputs.commit_changes }}
+      INPUT_DRY_RUN: ${{ inputs.dry_run }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends p7zip-full rename jq curl
+          pip install --no-cache-dir git-filter-repo
+
+      - name: Execute Action
+        run: |
+          set -euo pipefail
+          
+          case "$INPUT_ACTION" in
+            unzip)
+              mkdir -p out
+              unzip -o "$INPUT_FILE" -d out/
+              find out -type f | head -n 80
+              du -sh out
+              ;;
+            
+            split)
+              SPLIT_SIZE="${INPUT_EXTRA:-95M}"
+              split -b "$SPLIT_SIZE" "$INPUT_FILE" part_
+              ls -lh part_*
+              ;;
+            
+            merge)
+              cat part_* > "$INPUT_FILE"
+              ls -lh "$INPUT_FILE"
+              ;;
+            
+            extract)
+              unzip -o "$INPUT_FILE" $INPUT_EXTRA
+              ;;
+            
+            rename)
+              find . -name "$INPUT_EXTRA" -exec rename 's/\.[^.]*$/.mcfunction/' {} + || true
+              ;;
+            
+            repack)
+              rm -rf tmp && mkdir tmp
+              unzip -o "$INPUT_FILE" -d tmp/
+              (cd tmp && zip -r ../repacked.zip .)
+              ls -lh repacked.zip
+              ;;
+            
+            lfs)
+              git lfs install
+              git lfs track "${INPUT_EXTRA:-*.zip}"
+              git add .gitattributes .
+              ;;
+            
+            filter-repo)
+              git filter-repo --path "$INPUT_FILE" --invert-paths --force
+              ;;
+            
+            force-push)
+              echo "Preparing for force-push operation..."
+              git push --force
+              ;;
+            
+            bash)
+              if [ -n "$INPUT_EXTRA" ]; then
+                bash -c "$INPUT_EXTRA"
+              else
+                echo "Error: 'bash' action requires a script provided in the 'extra' input."
+                exit 1
+              fi
+              ;;
+            
+            release)
+              TAG="${INPUT_EXTRA:-latest}"
+              gh release upload "$TAG" "$INPUT_FILE" --clobber
+              ;;
+            
+            checksum)
+              ALGO="${INPUT_EXTRA:-sha256}"
+              echo "Generating $ALGO checksum for $INPUT_FILE..."
+              "$ALGO"sum "$INPUT_FILE" | tee checksum.txt
+              ;;
+            
+            json-format)
+              echo "Formatting JSON file: $INPUT_FILE"
+              jq '.' "$INPUT_FILE" > "$INPUT_FILE.tmp" && mv "$INPUT_FILE.tmp" "$INPUT_FILE"
+              ;;
+            
+            ping-webhook)
+              WEBHOOK_URL="${INPUT_EXTRA}"
+              if [ -n "$WEBHOOK_URL" ]; then
+                echo "Sending webhook notification..."
+                curl -X POST -H "Content-Type: application/json" \
+                  -d "{\"content\": \"🚀 Power Tools action **$INPUT_ACTION** completed successfully!\"}" \
+                  "$WEBHOOK_URL"
+              else
+                echo "Error: Extra argument must contain the Webhook URL."
+                exit 1
+              fi
+              ;;
+            
+            *)
+              echo "Unknown action: $INPUT_ACTION"
+              exit 1
+              ;;
+          esac
+
+      - name: Commit and Push Changes (Optional)
+        if: env.INPUT_COMMIT == 'true' && env.INPUT_ACTION != 'force-push' && env.INPUT_ACTION != 'release'
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(powertools): automated execution of ${{ inputs.action }}"
+            if [ "$INPUT_DRY_RUN" = "false" ]; then
+              git push
+            else
+              echo "Dry run enabled. Skipping push."
+            fi
+          fi
+
+      - name: Handle Force Push / Advanced Push
+        if: (env.INPUT_ACTION == 'force-push' || env.INPUT_ACTION == 'lfs' || env.INPUT_ACTION == 'filter-repo') && env.INPUT_COMMIT == 'true'
+        run: |
+          if [ "$INPUT_DRY_RUN" = "false" ]; then
+            if [ "$INPUT_ACTION" = 'force-push' ]; then
+              git push --force-with-lease
+            elif [ "$INPUT_ACTION" = 'filter-repo' ]; then
+              git push --force
+            else
+              git push
+            fi
+          else
+            echo "Dry run enabled. Skipping remote push."
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: result-${{ inputs.action }}
+          path: |
+            out/
+            part_*
+            repacked.zip
+            checksum.txt
+          if-no-files-found: ignore
+          retention-days: 3
+
+  matrix:
+    if: inputs.action == 'matrix-test'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(inputs.extra || '["1.21"]') }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Test Version
+        run: |
+          set -euo pipefail
+          echo "Testing version: ${{ matrix.version }}"
+          if [ -n "${{ inputs.file }}" ]; then
+            unzip -l "${{ inputs.file }}" | head -n 40
+          fi
