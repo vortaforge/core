@@ -68,7 +68,7 @@ class WorkflowPinning(unittest.TestCase):
     SHA = re.compile(r"@[0-9a-f]{40}$")
 
     def test_all_actions_are_pinned_by_commit_sha(self):
-        # CLAUDE.md: "Actions are pinned by commit SHA; keep it that way."
+        # The maintainer guide requires Actions pinned by commit SHA.
         wf_dir = os.path.join(ROOT, ".github", "workflows")
         unpinned = []
         for name in sorted(os.listdir(wf_dir)):
@@ -134,7 +134,7 @@ class WardServerSafetyInvariants(unittest.TestCase):
     """The Ward job is the one place that starts a Minecraft server. These tests
     stop later edits from quietly loosening its isolation or dropping its warnings."""
 
-    WARNED_FILES = ["CLAUDE.md", "AGENT.md", "README.md", "CONTRIBUTING.md", "NOTICE.md",
+    WARNED_FILES = ["docs/MAINTAINER_GUIDE.md", "README.md", "CONTRIBUTING.md", "NOTICE.md",
                     "SECURITY.md", "scripts/README.md", ".github/workflows/ward.yml",
                     "scripts/ward_ci.sh", "scripts/ward_guard.py"]
 
@@ -214,22 +214,26 @@ class DownloadPageFallback(unittest.TestCase):
         self.assertEqual(sorted(listed), sorted(expected))
 
 
-class AIAgentToolPolicy(unittest.TestCase):
-    """Keep the Actions AI agent from regaining shell-equivalent tools."""
+class MaintainerSafetyPolicy(unittest.TestCase):
+    """Preserve project safeguards when the repository AI agent is retired."""
 
-    def test_only_fixed_tools_and_manual_dispatch_writes_remain(self):
-        with open(os.path.join(ROOT, ".github", "scripts", "ai-agent.js"),
-                  encoding="utf-8") as fh:
-            source = fh.read()
+    def test_project_rules_remain_in_human_facing_guide(self):
+        path = os.path.join(ROOT, "docs", "MAINTAINER_GUIDE.md")
+        with open(path, encoding="utf-8") as fh:
+            guide = fh.read()
+        for rule in ("Never rewrite Git history", "force-push", "release assets",
+                     "Never put a token, password or key", "Disclose AI assistance honestly",
+                     "not independently reviewed (Anti-Review)",
+                     "Do not run Minecraft-server tests locally", "Preserve runtime identifiers",
+                     "third-party licence notices"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, guide)
 
-        self.assertIn('const ALLOW_WRITES = EVENT === "workflow_dispatch";', source)
-        for protected in ('".git/"', '".github/"', '"build.gradle"',
-                          '"scripts/audit_repo.py"', '"scripts/lint_datapacks.sh"'):
-            self.assertIn(protected, source)
-
-        for removed in ("run_python", "run_node", "run_command", "web_search", "fetch_url"):
-            self.assertNotRegex(source, rf"(?m)^\s+(?:async\s+)?{removed}\s*\(")
-            self.assertNotIn(f'{{"tool":"{removed}"', source)
+    def test_retired_ai_automation_and_instruction_files_are_absent(self):
+        for path in (".github/workflows/ai-agent.yml", ".github/scripts/ai-agent.js",
+                     "AGENT.md", "CLAUDE.md"):
+            with self.subTest(path=path):
+                self.assertFalse(os.path.exists(os.path.join(ROOT, path)), path)
 
 
 class AuditFullRobustness(unittest.TestCase):

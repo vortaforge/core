@@ -3,6 +3,16 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-29 - chore: retire repository AI automation
+
+**Tool:** Arena.ai Agent Mode, at the maintainer's explicit request. Review status: _pending independent human review_.
+
+- Removed the AI Agent workflow and implementation and the two AI-specific instruction files from this branch. This is a scoped removal, not permission to delete other project material or rewrite history.
+- Preserved project safety rules and technical context in `docs/MAINTAINER_GUIDE.md`; updated active documentation references and regression tests without changing Ward's execution logic. Historical AI-disclosure entries in this file remain intact.
+- Corrected live-status descriptions in `README.md` and `HANDOVER.md`: CI and CodeQL were manually disabled at the 2026-10-29 check, CODEOWNERS was absent, and the old Organization Backup script has unsafe deletion paths even in dry-run mode. The backup script and CODEOWNERS workflow themselves were not changed.
+- **Verified locally:** 32 offline Python tests passed, with 3 socket/process tests deliberately deselected; archive-registry and provenance-watermark checks passed. The repository audit passed its high-severity threshold, retaining the two previously reported medium `pack.format-mixed` findings. Actionlint 1.7.12 passed after ignoring the diagnostic for the intentional constant-false publish guard; the Ward script passed `bash -n`. Ward execution logic was checked unchanged. The backup script, its workflow, the CODEOWNERS sync workflow, archive registry, CI, CodeQL and reusable-quality workflow files remained byte-identical to the base.
+- **Not performed:** no workflow settings, GitHub secrets, provider keys, memberships, rulesets or release assets were changed, and no existing Git history was rewritten. The branch adds new commits normally. GitHub Actions, full Gradle CI and independent human review are not claimed. No Minecraft server or backup script was run.
+
 ## 2026-10-29 - fix: pause destructive release publication
 
 **Tool:** Arena.ai Agent Mode. Review status: _pending independent review_.
@@ -217,7 +227,7 @@ when reviewed_.
 | Path | Change |
 |---|---|
 | `packs/macroEngine-Datapack-v26.3/data/macroengine/function/_vc_origin.mcfunction` | Restored with `scripts/origin_watermarks.py --write`. Commit `5f2a74b` had deleted it, so `--check` (the first CI step) failed on `main`. Only this one file was written. |
-| `.github/workflows/ai-agent.yml`, `codeql.yml` | `actions/checkout`, `actions/setup-node` and `github/codeql-action/{init,analyze}` pinned by commit SHA (were floating tags), as `CLAUDE.md` requires. SHAs resolved with `git ls-remote` against the upstream repositories. |
+| `.github/workflows/ai-agent.yml`, `codeql.yml` | `actions/checkout`, `actions/setup-node` and `github/codeql-action/{init,analyze}` pinned by commit SHA (were floating tags), as `CLAUDE.md` required. SHAs resolved with `git ls-remote` against the upstream repositories. Historical note: the AI Agent workflow was removed later. |
 | `scripts/tests/test_repo_invariants.py` | New. Offline regression tests: real tree passes the watermark check; missing/hand-edited watermarks are rejected (on a temporary copy); every workflow `uses:` is SHA-pinned. |
 | `.github/workflows/build.yml` | New required step "Repository tests" (guigenmc pytest suite, `scripts/tests`, `scripts/check_archive.py`), wired into the release gate, diagnostics and the final summary. These tests existed but CI never ran them. |
 | `scripts/lint_datapacks.sh` | Excluded paths are now found with `-prune`, each one is reported once with its `.mcfunction` count, and the summary prints the total number of files excluded from validation. Exit-status behaviour is unchanged. |

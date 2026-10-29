@@ -12,7 +12,7 @@ to the output directory:
   and trailing whitespace is trimmed. Command text is otherwise untouched -
   in particular nothing is renamed, so namespaces, public ``api/`` function
   ids and scoreboard/storage identifiers are identical to the source pack
-  (renaming them would break existing worlds; see CLAUDE.md rule 8).
+  (renaming them would break existing worlds; see docs/MAINTAINER_GUIDE.md).
 * ``_vc_origin.mcfunction`` provenance files are copied verbatim, so a
   release ZIP still identifies the pack it was built from.
 * Ward test folders (``data/<namespace>/test/``) are excluded: they contain

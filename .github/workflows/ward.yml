@@ -4,7 +4,7 @@ name: Ward (datapack tests on an isolated test server)
 # WARNING - THIS WORKFLOW STARTS A MINECRAFT SERVER.
 #
 # This is the ONLY place in the repository that does. Everywhere else the rule
-# in CLAUDE.md stands: no tests on or against a Minecraft server.
+# in docs/MAINTAINER_GUIDE.md stands: no tests on or against a Minecraft server.
 #
 # The server is a throw-away Fabric server managed by mcward 1.4.0 (Ward):
 #   * bound to 127.0.0.1 only, whitelist on + enforced + empty, online-mode on,
@@ -68,8 +68,8 @@ jobs:
     timeout-minutes: 25
 
     env:
-      # Minecraft version(s) to test on. Packs target 26.3 (AGENT.md); this is
-      # the single place to change it. Ward must publish a build for it.
+      # Minecraft version(s) to test on. The prior project guidance named 26.3;
+      # verify pack targets and that Ward publishes a build for this version.
       WARD_MC_VERSION: "26.3"
       MCWARD_VERSION: "1.4.0"
       # WARD_ACCEPT_MINECRAFT_EULA: "true"   # maintainer decision, see header
