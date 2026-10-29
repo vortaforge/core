@@ -246,4 +246,4 @@ jobs:
             repacked.zip
             checksum.txt
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: 7
