@@ -46,7 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      releases: write
     
     env:
       INPUT_ACTION: ${{ inputs.action }}
@@ -57,7 +56,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v7.0.0
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v7.x (v4.2.2 SHA)
         with:
           fetch-depth: 0
 
