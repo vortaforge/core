@@ -13,6 +13,7 @@ on:
           - merge
           - extract
           - rename
+          - move
           - repack
           - lfs
           - filter-repo
@@ -27,7 +28,11 @@ on:
         required: false
         type: string
       extra:
-        description: "Extra arguments (pattern, size, script, webhook url...)"
+        description: "Extra arguments (pattern, size, script, webhook url, destination...)"
+        required: false
+        type: string
+      confirm_dangerous:
+        description: "Type EXACTLY the action name to confirm a dangerous action (bash, filter-repo, force-push, release)"
         required: false
         type: string
       commit_changes:
@@ -46,31 +51,50 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     env:
       INPUT_ACTION: ${{ inputs.action }}
       INPUT_FILE: ${{ inputs.file }}
       INPUT_EXTRA: ${{ inputs.extra }}
+      INPUT_CONFIRM: ${{ inputs.confirm_dangerous }}
       INPUT_COMMIT: ${{ inputs.commit_changes }}
       INPUT_DRY_RUN: ${{ inputs.dry_run }}
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v7.x (v4.2.2 SHA)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+
+      - name: Guard Dangerous Actions
+        run: |
+          set -euo pipefail
+          DANGEROUS="bash filter-repo force-push release"
+          for d in $DANGEROUS; do
+            if [ "$INPUT_ACTION" = "$d" ]; then
+              if [ "$INPUT_CONFIRM" != "$INPUT_ACTION" ]; then
+                echo "::error::'$INPUT_ACTION' is a dangerous action. Set 'confirm_dangerous' to exactly '$INPUT_ACTION' to proceed."
+                exit 1
+              fi
+              if [ "$INPUT_DRY_RUN" = "true" ] && { [ "$d" = "force-push" ] || [ "$d" = "filter-repo" ]; }; then
+                echo "::error::'$INPUT_ACTION' rewrites or force-pushes repository history. Set dry_run=false explicitly AND confirm_dangerous='$INPUT_ACTION' to proceed. Refusing while dry_run=true to avoid accidental partial execution."
+              fi
+            fi
+          done
 
       - name: Install Dependencies
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends p7zip-full rename jq curl
-          pip install --no-cache-dir git-filter-repo
+          if [ "$INPUT_ACTION" = "filter-repo" ]; then
+            pip install --no-cache-dir git-filter-repo
+          fi
 
       - name: Execute Action
         run: |
           set -euo pipefail
-          
+
           case "$INPUT_ACTION" in
             unzip)
               mkdir -p out
@@ -78,48 +102,60 @@ jobs:
               find out -type f | head -n 80
               du -sh out
               ;;
-            
+
             split)
               SPLIT_SIZE="${INPUT_EXTRA:-95M}"
               split -b "$SPLIT_SIZE" "$INPUT_FILE" part_
               ls -lh part_*
               ;;
-            
+
             merge)
               cat part_* > "$INPUT_FILE"
               ls -lh "$INPUT_FILE"
               ;;
-            
+
             extract)
               unzip -o "$INPUT_FILE" $INPUT_EXTRA
               ;;
-            
+
             rename)
-              find . -name "$INPUT_EXTRA" -exec rename 's/\.[^.]*$/.mcfunction/' {} + || true
+              if [ -z "$INPUT_EXTRA" ]; then
+                echo "::error::'rename' requires a specific glob pattern in 'extra' (e.g. '*.txt'). Refusing broad/empty pattern."
+                exit 1
+              fi
+              find . -path ./.git -prune -o -name "$INPUT_EXTRA" -print -exec rename 's/\.[^.]*$/.mcfunction/' {} + 
               ;;
-            
+
+            move)
+              if [ -z "$INPUT_FILE" ] || [ -z "$INPUT_EXTRA" ]; then
+                echo "::error::'move' requires 'file' (source) and 'extra' (destination)."
+                exit 1
+              fi
+              mkdir -p "$(dirname "$INPUT_EXTRA")"
+              mv -v "$INPUT_FILE" "$INPUT_EXTRA"
+              ;;
+
             repack)
               rm -rf tmp && mkdir tmp
               unzip -o "$INPUT_FILE" -d tmp/
               (cd tmp && zip -r ../repacked.zip .)
               ls -lh repacked.zip
               ;;
-            
+
             lfs)
               git lfs install
               git lfs track "${INPUT_EXTRA:-*.zip}"
               git add .gitattributes .
               ;;
-            
+
             filter-repo)
               git filter-repo --path "$INPUT_FILE" --invert-paths --force
               ;;
-            
+
             force-push)
               echo "Preparing for force-push operation..."
-              git push --force
               ;;
-            
+
             bash)
               if [ -n "$INPUT_EXTRA" ]; then
                 bash -c "$INPUT_EXTRA"
@@ -128,23 +164,23 @@ jobs:
                 exit 1
               fi
               ;;
-            
+
             release)
               TAG="${INPUT_EXTRA:-latest}"
               gh release upload "$TAG" "$INPUT_FILE" --clobber
               ;;
-            
+
             checksum)
               ALGO="${INPUT_EXTRA:-sha256}"
               echo "Generating $ALGO checksum for $INPUT_FILE..."
               "$ALGO"sum "$INPUT_FILE" | tee checksum.txt
               ;;
-            
+
             json-format)
               echo "Formatting JSON file: $INPUT_FILE"
               jq '.' "$INPUT_FILE" > "$INPUT_FILE.tmp" && mv "$INPUT_FILE.tmp" "$INPUT_FILE"
               ;;
-            
+
             ping-webhook)
               WEBHOOK_URL="${INPUT_EXTRA}"
               if [ -n "$WEBHOOK_URL" ]; then
@@ -157,7 +193,7 @@ jobs:
                 exit 1
               fi
               ;;
-            
+
             *)
               echo "Unknown action: $INPUT_ACTION"
               exit 1
@@ -170,7 +206,7 @@ jobs:
           set -euo pipefail
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add .
           if git diff --staged --quiet; then
             echo "No changes to commit."
@@ -186,6 +222,7 @@ jobs:
       - name: Handle Force Push / Advanced Push
         if: (env.INPUT_ACTION == 'force-push' || env.INPUT_ACTION == 'lfs' || env.INPUT_ACTION == 'filter-repo') && env.INPUT_COMMIT == 'true'
         run: |
+          set -euo pipefail
           if [ "$INPUT_DRY_RUN" = "false" ]; then
             if [ "$INPUT_ACTION" = 'force-push' ]; then
               git push --force-with-lease
@@ -209,4 +246,4 @@ jobs:
             repacked.zip
             checksum.txt
           if-no-files-found: ignore
-          retention-days: 9
+          retention-days: 3
