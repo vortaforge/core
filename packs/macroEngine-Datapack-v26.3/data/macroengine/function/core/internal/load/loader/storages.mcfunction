@@ -3,6 +3,11 @@
 # (moved from macroengine:core/internal/load/load/storages in v26.3 — load/ vs loader/
 #  separates gate/confirmation logic from the actual init routines)
 #
+# AI-ASSISTED FIX (Claude, Anthropic): added the missing 'storage' keyword to the
+# queue / region_watches / batches / cb_queue guards (Spyglass lint errors) and
+# changed the second batches line from 'if' to 'unless' so batches is re-initialized
+# after being cleared. Human review required before merge.
+#
 # SAFETY DESIGN
 # -------------
 # EVERY write here uses 'execute unless data storage ...' guards.
@@ -91,20 +96,20 @@ execute unless data storage macroengine:engine fibers run data modify storage ma
 # referencing fiber ids or functions that no longer exist. Clearing it
 # here actually fulfills what the comment above already claimed was
 # happening.
-execute if data macroengine:engine queue run data remove storage macroengine:engine queue
+execute if data storage macroengine:engine queue run data remove storage macroengine:engine queue
 
 # geo/region_watch module init
 # Region watches are always cleared on reload — all packs must re-register
 # their watches in the #macroengine:init function tag. This is intentional:
 # region watch registrations are transient and pack-owned.
-execute if data macroengine:engine region_watches run data remove storage macroengine:engine region_watches
+execute if data storage macroengine:engine region_watches run data remove storage macroengine:engine region_watches
 execute unless data storage macroengine:engine region_watches run data modify storage macroengine:engine region_watches set value []
 
 # lib/batch module init
 # Incomplete batches are always cleared on reload — they cannot be safely
 # resumed across a reload boundary (executing context is gone).
-execute if data macroengine:engine batches run data remove storage macroengine:engine batches
-execute if data macroengine:engine batches run data modify storage macroengine:engine batches set value {}
+execute if data storage macroengine:engine batches run data remove storage macroengine:engine batches
+execute unless data storage macroengine:engine batches run data modify storage macroengine:engine batches set value {}
 
 # Wand cooldown module — separate storage (avoids collision with macroengine:cooldown)
 execute unless data storage macroengine:engine wand_cooldowns run data modify storage macroengine:engine wand_cooldowns set value {}
@@ -138,7 +143,7 @@ data remove storage macroengine:engine cb_queue
 data remove storage macroengine:engine _cb_last
 data remove storage macroengine:engine _cb_work
 data remove storage macroengine:engine _cb_entry
-execute unless data macroengine:engine cb_queue run data modify storage macroengine:engine cb_queue set value []
+execute unless data storage macroengine:engine cb_queue run data modify storage macroengine:engine cb_queue set value []
 
 # ─────────────────────────────────────────────────────────────────
 # Color API init
