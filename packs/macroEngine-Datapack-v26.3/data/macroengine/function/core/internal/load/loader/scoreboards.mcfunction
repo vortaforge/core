@@ -45,7 +45,7 @@ scoreboard objectives add macroengine.hook_fish dummy
 scoreboard objectives add macroengine.log_level dummy
 scoreboard objectives add macroengine.gamerule dummy
 scoreboard objectives add macroengine.state dummy
-scoreboard objectives add macroengine.rnd_idx dumm
+scoreboard objectives add macroengine.rnd_idx dummy
 
-execute unless score #macroengine.log_level macroengine.log_level matches 0.. run scoreboard players set #macroengine.log_level macroengine.log_level 3y
+execute unless score #macroengine.log_level macroengine.log_level matches 0.. run scoreboard players set #macroengine.log_level macroengine.log_level 3
 scoreboard players set @a macroengine.hook_online 1
