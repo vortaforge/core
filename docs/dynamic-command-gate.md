@@ -18,7 +18,7 @@ config mechanism:
 | Pack | Dynamic surfaces | Gate | How an operator enables it |
 |---|---|---|---|
 | `macroEngine-Datapack-v26.3` | stored-string executors (queue, hooks, wands, triggers, `multi_cmd`, `once_cmd`, region watchers, command-block runners) and the `api/cmd/*` string runners | `macroengine:systems/cmd_gate/check`: config switch + `cmd.dynamic` permission + length/control checks + root blocklist. Full contract: `packs/macroEngine-Datapack-v26.3/docs/cmd_gate.md` | `data modify storage macroengine:engine config_in set value {key:"dynamic_cmd",value:1b}` then `function macroengine:core/config/set`, and grant `cmd.dynamic` (directly or via a permission group) |
-| `guikit-datapack` | menu/button `cmd` actions (`play/act/cmd_do`, `internal/btn/cmd`) | `guikit:cfg dynamic_cmd` (storage, default `0b`, seeded in `core/load`) | `data modify storage guikit:cfg dynamic_cmd set value 1b` |
+| `guikit-datapack` (retired source; historical distributions only) | historically, menu/button `cmd` actions (`play/act/cmd_do`, `internal/btn/cmd`) | `guikit:cfg dynamic_cmd` (storage, default `0b`, seeded in `core/load`) | `data modify storage guikit:cfg dynamic_cmd set value 1b` |
 | `guikitfw` | menu `commands` actions (`act/_commands_one`) | same storage flag, seeded in `core/load` | `data modify storage guikit:cfg dynamic_cmd set value 1b` |
 | `RTWrapper-v1.0.1` and `RTWrapper` | the single wrapper dispatch (`core/wrappers/handler/exec`) that every storage-driven request funnels through | score `#dynamic` in `rtw.config` (default 0, seeded in `core/load`) | `function rtwrapper:api/dynamic/on` (`.../off` to revert) |
 | `TunnelScript` | the command-block runner (`tunnelscript_core:internal/run_block`) behind `ts:run*`, batches and the minecart input queue | score `#dynamic_enabled` in `tunnelscript.vars` (default 0), *in addition to* the existing `tunnelscript.trusted` tag and confirmation gate; dry-run preview still works while off | `function ts:config/dynamic_on` |
@@ -73,15 +73,15 @@ switch really is a master off for stored strings.
   subject to that limit.
 * macroEngine ships no Ward tests: `data/macroengine/test/` does not exist
   (the `cmd_gate_*` tests this paragraph used to cite were never added to the
-  tree). The gate has been checked statically only (Mecha lint and the source
-  scan above); nothing about it has been executed on a server.
+  tree). The gate has been checked statically only (historically with Mecha,
+  and now with Spyglass plus source inspection); no server execution is claimed.
 
 ## Why not obfuscation instead?
 
 Hiding these executors behind name mangling, split-up macro strings, dead
 code or encrypted sources would make this document impossible to write
-honestly, would break the Mecha lint, the origin-watermark check, the
-repository audit and every existing world that references these namespaces -
+honestly, would undermine static lint, the origin-watermark and repository
+checks, and every existing world that references these namespaces -
 and would look *more* like malware to any reviewer, human or automated, not
 less. The defence against false-positive "this datapack is a virus" verdicts
 is the opposite posture: plain readable source under the Unlicense, this

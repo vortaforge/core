@@ -202,7 +202,8 @@ class DownloadPageFallback(unittest.TestCase):
     def test_fallback_zip_names_match_pack_mcmeta_directories(self):
         packs_root = os.path.join(ROOT, "packs")
         expected = []
-        for current, _dirs, files in os.walk(packs_root):
+        for current, dirs, files in os.walk(packs_root):
+            dirs[:] = [d for d in dirs if d not in {"build", ".gradle", "node_modules"}]
             if "pack.mcmeta" not in files:
                 continue
             relative = os.path.relpath(current, packs_root)
@@ -212,6 +213,45 @@ class DownloadPageFallback(unittest.TestCase):
             listed = re.findall(r'zip: "([^"]+\.zip)"', fh.read())
 
         self.assertEqual(sorted(listed), sorted(expected))
+
+    def test_offline_website_javascript(self):
+        if not shutil.which("node"):
+            self.fail("Node is required for the website behaviour regression test")
+        result = subprocess.run(
+            ["node", os.path.join(ROOT, "scripts", "tests", "site_behavior.test.mjs")],
+            cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class GradleDryRunSafety(unittest.TestCase):
+    def test_generated_pack_root_outputs_are_excluded(self):
+        with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
+            script = fh.read()
+        self.assertIn("parts.getName(0).toString()", script)
+        self.assertGreaterEqual(script.count("isGeneratedPathEntry(srcDir, f)"), 2)
+        self.assertIn("isGeneratedPathEntry(dir, f)", script)
+        self.assertIn("contains generated or Ward test content", script)
+
+    def test_gradle_archive_paths_exclude_ward_test_directories(self):
+        with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
+            script = fh.read()
+        self.assertIn("parts.getName(0).toString() == 'data'", script)
+        self.assertIn("parts.getName(2).toString() == 'test'", script)
+        self.assertGreaterEqual(script.count("isWardTestPath(srcDir, f)"), 2)
+        self.assertIn("isWardTestPath(dir, f)", script)
+        pack_build = os.path.join(ROOT, "packs", "macroEngine-Datapack-v26.3", "build.gradle")
+        with open(pack_build, encoding="utf-8") as fh:
+            self.assertIn("exclude 'data/*/test/**'", fh.read())
+
+    def test_merge_dry_run_returns_before_output_mutation(self):
+        with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
+            script = fh.read()
+        merge = script.split("tasks.register('mergeDatapacks')", 1)[1]
+        before_dry_return = merge.split('[mergeDatapacks] dry run OK:', 1)[0]
+        self.assertNotIn("outDir.deleteDir()", before_dry_return)
+        self.assertNotIn("outDir.mkdirs()", before_dry_return)
+        self.assertIn("return", merge.split('[mergeDatapacks] dry run OK:', 1)[1].split("outDir.deleteDir()", 1)[0])
 
 
 class MaintainerSafetyPolicy(unittest.TestCase):
@@ -234,36 +274,6 @@ class MaintainerSafetyPolicy(unittest.TestCase):
                      "AGENT.md", "CLAUDE.md"):
             with self.subTest(path=path):
                 self.assertFalse(os.path.exists(os.path.join(ROOT, path)), path)
-
-
-class AuditFullRobustness(unittest.TestCase):
-    """A GitHub API failure must become an audit finding, not a traceback."""
-
-    @classmethod
-    def setUpClass(cls):
-        sys.path.insert(0, os.path.join(ROOT, "scripts"))
-        import audit_full
-        cls.audit_full = audit_full
-
-    def setUp(self):
-        self.original_get = self.audit_full.get
-        self.audit_full.FINDINGS.clear()
-        self.addCleanup(setattr, self.audit_full, "get", self.original_get)
-        self.addCleanup(self.audit_full.FINDINGS.clear)
-
-    def test_list_endpoint_error_is_reported_without_raising(self):
-        self.audit_full.get = lambda path: {"_error": "HTTP 403 rate limit"}
-        self.audit_full.audit_prs_issues("vortaforge/core")
-        ids = {finding["id"] for finding in self.audit_full.FINDINGS}
-        self.assertEqual(ids, {"prs.unreadable", "issues.unreadable"})
-
-    def test_missing_local_clone_is_reported_without_raising(self):
-        with tempfile.TemporaryDirectory() as workdir:
-            self.audit_full.audit_local("vortaforge/core", workdir)
-        self.assertEqual(
-            [finding["id"] for finding in self.audit_full.FINDINGS],
-            ["local.not-cloned"],
-        )
 
 
 if __name__ == "__main__":

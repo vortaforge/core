@@ -12,17 +12,18 @@
 >    loadable pack. Every other entry in `packs/` is. The Gradle pack tasks
 >    (`zipPacks`, `checkPacks`, `mergeDatapacks`) discover packs by locating
 >    `pack.mcmeta`, so they see the nested directory, not this one.
-> 2. **It contains a Fabric mod** (`rtwrapper-fabric/`). `NOTICE.md` puts mods in
->    `mods/` and datapacks in `packs/`. There is also `mods/rtwrapper-mod`, so
->    two RTWrapper Fabric mods live in this repo.
+> 2. **It contains historical Fabric source** (`rtwrapper-fabric/`) under
+>    `packs/`. This old implementation is intentionally excluded from the
+>    Gradle build; the separate `mods/rtwrapper-mod` source was removed in
+>    the 2026-10-30 cleanup. No RTWrapper Fabric mod is currently built.
 > 3. **It says "Archived" but is not registered.** `archived/archive.json` holds
 >    one entry (`runtoolkit-suite`); this pack is not in it, and it still lives
 >    under `packs/`. `checkArchive` fails for an entry that is registered as
 >    archived while still under `packs/`, so the banner and the registry cannot
 >    both be satisfied as things stand.
 >
-> Related: `packs/RTWrapper-v1.0.1` (format 122, in `merge-manifest.json`) and
-> The three naming schemes — no suffix, `-1.21.1` (Minecraft version) and
+> Related: `packs/RTWrapper-v1.0.1` (format 121, not currently included in
+> `merge-manifest.json`). The three naming schemes — no suffix, `-1.21.1` (Minecraft version) and
 > `-v1.0.1` (semver) — are not consistent with each other.
 
 RTWrapper is a datapack for Java Edition 26.3.

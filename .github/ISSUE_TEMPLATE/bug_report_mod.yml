@@ -8,9 +8,10 @@ body:
       label: Affected subproject
       description: Which subproject under mods/ is this about?
       options:
+        - afk-manager
+        - datapack-blocker
+        - join-throttle
         - TEMPLATE-MOD
-        - datapack-fixer
-        - rtwrapper-mod
         - Other / not sure
     validations:
       required: true
@@ -20,7 +21,7 @@ body:
     attributes:
       label: Mod / Minecraft version
       description: Mod version (or commit hash) and Minecraft version you're running
-      placeholder: "e.g. datapack-fixer 1.4.2 on Minecraft 1.21.5"
+      placeholder: "e.g. datapack-blocker at a commit hash on Minecraft 1.21.1"
     validations:
       required: true
 

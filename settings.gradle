@@ -36,8 +36,7 @@ def SCAN_ROOTS = ['mods', 'packs', 'examples']
 // dig through git blame.
 // -----------------------------------------------------------------------
 def EXCLUDED_PROJECT_DIRS = [
-    'mods/datapack-fixer'               : 'legacy tool, not yet migrated to the shared build - see mods/datapack-fixer/README',
-    'packs/RTWrapper/rtwrapper-fabric'  : 'superseded by mods/rtwrapper-mod; kept only for historical reference',
+    'packs/RTWrapper/rtwrapper-fabric'  : 'historical Fabric implementation; intentionally not built',
 ]
 
 // Set debugSettings=1 on the command line (-PdebugSettings=1) for verbose

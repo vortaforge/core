@@ -13,8 +13,8 @@
 // build-logic uses) fixes the Fabric Loom *plugin version* once for every
 // consumer, which only works because every fabric-api module targets one
 // Minecraft version. The consumers of this file deliberately don't:
-// datapack-blocker/rtwrapper-mod/rtwrapper-fabric pin Loom 1.15.5 or 1.10.4
-// against MC 1.21.1 (obfuscated, needs Yarn mappings), while
+// datapack-blocker and the excluded historical rtwrapper-fabric target
+// MC 1.21.1 (obfuscated, needs Yarn mappings), while
 // opmod-example/TEMPLATE-MOD target MC 26.x (ships unobfuscated, no Yarn
 // layer) on newer/SNAPSHOT Loom. `apply from:` runs this file's script body
 // against whichever project applies it, using the loom/maven-publish
@@ -22,12 +22,9 @@
 // per-project Loom version pinning keeps working exactly as it does today.
 //
 // This file only factors out the parts that were previously copy-pasted
-// identically across mods/datapack-blocker, mods/rtwrapper-mod,
-// examples/opmod-example, mods/TEMPLATE-MOD, and
-// packs/RTWrapper/rtwrapper-fabric's build.gradle (the last one is excluded
-// from the actual Gradle build by settings.gradle's EXCLUDED_PROJECT_DIRS -
-// "superseded by mods/rtwrapper-mod; kept only for historical reference" -
-// but is still kept in sync with this shared script for consistency):
+// identically across mods/datapack-blocker, examples/opmod-example,
+// mods/TEMPLATE-MOD, and the historical packs/RTWrapper/rtwrapper-fabric
+// build (the latter remains excluded by settings.gradle):
 //   - the fabric.mod.json version-expansion processResources block
 //   - withSourcesJar()
 //   - the basic mavenJava publishing{} publication
@@ -40,7 +37,7 @@
 //     opmod-example's build.gradle for why it's plain `implementation` with
 //     no `mappings "..."` line)
 //   - `sourceCompatibility`/`targetCompatibility`/`options.release` (differs:
-//     21 for datapack-blocker/rtwrapper-mod, 25 for opmod-example/TEMPLATE-MOD)
+//     21 for datapack-blocker, 25 for opmod-example/TEMPLATE-MOD)
 //   - `jar { from("LICENSE") {...} }` (only present where a LICENSE file
 //     actually exists in that subproject - referencing a missing file here
 //     unconditionally would fail every consumer's jar task)
@@ -87,7 +84,7 @@ publishing {
             // examples/opmod-example (which sets
             // `base { archivesName = project.archives_base_name }`) that's
             // "opmod", not the directory name "opmod-example"; for
-            // mods/datapack-blocker, mods/rtwrapper-mod and mods/TEMPLATE-MOD
+            // mods/datapack-blocker and mods/TEMPLATE-MOD
             // (none of which set base.archivesName) it's the Gradle default
             // of project.name, matching what their jar filenames already use
             // - so this keeps every mod's published artifactId consistent

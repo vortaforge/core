@@ -1,31 +1,61 @@
 # scripts/
 
 Helper tooling for this monorepo. `NOTICE.md` treats everything here as
-**lower trust by default** - read a script before running it, especially
-`backup-org.sh`, which handles a token with org-wide read access.
-
-There was previously no index for this directory: six scripts and three
-self-contained tools sat side by side with nothing saying what any of them did,
-which is why three one-off fixers from a single audit session were still
-checked in and looked like part of the toolchain. They were removed; this file
-exists so the next reader does not have to reconstruct the difference.
+**lower trust by default**: inspect code and dependencies before use, and
+avoid running quality tooling with privileged credentials.
 
 ## Repository tooling
 
-| Script | Run by | What it does |
-|---|---|---|
-| [`lint_datapacks.sh`](lint_datapacks.sh) | `build.yml` -> `quality.yml` -> `./gradlew ci`, Gradle task `lintDatapacks` — enforced | Installs Mecha (pinned, `MECHA_VERSION`) and validates `.mcfunction` **command syntax** for every pack not in `IGNORE_PATHS`. Propagates Mecha's exit status; `LINT_WARN_ONLY=1` makes one run advisory. Does **not** load packs or resolve references. |
-| [`audit_repo.py`](audit_repo.py) | `verifyProject` Gradle task `auditRepository` (`--fail-on high`), and by hand | Working-tree consistency audit: `pack.mcmeta` shape and format ranges, plural/singular data folders, load/tick references, merge-manifest coherence, broken Markdown links, dangling workflow references, CI shape, and commit-message quality. Also flags invalid NBT paths (`[N]{}`, which Mecha and the game both reject), unresolvable load/tick tag values, and stale branches. `--json` / `--format github` for machine output, `--fail-on <severity>` to use it as a CI gate (exit 0 by default), `--min-severity`, `--only`/`--skip` to filter, `--fix [--dry-run]` for the safe file fixes; deleting remote branches additionally needs `--delete-stale-branches` and only ever touches fully merged, unprotected branches. |
-| [`audit_full.py`](audit_full.py) | by hand | Superset of the above that also queries GitHub: org plan and 2FA policy, repository settings and topics, workflow/action pinning, and Dependabot/secret-scanning state. Calls `audit_repo.py` for the local half. Needs a token. |
-| [`check_archive.py`](check_archive.py) | by hand (mirrors `./gradlew checkArchive`) | Validates `archived/archive.json` against its schema, and that nothing registered as archived is still under `packs/` or still in `merge-manifest.json`. Stdlib only, no network. |
-| [`fix_text_components.py`](fix_text_components.py) | by hand | Rewrites `{"storage":…,"nbt":…}` text components so they set `interpret` and `plain` explicitly. On 26.1+ a missing pair makes a string render **with its quotes** and a number or boolean render with vanilla colouring. Referenced from `packs/macroEngine-Datapack-v26.3/README.md`. |
-| [`backup-org.sh`](backup-org.sh) | `backup-org.yml`, or by hand | Full organization backup: bare git clones, wikis, issues/PRs/releases, Actions/Dependabot/security metadata, team membership and repo access, topics and languages, org settings — then sanitises credentials out of the metadata, archives it (optionally encrypted) and verifies the result. |
+| Script or test | Role when explicitly run |
+|---|---|
+| [`lint_datapacks.sh`](lint_datapacks.sh) and [`datapack_lint/`](datapack_lint/README.md) | Spyglass 0.4.70 static diagnostics plus a separate strict JSON parser, with per-file coverage enforcement and explicit Ward/permission exceptions. Uses Node 20+ and a pinned lock; may download vanilla data. No Minecraft server. |
+| [`tests/`](tests/) | Python regression tests, including focused repository safeguards, workflow-action pinning, pack/merge invariants, credential patterns, release packaging and offline Ward-guard tests. |
+| [`check_archive.py`](check_archive.py) | Validates `archived/archive.json` against its schema and that registered archives are not still under `packs/` or in the merge manifest; stdlib only. |
+| [`origin_watermarks.py`](origin_watermarks.py) | Checks or generates the no-op provenance watermarks. `--check` does not modify sources. |
+| [`fix_text_components.py`](fix_text_components.py) | Rewrites selected text components; it can change files, so review it and the diff before use. |
+| [`backup-org.sh`](backup-org.sh) | Historical organization-backup tool. **Do not assume even `--dry-run` is non-destructive:** its current paths can remove or overwrite files. It handles privileged organization data and needs a separate safety review before any use. It was not run as part of this cleanup. |
 
-```bash
-bash scripts/backup-org.sh --help          # full flag list
-bash scripts/backup-org.sh --dry-run       # rehearsal; writes nothing but the log
-python3 scripts/audit_repo.py              # local consistency report
-```
+`verifyProject` wires the static linter and regression suites into the Gradle
+graph, along with provenance, mod, pack and archive checks. The workflow
+configuration describes that graph; it does not itself mean GitHub workflows
+are enabled or have run. Publishing remains paused pending human validation.
+See [`datapack_lint/README.md`](datapack_lint/README.md) for setup, network,
+cache, security override, exclusions, version coverage and warning semantics.
+Ward test files remain in source but are excluded from runtime pack ZIPs.
+Generated pack-root build output is also omitted; nested datapack function
+paths named `build` are retained. Normal Gradle packaging clears and recreates its generated `build/` output
+locations; keep personal files elsewhere. The merge dry-run now returns before
+clearing or creating its output directory.
+
+## Audit retirement and coverage gaps
+
+`audit_repo.py` and `audit_full.py` were removed in the 2026-10-30 cleanup;
+`auditRepository` is no longer a Gradle task. The independent regression
+checks in `tests/test_repository_safeguards.py` retain selected safeguards:
+pack metadata and layout, load/tick tag shape and required function targets,
+static merged-function references and merge-manifest checks, invalid indexed
+NBT path patterns, common credential shapes, and license consistency. Other
+existing tests check workflow action pinning, ZIP contents, archive rules and
+provenance. Negative fixtures exercise several of these checks.
+
+These are **not a full replacement** for the old audits. In particular:
+
+- Required tag targets are resolved across the repository's pack tree, not
+  proven available in every combination of installed packs. Function macros,
+  generated or dynamic calls, and all cross-pack runtime effects cannot be
+  fully resolved statically.
+- Credential matching covers selected common token/key forms in small working-
+  tree text files; it skips symlinks, binary files and files over 2 MB. It is not secret
+  scanning, does not prove the absence of credentials and does not revoke any.
+- The removed scripts' broad Markdown-link, workflow/Gradle reference,
+  commit-message, stale-branch and other general repository audit checks are
+  not all replicated. Run specialized checks and human review where needed.
+- No replacement queries organization/repository settings, branch protection,
+  2FA, billing, Dependabot status or other remote GitHub state. No automatic
+  fix or remote-branch deletion functionality was carried forward.
+- Static tooling cannot establish the safety of dynamic commands or prove
+  game behaviour, permissions, compatibility across every supported version,
+  or that release assets are suitable for publishing.
 
 ## Self-contained tools
 
@@ -34,14 +64,14 @@ independently of the repository tooling above.
 
 | Directory | What it is | Manifest |
 |---|---|---|
-| [`dp-depman/`](dp-depman/) | Dependency resolver and editor for datapacks that declare a `datapack_depends.json`. | `datapack_depends.lock` |
-| [`dpgen/`](dpgen/) | Generates a datapack from a YAML description, so generated files do not have to be checked in. | `package.json` |
-| [`gui_generator/`](gui_generator/) | `guigenmc` — generates the `guikit` in-game GUI datapack from a menu spec; ships a browser UI and a test suite. | `pyproject.toml`, `requirements.txt` |
+| [`dpgen/`](dpgen/) | Generates a datapack from a YAML description. | `package.json` |
+| [`gui_generator/`](gui_generator/) | `guigenmc` — generates a GUI datapack from a menu spec; ships a browser UI and tests. | `pyproject.toml`, `requirements.txt` |
 
-Dependabot's pip entry watches `scripts/gui_generator` and its npm entry
-watches `scripts/dpgen` (`.github/dependabot.yml`). CI runs the `guigenmc`
-tests on Python 3.12 only; its declared Python 3.9 minimum is not currently
-covered by a CI job.
+Dependabot configuration watches `scripts/gui_generator`, `scripts/dpgen`
+and `scripts/datapack_lint`. Dependency proposals require human review; the
+linter's runtime version pin and decompressor override need coordinated
+updates. The configured quality workflow tests guigenmc on Python 3.12 only;
+its declared Python 3.9 minimum is not covered by that job.
 
 ## Removed from here
 
@@ -49,13 +79,22 @@ covered by a CI job.
 `datapack_lock/check_lock.py` were deleted on 2026-10-08. The first two were
 one-off fixers from a single audit session whose changes were already
 committed; `check_lock.py` implemented a lock that nothing invoked, against a
-workflow that never existed. If you are looking for one of them, that is why it
-is gone — see the commit that removed them for the evidence.
+workflow that never existed. `dp-depman/` and the two audit scripts were
+retired in the 2026-10-30 cleanup. Git history preserves their provenance.
 
 ## Ward test server (CI only)
 
-> **⚠️ Warning - a Minecraft server is started in exactly one place.** `.github/workflows/ward.yml` (via `scripts/ward_ci.sh`) runs datapack tests with mcward on a throw-away Fabric server on a GitHub-hosted runner. It is bound to `127.0.0.1`, whitelist enforced and empty, verified loopback-only by `scripts/ward_guard.py` before and after the tests, and deleted afterwards. Nothing else in this repository starts, connects to or tests against a Minecraft server. Never run that script on a developer machine, a production host or next to a real world.
+> **Warning: this path starts a Minecraft server.** `.github/workflows/ward.yml`
+> (via `scripts/ward_ci.sh`) defines datapack tests using mcward on a
+> throw-away Fabric server on a GitHub-hosted runner, with loopback binding,
+> an empty whitelist, guard checks and cleanup. It was manually disabled at
+> the 2026-10-29 audit; its configuration is not evidence of a run. Never run
+> that script on a developer machine, a production host or next to a real
+> world.
 
-- `ward_ci.sh` - orchestrates install, lock-down, start, verification, tests and cleanup. Refuses to run outside GitHub Actions.
-- `ward_guard.py` - seeds the locked `server.properties`, verifies loopback-only listeners, discovers packs with Ward tests (stdlib only).
-- `tests/` - offline tests for the guard; the "server" in them is a plain Python socket.
+- `ward_ci.sh` orchestrates install, lockdown, tests and cleanup; it refuses
+  to run outside GitHub Actions.
+- `ward_guard.py` seeds locked `server.properties`, checks listeners and
+  discovers packs with Ward tests.
+- `tests/` contains offline guard tests; the "server" there is a plain Python
+  socket, not Minecraft.

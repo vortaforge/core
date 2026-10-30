@@ -91,12 +91,13 @@ python3 -m pytest scripts/gui_generator/tests scripts/tests
 npm test
 ```
 
-Requirements include JDK 25 and the included Gradle wrapper. `verifyProject`
-covers provenance, repository audit, offline tests, datapack syntax, and
-pack/archive metadata. Mecha validates command syntax only; it does not prove
-in-game behaviour. The Ward workflow is the sole server-backed validation path
-and must never be loosened from its loopback-only, empty-whitelist, verified
-cleanup design.
+Requirements include JDK 25, Node 20+, Python tools and the included Gradle
+wrapper. `verifyProject` covers provenance, focused repository tests,
+Spyglass/JSON lint, mod verification and pack/archive metadata. Spyglass can
+download vanilla data; none of these checks proves in-game behaviour. See
+`scripts/README.md` for the retired audit's coverage gaps. The Ward workflow
+is the sole server-backed validation path and must never be loosened from its
+loopback-only, empty-whitelist, verified cleanup design.
 
 ## GitHub automation inventory
 

@@ -3,6 +3,55 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-30 - chore: retire selected components and replace datapack lint
+
+**Tool:** Arena.ai Agent Mode, at the maintainer's explicit request. **Anti-Review:**
+no independent human review had been recorded when this entry was prepared;
+local tests, bot comments and bypasses are not human approval.
+
+- Removed only the four selected source paths (`mods/rtwrapper-mod`,
+  `mods/datapack-fixer`, `packs/guikit-datapack`, `scripts/dp-depman`) and
+  the two retired audit scripts; removed only their orphaned audit tests.
+  Existing histories and credits are retained. Historical RTWrapper Fabric
+  source remains excluded, so no RTWrapper Fabric mod is currently built.
+- Replaced Mecha with a pinned Spyglass language-server client, a separate
+  strict JSON parser, per-file coverage checks, security regression tests,
+  explicit exceptions and a patched decompressor override. Retained selected
+  audit safeguards in tests and documented their gaps. Corrected two invalid
+  player selectors without claiming runtime validation.
+- Preserved original license notices in individual and merged archives,
+  corrected dpgen and PlayerAction licensing descriptions, and added tests.
+  Ward tests stay in source but are omitted from runtime ZIPs. The merge dry
+  run no longer clears prior build output. Updated active site, issue, build
+  and maintainer references without deleting historical records.
+- **Verified locally:** `./gradlew ci -PconfirmZip=yes` completed with JDK 25,
+  Node 20, one worker and constrained JVM/Node heaps; some packaging tasks
+  reused results from an earlier successful `packageProject` execution. The
+  run included 49 repository Python tests, 65 guigenmc tests, 5 dpgen tests,
+  6 linter tests and 52 Java tests (some Java tasks up-to-date). After adding
+  dependency-license, symlink-discovery and generated-output regressions,
+  all 51 repository tests and all 7 linter tests passed separately. The
+  full graph passed before the final packaging guard and warning-label change;
+  `packageProject`, the linter tests and an RTWrapper lint were rerun after
+  those respective changes. Earlier runs lost their Gradle daemon under
+  this sandbox's memory pressure; the successful run used lower limits.
+  All 11 individual pack ZIPs and the merged ZIP were inspected, with source
+  notices compared byte for byte; the macroEngine-specific ZIP was also checked.
+  An isolated fixture confirmed generated root outputs are omitted while a
+  legitimate nested `function/build` remains. Dry-run preservation
+  and failing command/JSON/timeout fixtures were tested. Isolated Gradle
+  fixtures rejected a symlinked notice, notice-directory collision and
+  missing repository license. Actionlint 1.7.12 passed with only the
+  intentional constant-false publishing-guard diagnostic filtered.
+- **Open limitations:** the full lint covered 3,278 files at one inferred
+  version per pack, with three Ward exclusions and 58 warnings. See
+  `docs/static-analysis-findings-2026-10-30.md` for potential QuickShare,
+  TunnelScript, LeftClickDetection, RTWrapper and macroEngine problems. No
+  Minecraft server, Ward run, backup script, or GitHub Actions run was used;
+  gameplay, all-version compatibility and permissions remain unverified.
+  Publishing is still paused. No workflow enablement, stored repository or
+  organization secrets, memberships, release assets or Git history were changed.
+
 ## 2026-10-29 - chore: retire repository AI automation
 
 **Tool:** Arena.ai Agent Mode, at the maintainer's explicit request. Review status: _pending independent human review_.

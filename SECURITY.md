@@ -32,7 +32,7 @@ This repo consolidates multiple projects with different security postures:
 | Area | Status |
 |---|---|
 | `mods/` | Fabric mods. Compiled, type-safe. |
-| `packs/` | 12 live packs (datapacks + the macroEngine resource pack), all under active layout. **Not** archived: `archived/` currently holds no packs at all (see `archived/archive.json`, whose only entry is the retired `runtoolkit/suite` repo with `"path": null`). |
+| `packs/` | Datapack and resource-pack roots, including a nested historical RTWrapper datapack. The archive registry currently lists no pack paths; an in-tree historical banner is not the same as a registered archive. |
 | `scripts/` | Helper tooling. Treat as lower trust; review before running. |
 | `examples/` | Templates and sample code. Not intended for production use. |
 | `archived/` | Reserved for no-longer-maintained projects, kept for reference only — do not deploy on a live server without review. Tracked in `archived/archive.json`; see `archived/README.md`. |
@@ -49,7 +49,8 @@ actually runs, and what each tool does and does not prove:
 
 | Tool | Invoked by | Checks | Does **not** check |
 |---|---|---|---|
-| `scripts/lint_datapacks.sh` (Mecha 0.101.0) | `build.yml` -> `quality.yml` -> `./gradlew ci`, Gradle task `lintDatapacks` - enforced | `.mcfunction` **command syntax** for every pack not in `IGNORE_PATHS` | Whether the pack **loads**, whether references resolve, whether behaviour is correct |
+| `scripts/lint_datapacks.sh` (Spyglass 0.4.70 + strict JSON) | `verifyProject` / the CI graph **when run** | Static diagnostics at one inferred version per pack; strict JSON and coverage checks; explicit Ward and permission exceptions | All supported versions, real permissions, complete reference resolution, loading or runtime behaviour |
+| `python3 -m unittest discover -s scripts/tests` | `verifyProject` / the CI graph **when run** | Focused pack/merge invariants, action pinning and common credential shapes | GitHub org settings, all secret types, runtime behaviour; see `scripts/README.md` for gaps |
 | `python3 scripts/build_release.py --check` | manual (not a CI step yet) | release ZIPs are deterministic and the release minifier is idempotent; the build also inventories dynamic command-execution surfaces (`docs/dynamic-command-gate.md`) | Runtime behaviour; whether a listed surface is reachable by an untrusted player |
 | `./gradlew checkPacks` | `quality.yml` via `verifyProject` in the `ci` graph | `pack.mcmeta` shape and format range, JSON validity, cross-references between packs | Command semantics |
 | `./gradlew checkOriginWatermarks` | `quality.yml` via `verifyProject`; `zipPacks` also runs its provenance guard during packaging | every pack carries `data/<namespace>/function/_vc_origin.mcfunction` | Content of the watermark (covered by the next row) |

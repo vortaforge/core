@@ -147,9 +147,7 @@ Yes. It is a purely server-side datapack, and players do not need any mods. Requ
 
 ### Is it paid?
 
-No. The pack is released under the **Unlicense** (public domain): free, including commercial use, and no attribution is required. Two notes:
-
-- This is not legal advice.
+No. macroEngine's original code is released under the **Unlicense** and may be used commercially. The pack also contains PlayerAction, which is licensed under MIT: keep its copyright and permission notice in copies or substantial portions. See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md). This is not legal advice.
 
 ### How is the performance?
 
@@ -171,11 +169,12 @@ The diagrams above are generated from the source code. Real in-game captures (in
 - **Forceload side effects.** On load the pack runs `forceload add 0 0` and `forceload add -30000000 1600`. Cleanup only runs `forceload remove 0 0`, which also removes a `0 0` forceload the server owner added themselves, and `-30000000 1600` is **never removed** (if it lies outside the world border, the command may fail silently).
 - **Command-executing APIs do not check who is calling.** See "Is it safe?".
 - **NBT-filtered `@e[type=item]` scan every tick** (performance note above).
-- **License and file inconsistencies.** `LICENSE` and `THIRD_PARTY_LICENSES.md` are not in this zip (the statement "Both files ship inside the distributed zip" above is wrong). `_rt_origin.mcfunction` is claimed to be stripped from distribution zips but is present (the game ignores it, so it is harmless) and its license header contradicts the Unlicense.
+- **Older archive contents may differ.** Verify that a particular archive contains `LICENSE` and `THIRD_PARTY_LICENSES.md` before redistributing it. The current source uses `_vc_origin.mcfunction`; the Gradle individual-pack ZIP strips it from a temporary copy, while `scripts/build_release.py` retains it.
 
 ## License
 
-- macroEngine original code: Unlicense (public domain) — see [`LICENSE`](LICENSE).
+- macroEngine original code: Unlicense — see [`LICENSE`](LICENSE).
+- PlayerAction: MIT, with copyright and license text in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md); retain that notice when redistributing the applicable code.
 - String module (`core/lib/string`, `core/internal/text`): macroEngine original code.
 
-Both files ship inside the distributed zip.
+Current individual-pack build paths include both license files; merged packs carry notices from their included source packs.

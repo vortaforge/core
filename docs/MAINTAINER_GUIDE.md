@@ -88,12 +88,13 @@ python3 -m pytest scripts/gui_generator/tests scripts/tests
 # inside scripts/dpgen: npm test
 ```
 
-`verifyProject` is the canonical offline repository-validation graph and needs
-its Python/Node tools; `packageProject` prepares individual and merged pack
-artifacts. Mecha checks command syntax, not in-game behaviour, and has known
-limitations for 26.3 World Clocks syntax. None of these checks proves an
-in-game result. `scripts/ward_ci.sh` starts a Minecraft server and must never be
-run by hand.
+`verifyProject` is the canonical repository-validation graph and needs its
+Python/Node tools; Spyglass may download vanilla data. `packageProject`
+prepares individual and merged pack artifacts. Spyglass and strict JSON are
+static checks, with exclusions and version limits in
+`scripts/datapack_lint/README.md`; the retired audit's coverage gaps are in
+`scripts/README.md`. None proves an in-game result. `scripts/ward_ci.sh`
+starts a Minecraft server and must never be run by hand.
 
 Workflow enablement is a GitHub setting, not a Git file. On 2026-10-29, the
 GitHub API showed CI (`build.yml`), CodeQL, Reusable Quality, Organization
