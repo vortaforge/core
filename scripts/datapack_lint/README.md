@@ -21,8 +21,12 @@ npm test --prefix scripts/datapack_lint
 ```
 
 Gradle's `lintDatapacks` and `testDatapackLint` install the locked dependencies
-as needed. `npm ci` replaces **this tool's generated `node_modules`**; do not
-store personal files there. No npm lifecycle scripts are run. Spyglass
+as needed. The unit tests load the production language-server session and
+exercise the Node JSON-RPC streams, but do not run Spyglass or scan packs.
+Dependency updates should also pass `lintDatapacks`: in particular,
+`vscode-jsonrpc@10.0.0` exports `vscode-jsonrpc/node`, not `node.js`.
+`npm ci` replaces **this tool's generated `node_modules`**; do not store
+personal files there. No npm lifecycle scripts are run. Spyglass
 fetches Minecraft version data and vanilla archives from `api.spyglassmc.com`
 and caches them on disk. A first run requires network access; cached results
 may be usable offline. Those external data are not pinned by the npm lock and

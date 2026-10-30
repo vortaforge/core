@@ -36,7 +36,7 @@ SOFTWARE.
 
 ## vscode-jsonrpc — MIT
 
-Notice from the installed `vscode-jsonrpc@8.2.1` package (`License.txt`):
+Notice from the installed `vscode-jsonrpc@10.0.0` and transitive `vscode-jsonrpc@8.2.0` packages (identical `License.txt` files):
 
 ```
 Copyright (c) Microsoft Corporation
