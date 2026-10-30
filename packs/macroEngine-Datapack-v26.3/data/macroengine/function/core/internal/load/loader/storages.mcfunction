@@ -73,8 +73,8 @@ execute unless data storage macroengine:engine hook_binds run data modify storag
 # that queue is cleared below (nothing will ever resume it again), but
 # clearing it explicitly here keeps the storage clean and matches what
 # cleanup.mcfunction already does for the teardown path.
-data remove storage macroengine:engine fibers
-data modify storage macroengine:engine fibers set value {}
+execute if data storage macroengine:engine fibers run data remove storage macroengine:engine fibers
+execute unless data storage macroengine:engine fibers run data modify storage macroengine:engine fibers set value {}
 # NOTE: fibers._pending no longer exists as of the resume_dispatch
 # concurrency fix — resume targets now travel inside each queue entry
 # (id/resume fields) instead of a separate shared FIFO list.
@@ -91,20 +91,20 @@ data modify storage macroengine:engine fibers set value {}
 # referencing fiber ids or functions that no longer exist. Clearing it
 # here actually fulfills what the comment above already claimed was
 # happening.
-data remove storage macroengine:engine queue
+execute if data macroengine:engine queue run data remove storage macroengine:engine queue
 
 # geo/region_watch module init
 # Region watches are always cleared on reload — all packs must re-register
 # their watches in the #macroengine:init function tag. This is intentional:
 # region watch registrations are transient and pack-owned.
-data remove storage macroengine:engine region_watches
-data modify storage macroengine:engine region_watches set value []
+execute if data macroengine:engine region_watches run data remove storage macroengine:engine region_watches
+execute unless data storage macroengine:engine region_watches run data modify storage macroengine:engine region_watches set value []
 
 # lib/batch module init
 # Incomplete batches are always cleared on reload — they cannot be safely
 # resumed across a reload boundary (executing context is gone).
-data remove storage macroengine:engine batches
-data modify storage macroengine:engine batches set value {}
+execute if data macroengine:engine batches run data remove storage macroengine:engine batches
+execute if data macroengine:engine batches run data modify storage macroengine:engine batches set value {}
 
 # Wand cooldown module — separate storage (avoids collision with macroengine:cooldown)
 execute unless data storage macroengine:engine wand_cooldowns run data modify storage macroengine:engine wand_cooldowns set value {}
@@ -135,10 +135,10 @@ execute unless data storage macroengine:engine wand_cooldowns run data modify st
 # cannot be safely resumed across a reload boundary.
 # ─────────────────────────────────────────────────────────────────
 data remove storage macroengine:engine cb_queue
-data modify storage macroengine:engine cb_queue set value []
 data remove storage macroengine:engine _cb_last
 data remove storage macroengine:engine _cb_work
 data remove storage macroengine:engine _cb_entry
+execute unless data macroengine:engine cb_queue run data modify storage macroengine:engine cb_queue set value []
 
 # ─────────────────────────────────────────────────────────────────
 # Color API init
