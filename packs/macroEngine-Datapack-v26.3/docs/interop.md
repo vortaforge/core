@@ -1,7 +1,8 @@
 # Using macroEngine next to other packs
 
-Everything on this page was checked against the source in this repository (read, grepped, linted with Mecha).
-Nothing here was run in a Minecraft server.
+This page describes source inspection and historical static linting (originally
+with Mecha; the current static checker is Spyglass). The old guikit datapack
+is now retired. Nothing here was run in a Minecraft server.
 
 ## 1. Is macroEngine usable right now?
 
@@ -13,8 +14,10 @@ execute if function macroengine:gate/is_open run function mypack:use_macroengine
 no gate guard on purpose, so it can answer while the pack is closed (not approved, consent pending, incomplete or
 reload-looping load).
 
-`vortaforge.gate` is a shared objective: `guikit-datapack` and `RTWrapper-v1.0.1` create it too, each with its own
-fake players (`#macroengine.*`, ...). Read your own fake players; do not write to another pack's.
+`vortaforge.gate` is a shared objective: `RTWrapper-v1.0.1` creates it too,
+as did historical `guikit-datapack` distributions, each with its own fake
+players (`#macroengine.*`, ...). Read your own fake players; do not write to
+another pack's.
 
 ## 2. Extension points (function tags)
 
@@ -57,7 +60,7 @@ tag you pass in. That is the hook for chest-minecart menus from other packs.
 | Conflict | What happens | Status |
 |---|---|---|
 | `core/internal/player` uses un-namespaced `player_action.*` objectives, tags and interaction entities | Another pack that bundles the same names (for example the upstream PlayerAction library this code derives from) shares them: both packs read and clean up each other's state | **Open.** Phase 1 of `playeraction-rewrite-plan.md` renames them. It changes runtime identifiers stored in existing worlds, so it needs a migration plan and in-game testing first |
-| `guikit-datapack` and `guikitfw` both use the namespace `guikit` | Enable only one; the merge manifest includes `guikitfw` | By design (`guikitfw` is the successor) |
+| Historical `guikit-datapack` distributions and `guikitfw` both use the namespace `guikit` | Enable only one; the merge manifest includes `guikitfw` | The old source is retired; `guikitfw` is the successor |
 
 ## 6. Merging with other packs
 

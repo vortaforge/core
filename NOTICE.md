@@ -17,7 +17,7 @@ next to it:
   shared dependency bump or API change can silently break a sibling mod.
 - `packs/` — Datapacks. These are checked by `verifyProject` as part of
   the same `ci` graph (syntax/reference tooling listed in `SECURITY.md`
-  § "Validation tooling": Mecha lint, `checkPacks`, `mergeDatapacks`), but
+  § "Validation tooling": Spyglass/JSON lint, `checkPacks`, `mergeDatapacks`), but
   are not Gradle-*compiled* — there is nothing to build for them, so
   `buildAll` alone says nothing about a datapack change.
 - `scripts/` — Helper tooling, lower trust by default. Review before
@@ -40,12 +40,12 @@ review.
   project CI task graph" step of the `Verify, test and package` job (see
   `.github/workflows/quality.yml`); there is no separate `buildAll`/`lint`
   step in CI to pass independently.
-- `ci` already runs the **datapack** lint (Mecha, via `verifyProject`): a
-  syntax error in any `.mcfunction` fails the task graph and blocks the
-  release gate. Note that Mecha only validates command *syntax* — it never
-  loads the pack, so the "you've validated the pack loads correctly"
-  checkbox below still applies. Paths listed in `scripts/lint_datapacks.sh`'s
-  `IGNORE_PATHS` are skipped.
+- When `ci` actually runs, `verifyProject` invokes Spyglass and strict JSON
+  lint. Error diagnostics fail the graph unless advisory mode is explicitly
+  selected. Ward-test exclusions, permission warnings, one-version-per-pack
+  coverage and the patched decompressor are explained in
+  `scripts/datapack_lint/README.md`. Static checks do not prove a pack loads
+  or behaves correctly; workflow enablement is a separate GitHub setting.
 - Building a single subproject during iteration is fine
   (`./gradlew :mods:<subproject-name>:build`), but run the full `ci`
   before opening the PR — cross-subproject breakage is the most common

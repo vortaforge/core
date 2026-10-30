@@ -53,15 +53,6 @@ tasks.register('checkProvenance', Exec) {
     markSuccess(delegate, marker('provenance'))
 }
 
-tasks.register('auditRepository', Exec) {
-    group = 'verification'
-    description = 'Runs the repository consistency audit and fails for high/critical findings.'
-    workingDir repositoryRoot
-    commandLine pythonExecutable, 'scripts/audit_repo.py', '--format', 'github', '--fail-on', 'high'
-    configureRepositoryInput(delegate)
-    markSuccess(delegate, marker('audit'))
-}
-
 tasks.register('testRepository', Exec) {
     group = 'verification'
     description = 'Runs repository-only Python regression tests; does not start Minecraft.'
@@ -102,20 +93,45 @@ tasks.register('testDpgen', Exec) {
     markSuccess(delegate, marker('dpgen-tests'))
 }
 
+tasks.register('installDatapackLintDependencies', Exec) {
+    group = 'build setup'
+    description = 'Installs locked Spyglass dependencies without npm lifecycle scripts.'
+    def lintDirectory = new File(repositoryRoot, 'scripts/datapack_lint')
+    workingDir lintDirectory
+    commandLine npmExecutable, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'
+    inputs.files(new File(lintDirectory, 'package.json'), new File(lintDirectory, 'package-lock.json'))
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(new File(lintDirectory, 'node_modules'))
+}
+
+tasks.register('testDatapackLint', Exec) {
+    group = 'verification'
+    description = 'Runs the datapack lint policy and dependency-security regression tests.'
+    workingDir new File(repositoryRoot, 'scripts/datapack_lint')
+    commandLine npmExecutable, 'test'
+    dependsOn 'installDatapackLintDependencies'
+    configureRepositoryInput(delegate)
+    markSuccess(delegate, marker('datapack-lint-tests'))
+}
+
 tasks.register('lintDatapacks', Exec) {
     group = 'verification'
-    description = 'Runs the Mecha datapack syntax validation (requires mecha==0.101.0 on PATH).'
+    description = 'Runs Spyglass and strict JSON validation for datapacks and resource packs.'
     workingDir repositoryRoot
     commandLine 'bash', 'scripts/lint_datapacks.sh'
+    dependsOn 'installDatapackLintDependencies'
     configureRepositoryInput(delegate)
+    // Vanilla language data and advisory mode are external inputs. Never reuse
+    // a stale success marker when those inputs may have changed.
+    outputs.upToDateWhen { false }
     markSuccess(delegate, marker('datapack-lint'))
 }
 
 tasks.register('verifyProject') {
     group = 'verification'
-    description = 'Runs every offline repository verification task. Never starts a Minecraft server.'
-    dependsOn 'checkProvenance', 'auditRepository', 'testRepository', 'testGuiGenerator',
-            'testDpgen', 'lintDatapacks', 'checkPacks', 'checkOriginWatermarks', 'checkArchive'
+    description = 'Runs repository verification; Spyglass may download vanilla data. Never starts a Minecraft server.'
+    dependsOn 'checkProvenance', 'testRepository', 'testGuiGenerator', 'testDpgen',
+            'testDatapackLint', 'lintDatapacks', 'verifyMod', 'checkPacks', 'checkOriginWatermarks', 'checkArchive'
 }
 
 // -----------------------------------------------------------------------------

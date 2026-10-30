@@ -584,8 +584,6 @@
   const OWNER = "vortaforge";
   const REPO = "core";
   const RELEASE_TAG = "packs-latest";
-  const RELEASE_BASE =
-    "https://github.com/" + OWNER + "/" + REPO + "/releases/download/" + RELEASE_TAG + "/";
   const MODS_TREE_BASE =
     "https://github.com/" + OWNER + "/" + REPO + "/tree/main/mods/";
   const API_RELEASE =
@@ -597,7 +595,7 @@
   const FETCH_TIMEOUT_MS = 12000;
   const HEAD_TIMEOUT_MS = 8000;
   const OVERALL_TIMEOUT_MS = 20000;
-  const CACHE_KEY = "vortaforge-core-site-cache-v1";
+  const CACHE_KEY = "vortaforge-core-site-cache-v2";
   const CACHE_MAX_AGE_MS = 15 * 60 * 1000; // 15 min — this content doesn't change minute to minute
   const AUTO_REFRESH_MS = 5 * 60 * 1000; // re-check GitHub every 5 min while the tab is open
   const VISIBILITY_REFRESH_THRESHOLD_MS = 2 * 60 * 1000; // re-check on tab refocus if stale
@@ -628,7 +626,6 @@
   const FALLBACK_PACKS = [
     { name: "cmdTunnel-datapack", zip: "cmdTunnel-datapack.zip" },
     { name: "DailyBonus", zip: "DailyBonus.zip" },
-    { name: "guikit-datapack", zip: "guikit-datapack.zip" },
     { name: "guikitfw", zip: "guikitfw.zip" },
     { name: "InteractionClickDetection", zip: "InteractionClickDetection.zip" },
     { name: "LeftClickDetection", zip: "LeftClickDetection.zip" },
@@ -639,18 +636,17 @@
     { name: "RTWrapper (original, nested)", zip: "RTWrapper-datapack-RTWrapper-Datapack.zip" },
     { name: "TunnelScript", zip: "TunnelScript.zip" }
   ];
-  // Only subprojects `./gradlew buildAll` actually builds, i.e. mods/ minus
-  // TEMPLATE-MOD (scaffold) minus everything in settings.gradle's
-  // EXCLUDED_PROJECT_DIRS (mods/datapack-fixer: "legacy tool, not yet
-  // migrated to the shared build"). Listing datapack-fixer here - as the
-  // previous version did - advertised a download for an artifact CI never
-  // produces.
+  // Current mod source directories only; TEMPLATE-MOD is a scaffold. The
+  // historical RTWrapper Fabric source under packs/ remains excluded from
+  // the Gradle build and is not advertised as a current mod release.
   const FALLBACK_MODS = [
     { name: "AFK Manager", dir: "afk-manager" },
     { name: "Datapack Blocker", dir: "datapack-blocker" },
-    { name: "Join Throttle", dir: "join-throttle" },
-    { name: "RTWrapper", dir: "rtwrapper-mod" }
+    { name: "Join Throttle", dir: "join-throttle" }
   ];
+  // Old assets can still exist in a GitHub release. Preserve and label them
+  // as historical instead of presenting them as current source projects.
+  const HISTORICAL_PACK_ASSETS = new Set(["guikit-datapack.zip"]);
 
   const el = {
     overlay: document.getElementById("loading-overlay"),
@@ -769,6 +765,12 @@
     return filename.replace(/\.zip$/i, "").replace(/-/g, " ");
   }
 
+  function isReleaseAssetUrl(url) {
+    return typeof url === "string" && url.startsWith(
+      "https://github.com/" + OWNER + "/" + REPO + "/releases/download/"
+    );
+  }
+
   function escapeHtml(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -841,7 +843,7 @@
   // ---------------------------------------------------------------------
 
   async function startDownload(pack, btn, statusEl) {
-    const url = pack.downloadUrl || (RELEASE_BASE + encodeURIComponent(pack.zip));
+    const url = pack.downloadUrl;
     const filename = pack.zip || (pack.name + ".zip");
 
     btn.disabled = true;
@@ -927,7 +929,7 @@
   }
 
   function copyPackLink(pack, statusEl) {
-    const url = pack.downloadUrl || (RELEASE_BASE + encodeURIComponent(pack.zip));
+    const url = pack.downloadUrl;
     const done = function (ok) {
       statusEl.className = ok ? "dl-status ok" : "dl-status err";
       statusEl.textContent = ok ? "Link copied." : "Could not copy link.";
@@ -1017,12 +1019,22 @@
       const statusEl = document.createElement("div");
       statusEl.className = "dl-status";
 
-      btn.addEventListener("click", function () {
-        startDownload(pack, btn, statusEl);
-      });
-      copyBtn.addEventListener("click", function () {
-        copyPackLink(pack, statusEl);
-      });
+      // A source/fallback name is not evidence that a release asset exists.
+      // Cached lists can also become stale; enable links only for a live API
+      // asset with a GitHub release URL.
+      if (sourceLabel !== "live" || !isReleaseAssetUrl(pack.downloadUrl)) {
+        btn.disabled = true;
+        copyBtn.disabled = true;
+        statusEl.className = "dl-status info";
+        statusEl.textContent = "Release asset not verified; reconnect to check downloads.";
+      } else {
+        btn.addEventListener("click", function () {
+          startDownload(pack, btn, statusEl);
+        });
+        copyBtn.addEventListener("click", function () {
+          copyPackLink(pack, statusEl);
+        });
+      }
 
       actions.appendChild(btn);
       actions.appendChild(copyBtn);
@@ -1113,13 +1125,13 @@
     if (!Array.isArray(assets)) return [];
     return assets
       .filter(function (a) {
-        return a && typeof a.name === "string" && /\.zip$/i.test(a.name);
+        return a && typeof a.name === "string" && /\.zip$/i.test(a.name) && isReleaseAssetUrl(a.browser_download_url);
       })
       .map(function (a) {
         return {
-          name: prettyNameFromZip(a.name),
+          name: prettyNameFromZip(a.name) + (HISTORICAL_PACK_ASSETS.has(a.name) ? " (historical asset)" : ""),
           zip: a.name,
-          downloadUrl: a.browser_download_url || (RELEASE_BASE + encodeURIComponent(a.name)),
+          downloadUrl: a.browser_download_url,
           size: typeof a.size === "number" ? a.size : null,
           downloadCount: typeof a.download_count === "number" ? a.download_count : null,
           updatedAt: a.updated_at || null
@@ -1132,13 +1144,9 @@
 
   function modsFromContents(items) {
     if (!Array.isArray(items)) return [];
-    // TEMPLATE-MOD is a scaffold, not a shipped mod. datapack-fixer is a real
-    // mod directory but is listed in settings.gradle's EXCLUDED_PROJECT_DIRS
-    // ("legacy tool, not yet migrated to the shared build"), so `buildAll`
-    // never produces a jar for it and there is nothing to download. Both must
-    // be filtered here too, not just in FALLBACK_MODS, otherwise the live-API
-    // path advertises an artifact that does not exist.
-    const EXCLUDED = ["TEMPLATE-MOD", "datapack-fixer"];
+    // The scaffold is not a shipped mod. Retired directories are filtered as
+    // defense in depth if an old API response is ever served from a cache.
+    const EXCLUDED = ["TEMPLATE-MOD", "datapack-fixer", "rtwrapper-mod"];
     return items
       .filter(function (item) {
         return item && item.type === "dir" && item.name && EXCLUDED.indexOf(item.name) === -1;
@@ -1417,7 +1425,7 @@
         el.noreleaseBanner,
         el.noreleaseDetail,
         "No GitHub Release (tagged <code>" + escapeHtml(RELEASE_TAG) + "</code> or otherwise) has been published for this repo yet. " +
-        "The packs list below is the static fallback and its download links may not resolve to real files. " +
+        "The list below is a source inventory only; downloads are disabled until live release assets can be verified. " +
         "This page checks automatically and will switch to live data as soon as a release is published."
       );
     }

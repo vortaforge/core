@@ -17,7 +17,7 @@ body:
     id: area
     attributes:
       label: Affected project/path (no exploit detail)
-      placeholder: "e.g. packs/RTWrapper, mods/rtwrapper-mod"
+      placeholder: "e.g. packs/RTWrapper, mods/datapack-blocker"
     validations:
       required: true
 

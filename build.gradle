@@ -189,6 +189,12 @@ def findMissingWatermarks = { List<File> packDirs ->
 // specific, well-known classes of accidental leaks the packaging skill
 // calls out.
 def SENSITIVE_PATH_NAMES = ['.git', '.env', '.idea', '.vscode', '.DS_Store', 'Thumbs.db', 'node_modules'] as Set
+def isLicenseNoticeName = { String filename ->
+    def name = filename.toUpperCase(Locale.ROOT)
+    name == 'LICENSE' || name.startsWith('LICENSE.') ||
+        name == 'COPYING' || name.startsWith('COPYING.') ||
+        name == 'NOTICE' || name.startsWith('NOTICE.') || name.startsWith('THIRD_PARTY_LICENSE')
+}
 def isSensitivePathEntry = { File srcDir, File f ->
     srcDir.toPath().relativize(f.toPath()).any { part ->
         def name = part.toString()
@@ -199,10 +205,23 @@ def isSensitivePathEntry = { File srcDir, File f ->
             name.endsWith('.p12')
     }
 }
+// Generated folders at a pack root must never be re-packaged. Do not blanket
+// exclude nested names like data/<namespace>/function/build/: those can be
+// legitimate runtime identifiers and must remain intact.
+def isGeneratedPathEntry = { File srcDir, File f ->
+    def parts = srcDir.toPath().relativize(f.toPath())
+    parts.nameCount >= 2 && ['build', 'dist', '.gradle', '.cache', 'node_modules'].contains(parts.getName(0).toString())
+}
+// Ward's data/<namespace>/test/** files contain non-vanilla commands. Keep
+// them in source for CI, but omit them from runtime distribution archives.
+def isWardTestPath = { File srcDir, File f ->
+    def parts = srcDir.toPath().relativize(f.toPath())
+    parts.nameCount >= 3 && parts.getName(0).toString() == 'data' && parts.getName(2).toString() == 'test'
+}
 
 def copyDirRecursive = { File srcDir, File destDir ->
     srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
-        if (isSensitivePathEntry(srcDir, f)) return
+        if (isSensitivePathEntry(srcDir, f) || isGeneratedPathEntry(srcDir, f) || isWardTestPath(srcDir, f)) return
         def rel = srcDir.toPath().relativize(f.toPath())
         def target = destDir.toPath().resolve(rel)
         java.nio.file.Files.createDirectories(target.parent)
@@ -217,7 +236,9 @@ def zipDirectory = { File srcDir, File zipFile ->
         // Second, independent check at zip time (not just at copy time):
         // stays correct even if a future caller zips a directory directly
         // without going through copyDirRecursive first.
-        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f -> if (!isSensitivePathEntry(srcDir, f)) files << f }
+        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            if (!isSensitivePathEntry(srcDir, f) && !isGeneratedPathEntry(srcDir, f) && !isWardTestPath(srcDir, f)) files << f
+        }
         files.sort { it.path }.each { f ->
             def rel = srcDir.toPath().relativize(f.toPath()).toString().replace(File.separator, '/')
             zos.putNextEntry(new java.util.zip.ZipEntry(rel))
@@ -528,6 +549,12 @@ tasks.register('zipPacks') {
               def slurper = new groovy.json.JsonSlurper()
               new java.util.zip.ZipFile(zipFile).withCloseable { zf ->
                   entries = zf.size()
+                  zf.entries().each { entry ->
+                      if (entry.name ==~ /(?:build|dist|\.gradle|\.cache|node_modules)\/.+/ ||
+                          entry.name ==~ /data\/[^\/]+\/test\/.+/) {
+                          throw new GradleException("[zipPacks] failed: ${zipName} contains generated or Ward test content: ${entry.name}")
+                      }
+                  }
                   def meta = zf.getEntry('pack.mcmeta')
                   if (meta == null) {
                       throw new GradleException(
@@ -540,6 +567,12 @@ tasks.register('zipPacks') {
                       zf.getInputStream(meta).withReader('UTF-8') { r -> slurper.parseText(r.text) }
                   } catch (Exception e) {
                       throw new GradleException("[zipPacks] failed: pack.mcmeta in ${zipName} is not valid JSON: ${e.message}")
+                  }
+                  (dir.listFiles() ?: []).findAll { f -> f.isFile() && isLicenseNoticeName(f.name) }.each { source ->
+                      def notice = zf.getEntry(source.name)
+                      if (notice == null || !java.util.Arrays.equals(zf.getInputStream(notice).bytes, source.bytes)) {
+                          throw new GradleException("[zipPacks] failed: ${zipName} did not preserve ${source.name} verbatim.")
+                      }
                   }
               }
               if (!hasMeta || entries == 0) {
@@ -1082,6 +1115,7 @@ tasks.register('mergeDatapacks') {
     def manifestFile = manifestPathProp ? file(manifestPathProp.toString()) : file('packs/merge-manifest.json')
     def outDir = file('build/merged-datapack')
     def buildDir = file('build')
+    def rootLicense = rootProject.file('LICENSE')
     doLast {
         def dryRun = (dryRunProp?.toString()?.toLowerCase() == 'true')
         if (dryRun) {
@@ -1231,12 +1265,8 @@ tasks.register('mergeDatapacks') {
             }
         }
 
-        if (outDir.exists()) {
-            println "[mergeDatapacks] clearing stale output at ${outDir}"
-            outDir.deleteDir()
-        }
-        outDir.mkdirs()
-
+        // Do not clear or create output yet: collision/format validation and
+        // especially -PmergeDryRun=true must leave prior output untouched.
         // Collect every relative file path across all included packs so we
         // can detect collisions before writing anything. minecraft load/tick
         // tag values are additionally captured per-pack (for the gated
@@ -1253,6 +1283,8 @@ tasks.register('mergeDatapacks') {
         def packTickHooks = [:].withDefault { [] }
         def packReplaceFlags = [:].withDefault { false }
         def skippedSensitive = 0
+        def skippedGenerated = 0
+        def skippedWard = 0
         packDirs.each { packName, dir ->
             dir.eachFileRecurse { f ->
                 if (f.isFile()) {
@@ -1266,6 +1298,14 @@ tasks.register('mergeDatapacks') {
                     // or credential file must never end up in merged output.
                     if (isSensitivePathEntry(dir, f)) {
                         skippedSensitive++
+                        return
+                    }
+                    if (isGeneratedPathEntry(dir, f)) {
+                        skippedGenerated++
+                        return
+                    }
+                    if (isWardTestPath(dir, f)) {
+                        skippedWard++
                         return
                     }
                     if (isMinecraftHookTag(rel)) {
@@ -1285,8 +1325,8 @@ tasks.register('mergeDatapacks') {
                 }
             }
         }
-        println "[mergeDatapacks] collected ${relPathToSources.size()} distinct relative file path(s) across all included packs" +
-                (skippedSensitive ? " (skipped ${skippedSensitive} sensitive/denylisted file(s))" : ".")
+        println "[mergeDatapacks] collected ${relPathToSources.size()} distinct relative file path(s) across all included packs; " +
+                "skipped ${skippedSensitive} sensitive/denylisted, ${skippedGenerated} generated and ${skippedWard} Ward test file(s)."
         if (gatedLoad) {
             packDirs.keySet().each { pn ->
                 println "[mergeDatapacks] hooks for ${pn}: load=${packLoadHooks[pn].size()} ${packLoadHooks[pn] ? packLoadHooks[pn].join(', ') : '(none)'} | tick=${packTickHooks[pn].size()} ${packTickHooks[pn] ? packTickHooks[pn].join(', ') : '(none)'}"
@@ -1345,6 +1385,12 @@ tasks.register('mergeDatapacks') {
                     "${hardCollisionRels.size()} collision(s) (${prefixConflicts ? 'prefixed' : 'none/blocking'}). No files written."
             return
         }
+
+        if (outDir.exists()) {
+            println "[mergeDatapacks] clearing stale output at ${outDir}"
+            outDir.deleteDir()
+        }
+        outDir.mkdirs()
 
         // Write everything out.
         relPathToSources.each { rel, sources ->
@@ -1749,6 +1795,48 @@ tellraw @s ["", {"text":"[@TAG@] ","color":"dark_gray"}, {"text":"error log clea
                     (killSwitch ? ', kill-switch' : '') + (loadErrorHandling ? ', error log API' : '') + ")."
         }
 
+        // Root metadata files were deliberately excluded from the data merge,
+        // but license and copyright notices must not disappear from a merged
+        // distribution. Copy the repository license and each included pack's
+        // own notices into a reserved, collision-checked directory. Their
+        // original bytes and filenames are preserved; names are indexed so
+        // two nested pack paths cannot overwrite one another.
+        def noticeRoot = new File(outDir, 'THIRD_PARTY_NOTICES')
+        if (noticeRoot.exists()) {
+            throw new GradleException('[mergeDatapacks] THIRD_PARTY_NOTICES is reserved for source license notices; resolve the source collision.')
+        }
+        if (!rootLicense.isFile()) {
+            throw new GradleException('[mergeDatapacks] repository LICENSE is missing; refusing to package.')
+        }
+        def repositoryNoticeDir = new File(noticeRoot, 'repository')
+        repositoryNoticeDir.mkdirs()
+        java.nio.file.Files.copy(rootLicense.toPath(), new File(repositoryNoticeDir, 'LICENSE').toPath())
+        def noticeIndex = ['License and notice files from the repository and included packs:', '', 'repository/  - repository LICENSE']
+        int noticeNumber = 0
+        packDirs.each { packName, dir ->
+            noticeNumber++
+            def safeName = packName.toString().replaceAll('[^A-Za-z0-9_.-]+', '-')
+            def noticeFolder = String.format('%03d-%s', noticeNumber, safeName ?: 'pack')
+            def notices = (dir.listFiles() ?: []).findAll { f -> f.isFile() && isLicenseNoticeName(f.name) }
+                    .sort { a, b -> a.name <=> b.name }
+            if (notices.isEmpty()) {
+                println "[mergeDatapacks] WARNING: ${packName} has no root license/notice file; review its licensing before distributing."
+                noticeIndex << "${noticeFolder}/  - ${packName}: no root license/notice found"
+            } else {
+                def destination = new File(noticeRoot, noticeFolder)
+                destination.mkdirs()
+                notices.each { source ->
+                    if (java.nio.file.Files.isSymbolicLink(source.toPath())) {
+                        throw new GradleException("[mergeDatapacks] refusing symlinked notice ${source}")
+                    }
+                    java.nio.file.Files.copy(source.toPath(), new File(destination, source.name).toPath())
+                }
+                noticeIndex << "${noticeFolder}/  - ${packName}: ${notices.collect { it.name }.join(', ')}"
+            }
+        }
+        new File(noticeRoot, 'README.txt').setText(noticeIndex.join('\n') + '\n', 'UTF-8')
+        println "[mergeDatapacks] preserved repository and included-pack license notices under THIRD_PARTY_NOTICES/."
+
         // Write the merged pack.mcmeta from the manifest's "output" block.
         // pack_format is optional as of 25w31a (data pack format 82+ /
         // resource pack 65+); min_format+max_format are the required pair
@@ -1879,11 +1967,7 @@ task verifyMod {
         def allModJsons = fileTree(dir: rootDir, include: [
             'mods/*/src/main/resources/fabric.mod.json',
             'examples/*/src/main/resources/fabric.mod.json'
-        ]).files.findAll { f ->
-            // Skip the two folders that settings.gradle already excludes
-            !f.path.contains("${File.separator}datapack-fixer${File.separator}") &&
-            !f.path.contains("${File.separator}RTWrapper${File.separator}rtwrapper-fabric${File.separator}")
-        }
+        ]).files
 
         if (allModJsons.isEmpty()) {
             println '[verifyMod] no fabric.mod.json found under mods/ or examples/ – nothing to check.'
@@ -1920,33 +2004,33 @@ task verifyMod {
                 }
             }
 
-            // entrypoints → source classes (warning only – templates often lack client classes)
+            def modRoot = modJsonFile.parentFile.parentFile.parentFile.parentFile // .../src/main/resources → mod root
+            // Entrypoints may live in Fabric Loom's split client source set.
             def entrypoints = modJson.entrypoints
             if (entrypoints instanceof Map) {
-                def modRoot = modJsonFile.parentFile.parentFile.parentFile.parentFile // .../src/main/resources → mod root
                 entrypoints.each { String key, value ->
                     (value instanceof List ? value : [value]).each { entry ->
                         String className = (entry instanceof Map) ? entry.value : entry?.toString()
                         if (className) {
                             String relPath = className.replace('.', '/') + '.java'
-                            def javaFile = new File(modRoot, "src/main/java/${relPath}")
-                            if (!javaFile.exists()) {
-                                warnings << "${rel}: entrypoint '${key}' → '${className}' has no source at ${javaFile}"
+                            def candidates = ['src/main/java', 'src/client/java'].collect { new File(modRoot, "${it}/${relPath}") }
+                            if (!candidates.any { it.isFile() }) {
+                                warnings << "${rel}: entrypoint '${key}' → '${className}' has no source in main/client Java source sets"
                             }
                         }
                     }
                 }
             }
 
-            // mixin configs – warning only (TEMPLATE-MOD and similar stubs often omit them)
+            // Mixin configurations may also be in split client resources.
             def mixins = modJson.mixins
             if (mixins instanceof List) {
                 mixins.each { m ->
                     String mixinPath = (m instanceof Map) ? m.config : m?.toString()
                     if (mixinPath) {
-                        def mixinFile = new File(modJsonFile.parentFile, mixinPath)
-                        if (!mixinFile.exists()) {
-                            warnings << "${rel}: mixin config '${mixinPath}' not found"
+                        def candidates = ['src/main/resources', 'src/client/resources'].collect { new File(modRoot, "${it}/${mixinPath}") }
+                        if (!candidates.any { it.isFile() }) {
+                            warnings << "${rel}: mixin config '${mixinPath}' not found in main/client resources"
                         }
                     }
                 }
@@ -1956,8 +2040,9 @@ task verifyMod {
         // root build.gradle smells
         def rootBuild = file('build.gradle')
         if (rootBuild.exists()) {
-            String text = rootBuild.text
-            if (text.contains('mavenLocal()')) {
+            // Match a call at the start of a statement, not this check's own
+            // string literals/comments. This is a heuristic, not a Groovy parser.
+            if (rootBuild.readLines('UTF-8').any { it ==~ /\s*(?:repositories\s*\{\s*)?mavenLocal\s*\(\s*\).*/ }) {
                 warnings << "root build.gradle uses mavenLocal() – remove for reproducible CI builds"
             }
         }

@@ -58,6 +58,8 @@ class BuildTests(unittest.TestCase):
               "# provenance stays\n")
         write(os.path.join(demo, "data", "demo", "test", "ward_only.mcfunction"),
               "assert score #x demo.obj matches 1\n")
+        write(os.path.join(demo, "LICENSE"), "demo license\n")
+        write(os.path.join(demo, "THIRD_PARTY_LICENSES.md"), "third-party notice\n")
 
     def test_zip_contents(self):
         out = os.path.join(self.tmp, "out")
@@ -68,6 +70,8 @@ class BuildTests(unittest.TestCase):
             # Ward tests are not vanilla and must not ship in a release pack.
             self.assertFalse(any("/test/" in n for n in names), names)
             self.assertIn("pack.mcmeta", names)
+            self.assertEqual(zf.read("LICENSE"), b"demo license\n")
+            self.assertEqual(zf.read("THIRD_PARTY_LICENSES.md"), b"third-party notice\n")
             self.assertEqual(
                 zf.read("data/demo/function/run.mcfunction").decode("utf-8"),
                 "$$(cmd)\n")
@@ -76,6 +80,17 @@ class BuildTests(unittest.TestCase):
                 zf.read("data/demo/function/_vc_origin.mcfunction").decode("utf-8"),
                 "# provenance stays\n")
         self.assertTrue(os.path.isfile(os.path.join(out, "SHA256SUMS.txt")))
+
+    def test_real_macroengine_notice_is_in_the_individual_zip(self):
+        repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        source = os.path.join(repo, "packs", "macroEngine-Datapack-v26.3")
+        archive = os.path.join(self.tmp, "macro.zip")
+        build_release.build_pack_zip(source, archive)
+        with zipfile.ZipFile(archive) as zf:
+            for name in ("LICENSE", "THIRD_PARTY_LICENSES.md"):
+                with open(os.path.join(source, name), "rb") as original:
+                    self.assertEqual(zf.read(name), original.read())
+            self.assertIn(b"Copyright (c) 2022 Michael Weatherby", zf.read("THIRD_PARTY_LICENSES.md"))
 
     def test_dynamic_inventory_finds_whole_command_macro(self):
         out = os.path.join(self.tmp, "out")

@@ -19,7 +19,7 @@ body:
     id: subproject
     attributes:
       label: Specific subproject (if applicable)
-      placeholder: "e.g. rtwrapper-mod, macroEngine-Datapack-v26.3, dp-depman"
+      placeholder: "e.g. datapack-blocker, macroEngine-Datapack-v26.3, dpgen"
 
   - type: textarea
     id: problem

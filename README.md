@@ -26,7 +26,7 @@ administration work.
 ## Structure
 
 - `mods/`        — Fabric mods (Gradle subprojects, auto-discovered by `settings.gradle`)
-- `packs/`       — Datapacks / resource packs. `guikitfw` is the active successor to `guikit-datapack`.
+- `packs/`       — Datapacks / resource packs. `guikitfw` is the active successor to the retired `guikit-datapack`.
 - `scripts/`     — Helper scripts and tools
 - `docs/`        — Cross-pack design and security notes
 - `examples/`    — Templates, example Fabric mods, example datapacks, test files
@@ -48,7 +48,9 @@ This repo uses Gradle to build all Fabric mod subprojects.
 ### Requirements
 
 - JDK 25
+- Node.js 20+ and npm; Python 3 with pytest and an editable guigenmc install
 - Gradle Wrapper (included, no separate Gradle install needed)
+- Network access for initial dependency and Spyglass vanilla-data downloads
 
 ### Project lifecycle tasks
 
@@ -56,8 +58,8 @@ The root build exposes project-specific entry points in addition to the
 per-module Gradle tasks:
 
 ```bash
-# Offline checks: provenance, audit, tests, datapack syntax and pack metadata.
-# pytest, guigenmc (editable) and Mecha must be installed first.
+# Provenance, regression tests, Spyglass + strict JSON, and pack metadata.
+# Spyglass may download vanilla data; no Minecraft server is started.
 ./gradlew verifyProject
 
 # Builds Fabric modules, individual pack ZIPs, the merged pack and an inventory.
@@ -107,15 +109,22 @@ the separate AI Agent workflow and implementation; previous green runs or AI
 comments are not independent human reviews. See the
 [maintainer guide](docs/MAINTAINER_GUIDE.md) for preserved project rules.
 
-`verifyProject` enforces provenance, the repository audit, offline tests,
-dpgen tests, datapack syntax, and pack/archive metadata checks. `packageProject`
-builds subprojects and the individual/merged pack archives.
+`verifyProject` runs provenance, focused repository safeguards, Python and
+Node tests, Spyglass/JSON lint, mod verification, and pack/archive checks.
+`packageProject` builds subprojects and the individual/merged pack archives.
+The old repository and GitHub audit scripts were removed; the retained checks
+and important coverage gaps are listed in [scripts/README.md](scripts/README.md).
 
-The datapack lint still skips the paths listed in `IGNORE_PATHS` at the top of
-`scripts/lint_datapacks.sh` (`archived/*`, `packs/cmdTunnel-datapack/*` and two
-26.x `time query` files in `macroEngine-Datapack-v26.3`). Mecha only checks
-command *syntax* — it does not load the pack, so a green run is not proof that a
-datapack behaves correctly.
+Spyglass analyzes each pack at one inferred Minecraft version, including the
+legacy cmdTunnel and the 26.x World Clock functions. Explicit Ward-test
+exclusions and hash-bound RTWrapper permission warnings are documented in
+[scripts/datapack_lint/README.md](scripts/datapack_lint/README.md). Warnings
+need review; neither static lint nor a green build proves in-game behaviour.
+
+The separate `mods/rtwrapper-mod` and `mods/datapack-fixer` sources were
+removed in the 2026-10-30 cleanup. The historical
+`packs/RTWrapper/rtwrapper-fabric` source remains excluded from the Gradle
+build; no RTWrapper Fabric mod is built as a replacement.
 
 ### Release ZIPs for the packs
 

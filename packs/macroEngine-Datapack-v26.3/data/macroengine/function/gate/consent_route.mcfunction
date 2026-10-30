@@ -12,8 +12,8 @@
 execute if entity @s[type=minecraft:player,tag=!macroengine.consented] run tag @s add macroengine.prompted
 
 # Everyone else who has not consented: chat notice only, and no forced screen
-tellraw @a[type=minecraft:player,tag=!macroengine.consented,tag=!macroengine.prompted] [{"text":"[macroengine] The datapack is now approved, but it stays inactive for you until you confirm the notice. ","color":"yellow"},{"text":"[Open consent screen]","color":"green","click_event":{"action":"run_command","command":"/trigger macroengine.consent set 1"}}]
-tag @a[type=minecraft:player,tag=!macroengine.consented,tag=!macroengine.prompted] add macroengine.prompted
+tellraw @a[tag=!macroengine.consented,tag=!macroengine.prompted] [{"text":"[macroengine] The datapack is now approved, but it stays inactive for you until you confirm the notice. ","color":"yellow"},{"text":"[Open consent screen]","color":"green","click_event":{"action":"run_command","command":"/trigger macroengine.consent set 1"}}]
+tag @a[tag=!macroengine.consented,tag=!macroengine.prompted] add macroengine.prompted
 
 # The approver sees the screen
 execute if entity @s[type=minecraft:player,tag=!macroengine.consented] run function macroengine:gate/consent_dialog

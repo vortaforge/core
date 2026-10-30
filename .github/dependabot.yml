@@ -31,9 +31,16 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 9
 
-  # npm: scripts/dpgen has a package.json + lockfile that no other entry covers.
+  # Each npm tool has its own lockfile. Updates still need human review,
+  # including the datapack linter's security override and runtime pins.
   - package-ecosystem: "npm"
     directory: "/scripts/dpgen"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 9
+
+  - package-ecosystem: "npm"
+    directory: "/scripts/datapack_lint"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 9
