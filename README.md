@@ -3,6 +3,27 @@
 Monorepo for VortaForge: Fabric mods, Minecraft datapacks and resource
 packs, plus the datapack tooling built around them.
 
+---
+# 🚨 CRITICAL SECURITY RISK
+
+> [!CAUTION]
+> **CRITICAL SECURITY & PRIVACY ISSUE**
+>
+> BTK Decision No. 2023/DK-İD/119 introduces serious structural risks:
+>
+> - **Privacy:** Potential exposure of sensitive user data (Articles 12–13).
+> - **Infrastructure:** Broad technical information disclosure requirements (Article 18).
+> - **Availability:** Up to 90% network bandwidth throttling (Articles 22, 29, 32).
+> - **Data security:** Increased data concentration risks (Article 13).
+> - **Content integrity:** Potential over-removal of legitimate content (Article 36).
+>
+> **Impact:** Potential systemic consequences for users, developers, businesses, and digital infrastructure.
+>
+> **Classification: CRITICAL**
+>
+> *This assessment identifies structural risks, not confirmed security breaches or exploitable vulnerabilities.*
+---
+
 <!--
 This opening line is the repository's GitHub description verbatim. Change one,
 change the other:
