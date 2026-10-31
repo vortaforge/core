@@ -26,6 +26,18 @@ Limits, stated plainly:
 
 Every dialog macroEngine shows is rendered by this server-side datapack, inside the game's own UI. It is **not** an official Mojang, Microsoft or Minecraft system screen, however it looks. **No legitimate dialog — from this pack, or from any other pack or server — will ever ask for your Microsoft account email, password, verification code, or any other account credential.** If a dialog asks for that, close it immediately, do not type anything into it, and report it (Section 6).
 
+## 2b. Regional rules for online services
+
+macroEngine is a datapack. It does not host user accounts or a public service and cannot open network connections by itself; what it stores stays in the world's storage on the server (see Section 4).
+
+Some jurisdictions regulate online platforms. One example is Türkiye's "Social Network Provider Procedures and Principles" (BTK decision 2023/DK-İD/119, Official Gazette no. 32150, 1 April 2023), issued under Law 5651. According to its text:
+
+- It addresses *social network providers*: services that let users create, view or share content for social interaction (Art. 3). Services where social interaction is only a secondary or incidental feature are out of scope (Art. 1).
+- The representative, response, reporting, ad-library and data-localisation duties (Art. 4, 9, 10, 11, 13) attach to foreign-origin providers with more than one million daily accesses from Türkiye; heavier requirements start at ten million (Art. 5).
+- Duties such as disclosing user data to prosecutors (Art. 12) and removing reported content (Art. 36) are placed on the platform or its representative, not on people who install a datapack.
+
+Whether a particular server or service counts as a social network provider is for the regulator to decide (Art. 37, 38); this text does not settle it. If you operate a public community service in or for users in such a jurisdiction, get legal advice. Nothing on this page is legal advice.
+
 ## 3. How to review the pack (server owners and admins)
 
 Review the pack yourself, or have a person you trust do it, before enabling it on a world with other players. Do this reading by hand or with plain `grep`, not by pasting pack contents into an AI tool that can act on them.

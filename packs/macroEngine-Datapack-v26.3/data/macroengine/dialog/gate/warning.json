@@ -49,6 +49,21 @@
       "width": 380,
       "contents": [
         {
+          "text": "REGIONAL RULES\n",
+          "color": "yellow",
+          "bold": true
+        },
+        {
+          "text": "Some countries regulate online platforms (for example Türkiye's \"Social Network Provider\" rules under Law 5651). Such rules address platform operators, not people who install a datapack, and a datapack cannot open network connections by itself. Whether they apply to a server depends on the service its operator runs. This is not legal advice; see INFO.md, section 2b.",
+          "color": "white"
+        }
+      ]
+    },
+    {
+      "type": "minecraft:plain_message",
+      "width": 380,
+      "contents": [
+        {
           "text": "⚠ ",
           "color": "red",
           "bold": true

@@ -3,6 +3,23 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-10-31 - docs(macroengine): regional-rules notice on the consent screen
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `packs/macroEngine-Datapack-v26.3/data/macroengine/dialog/gate/warning.json`: added a "REGIONAL RULES" block to the existing gate 3 consent screen. No new gate was added: the consent gate already requires players to read this screen and confirm before the pack activates for them.
+- `packs/macroEngine-Datapack-v26.3/INFO.md`: new section 2b summarising, with article numbers, what BTK decision 2023/DK-İD/119 says about scope and who its duties address. The summary is based on the decision text supplied by the maintainer; it makes no claim that the rules apply or do not apply to any Minecraft server and is not legal advice.
+- **Not performed:** no Minecraft server or in-game test; the dialog JSON was only checked for syntactic validity and the repository's offline tests.
+
+## 2026-10-31 - fix: QuickShare cooldown guard and item placeholder; correct macroEngine finding
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `packs/QuickShare/data/quickshare/function/share.mcfunction`: the drop guard no longer fires during an active cooldown; drop and cooldown reset both test the cooldown as it was at function start; an empty main hand no longer starts a cooldown.
+- `packs/QuickShare/data/quickshare/function/drop_mainhand_copy.mcfunction`: scratch item entity starts as a `minecraft:stone` placeholder instead of `minecraft:air`, and is overwritten from `SelectedItem` or killed.
+- `docs/static-analysis-findings-2026-10-30.md`: QuickShare row updated; macroEngine `rnd_idx` note corrected (the objective is declared in `loader/scoreboards.mcfunction`).
+- **Not performed:** no Minecraft server, Ward run or in-game test was used; the QuickShare behavior is reasoned from the command logic and the cited documentation only and is unverified at runtime. TunnelScript, LeftClickDetection, RTWrapper and the other macroEngine warnings were not touched.
+
 ## 2026-10-30 - chore: retire selected components and replace datapack lint
 
 **Tool:** Arena.ai Agent Mode, at the maintainer's explicit request. **Anti-Review:**
