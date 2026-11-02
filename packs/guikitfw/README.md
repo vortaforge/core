@@ -9,7 +9,7 @@ Inspired by the **guigen** runtime model (pid-bound entity containers, shift/lef
 
 ## Requirements
 
-- Minecraft Java **1.21+** (pack format 121–122)
+- Minecraft Java Edition with data pack format **121** (`min_format` and `max_format` are both 121 in `pack.mcmeta`; the same format as macroEngine v26.3). Other formats are not declared and are untested.
 - Datapack load order: **guikit** before any pack that calls `register_menu`
 
 ## Install
@@ -116,12 +116,13 @@ Interactive widgets should set a stable `id` (used in `custom_data` and click ma
 | `timer` | `900` | Default open duration (ticks) |
 | `distance_close` | `8` | Used when `follow` is false |
 | `container` | `chest_minecart` | Entity container type |
-| `click_detection` | `["shift"]` | Reserved / documented; shift+left always run |
+| `click_detection` | `["shift"]` | List of enabled click detectors. Shift-click detection always runs. Add `"left"` to also enable left-click detection (read by `internal/click/maybe_left` in the player tick). Drops are handled in the global tick and are not controlled by this key |
+| `dynamic_cmd` | `0b` | Allow widget `commands[]` entries to run (`$execute as @s at @s run $(cmd)`). Off by default; `functions[]` is not affected. See "Trust boundary" |
 
 ## Runtime model (guigen-aligned)
 
 1. **Open** — assign `guikit.pid`, summon invulnerable chest minecart, bind by pid  
-2. **Tick (open players)** — bind → build widget queue from lib → **shift** (`clear` by id) → **left** (`unless items`) → vacuum inventory + **cursor** → redraw  
+2. **Tick (open players)** — bind → build widget queue from lib → **shift** (`clear` by id) → **left** (`unless items`, only when `click_detection` contains `"left"`) → vacuum inventory + **cursor** → redraw  
 3. **Handler** — resolve widget → condition → cooldown → costs → `act/<kind>`  
 4. **Global tick** — timer, triggers, cursor wipe for all players, drop cleanup  
 
@@ -135,8 +136,13 @@ Interactive widgets should set a stable `id` (used in `custom_data` and click ma
 | `#guikit:on_open` | After cart bound, before first draw |
 | `#guikit:on_close` | Before cart killed |
 | `#guikit:fill` | After page widgets placed |
+| `#guikit:while_on` | Every tick, as each player with an open menu (`guikit.timer` 1..) |
 
 Override `guikit:widget/<kind>` or `guikit:act/<kind>` in another pack to extend behaviour.
+
+## Trust boundary
+
+Menu definitions are code, not data. Widget `functions[]` entries are substituted into a macro line (`$function $(fn)`) and `commands[]` entries into `$execute as @s at @s run $(cmd)` (the latter only when `dynamic_cmd` is `1b`). guikit does not validate either string. Never build a menu, a `functions[]` entry or a `commands[]` entry from text a player typed (chat, signs, books, name tags, anvil renames). Register menus only from datapack code you control.
 
 ## Layout
 

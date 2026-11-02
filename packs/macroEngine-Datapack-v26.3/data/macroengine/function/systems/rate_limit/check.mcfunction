@@ -6,6 +6,8 @@
 # Output → macroengine:output result
 # 1b = ALLOWED (hit was recorded, call may proceed)
 # 0b = DENIED (limit reached, hit NOT recorded)
+# The result is also 0b (never a leftover value from an earlier call) when the pack is closed,
+# the player has not consented or the rate_limit module is off.
 #
 # Usage:
 # function macroengine:systems/rate_limit/check {key:"global:my_event"}
@@ -17,6 +19,7 @@
 # Rule must be pre-registered via macroengine:systems/rate_limit/config.
 # If no rule exists for the key → ALLOWED (fail-open; log warning).
 
+data modify storage macroengine:output result set value 0b
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
 execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 execute if data storage macroengine:engine modules{rate_limit:0b} run return 0

@@ -3,6 +3,20 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-11-02 - fix: guikitfw menu registry and docs, macroEngine rate_limit result, perm scratch cleanup and gate documentation
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `packs/guikitfw/README.md`: the Requirements line now matches `pack.mcmeta` (format 121 only, not "1.21+ / 121-122"); the `click_detection` row now describes what the code does (shift always, `"left"` opt-in via `internal/click/maybe_left`, drops independent of the key); added the `dynamic_cmd` config row, the `#guikit:while_on` tag row and a "Trust boundary" section.
+- `packs/guikitfw/data/guikit/function/internal/click/detect.mcfunction`: comment only. Nothing calls this function; the comment now says so and points to `maybe_left`.
+- `packs/guikitfw/data/guikit/function/runtime/put_menu.mcfunction`: appends an id to `guikit:lib order` only if it is not already listed, so re-registering a menu no longer grows the list. The list is only written, never read, in this pack.
+- `packs/macroEngine-Datapack-v26.3/data/macroengine/function/systems/rate_limit/check.mcfunction`: sets `macroengine:output result` to `0b` before the gate checks, so a closed pack, a missing consent or a disabled `rate_limit` module no longer leaves an earlier call's value (for example `1b` written by `api/perm/require`, which uses the same key) for the caller to read. Behaviour change: those three cases now read as denied.
+- `packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/internal/systems/rate_limit/no_rule.mcfunction`: the module guard tested `modules{cmd:0b}`; it now tests `modules{rate_limit:0b}`.
+- `packs/macroEngine-Datapack-v26.3/data/macroengine/function/api/perm/exec.mcfunction` and `run.mcfunction`: the permission verdict is read into a score (`#pex_deny`, `#pr_deny`) and the `_pex_tmp` / `_pr_tmp` scratch compound is removed right away, so the denial and dynamic-command-off exits no longer leave it in `macroengine:engine`. The allow/deny logic and the `dynamic_cmd` check are unchanged.
+- `packs/macroEngine-Datapack-v26.3/README.md`: the "Is it safe?" FAQ and the Known Issues entry said the pack had no load gate or caller authorization; both now describe the load gate, consent gate, module switches, `dynamic_cmd` (default off), `cmd.dynamic`, the root blocklist, `perm_enforce` / `perm_cmd` defaults and what is still not covered, as documented in `docs/cmd_gate.md` and `docs/perm.md`.
+- **Not performed:** no Minecraft server, Ward run or in-game test; `./gradlew ci`, `verifyProject`, Spyglass and the repository test suites were not run. The changes were read against the source only and checked with a script that resolves every `function macroengine:` / `function guikit:` reference and parses every JSON file. The `put_menu` list-match idiom (`{order:["<id>"]}`) and the `store success` score logic in `perm/exec` and `perm/run` are reasoned from the command semantics and are unverified at runtime.
+- **Reported but not changed:** guikit's `$function $(fn)` and `$execute ... run $(cmd)` macro lines still do not validate their input (documented in the new README section instead); guikit's per-tick `@e[type=item,nbt=...]` scan and per-player redraw cost were not measured; `playeraction-rewrite-plan.md` says 82 files for `core/internal/player/` while the tree has 80; the `rate_limit/check` return value is 0 on the documented fail-open path (no rule) while `result` is `1b`.
+
 ## 2026-10-31 - docs(macroengine): regional-rules notice on the consent screen
 
 **Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
