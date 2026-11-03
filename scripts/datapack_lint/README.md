@@ -51,7 +51,7 @@ pack's older base version. Static lint does not verify resource resolution in
 all loading combinations, macro expansion with real inputs, permission
 configuration, performance, or game behaviour. Inspect warnings and review
 compatibility separately. The 2026-10-30 full-run warnings and unresolved
-risks are documented in [`docs/static-analysis-findings-2026-10-30.md`](../../docs/static-analysis-findings-2026-10-30.md).
+risks are documented in [the dated static-analysis findings](../../README.md#cross-pack-static-analysis-2026-10-30).
 
 ## Explicit exceptions
 
@@ -80,3 +80,8 @@ includes an escaping-symlink archive regression. Review the override and run
 `npm audit` when updating dependencies; an audit is a point-in-time check,
 not a guarantee of safety. Spyglass currently requests archive entries in
 memory, but retaining the patched implementation is defense in depth.
+
+
+## Where the historical findings live
+
+The 2026-10-30 findings are preserved in the repository README. They describe that date’s static analysis, not a new scan or proof of in-game behavior. See the explicit exceptions above and re-evaluate warnings for the exact source and dependency versions in use.

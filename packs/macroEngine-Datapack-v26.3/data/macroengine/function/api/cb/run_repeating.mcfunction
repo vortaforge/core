@@ -17,7 +17,7 @@
 #
 # Numbers are read as numbers and compared on a scoreboard; cmd is copied
 # between storages and never pasted into a macro line. Entries share the
-# fire spacing of api/cb (see docs/cb.md), so an interval of 1 runs at 2.
+# fire spacing of api/cb (see packs/macroEngine-Datapack-v26.3/README.md#macro-reference-cb), so an interval of 1 runs at 2.
 #
 # EXAMPLE:
 #   data modify storage macroengine:input cb set value {cmd:"say tick",times:5,interval:20}

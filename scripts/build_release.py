@@ -12,7 +12,7 @@ to the output directory:
   and trailing whitespace is trimmed. Command text is otherwise untouched -
   in particular nothing is renamed, so namespaces, public ``api/`` function
   ids and scoreboard/storage identifiers are identical to the source pack
-  (renaming them would break existing worlds; see docs/MAINTAINER_GUIDE.md).
+  (renaming them would break existing worlds; see MAINTAINER_GUIDE.md).
 * ``_vc_origin.mcfunction`` provenance files are copied verbatim, so a
   release ZIP still identifies the pack it was built from.
 * Ward test folders (``data/<namespace>/test/``) are excluded: they contain
@@ -29,7 +29,7 @@ are written next to the ZIPs:
   command string that is not literal source text (whole-command macros,
   ``run $(...)``, dynamic ``function`` dispatch and storage-fed command
   blocks). It is a review aid: it lists the surfaces that the runtime
-  dynamic-command gate exists for. See docs/dynamic-command-gate.md.
+  dynamic-command gate exists for. See README.md#cross-pack-dynamic-command-gate.
 
 What this deliberately does not do
 -----------------------------------
@@ -208,7 +208,7 @@ def build_all(packs_dir, out_dir, only=None):
     inventory = {
         "generated_by": "scripts/build_release.py",
         "note": ("Dynamic command-execution surfaces found in the source "
-                 "packs. Review aid only; see docs/dynamic-command-gate.md."),
+                 "packs. Review aid only; see README.md#cross-pack-dynamic-command-gate."),
         "packs": surfaces,
     }
     with open(os.path.join(out_dir, "dynamic-surfaces.json"), "w", encoding="utf-8") as fh:

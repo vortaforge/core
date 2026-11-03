@@ -52,7 +52,7 @@ namespace.
 ## Non-negotiable project rules
 
 The successor takes over subject to the repository rules in
-[`docs/MAINTAINER_GUIDE.md`](docs/MAINTAINER_GUIDE.md). In particular:
+[`MAINTAINER_GUIDE.md`](MAINTAINER_GUIDE.md). In particular:
 
 - Never delete or rewrite git history, repositories, or organizations. No
   force-push and no `git filter-repo`; archive instead.
@@ -76,7 +76,7 @@ The successor takes over subject to the repository rules in
 
 ## Build and validation map
 
-Canonical commands from `README.md` and `docs/MAINTAINER_GUIDE.md`:
+Canonical commands from `README.md` and `MAINTAINER_GUIDE.md`:
 
 ```bash
 ./gradlew verifyProject

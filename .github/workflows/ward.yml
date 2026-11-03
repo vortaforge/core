@@ -4,7 +4,7 @@ name: Ward (datapack tests on an isolated test server)
 # WARNING - THIS WORKFLOW STARTS A MINECRAFT SERVER.
 #
 # This is the ONLY place in the repository that does. Everywhere else the rule
-# in docs/MAINTAINER_GUIDE.md stands: no tests on or against a Minecraft server.
+# in MAINTAINER_GUIDE.md stands: no tests on or against a Minecraft server.
 #
 # The server is a throw-away Fabric server managed by mcward 1.4.0 (Ward):
 #   * bound to 127.0.0.1 only, whitelist on + enforced + empty, online-mode on,
