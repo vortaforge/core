@@ -16,4 +16,4 @@ data merge storage ostr:data {temp:{check:{string:[""], int:[I;], byte:[B;]}}}
 
 # blocks
 setblock 29999984 -63 43392 oak_sign
-setblock 29999984 -64 43392 lectern{Book:{id:"minecraft:written_book", Count:1b,tag:{pages:["", ""], author:"a", title:"a", resolved:1b}}}
+setblock 29999984 -64 43392 lectern{Book:{id:"minecraft:written_book", Count:1b,tag:{pages:['""', '""'], author:"a", title:"a", resolved:1b}}}
