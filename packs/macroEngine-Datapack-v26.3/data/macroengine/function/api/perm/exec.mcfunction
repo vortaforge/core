@@ -16,6 +16,6 @@ data remove storage macroengine:engine _pex_tmp
 $execute if score #pex_deny macroengine.tmp matches 1 run execute as @a if score @s macroengine.pid = $pex_pid macroengine.tmp run tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"✘ ","color":"red"},{"text":"$(perm)","color":"yellow"},{"text":" — you don't have this permission.","color":"red"}]
 execute if score #pex_deny macroengine.tmp matches 1 run return 0
 
-# Dynamic commands are off by default (config dynamic_cmd). See docs/cmd_gate.md.
+# Dynamic commands are off by default (config dynamic_cmd). See packs/macroEngine-Datapack-v26.3/README.md#macro-reference-cmd-gate.
 execute unless data storage macroengine:engine config{dynamic_cmd:1b} run return 0
 $execute as @a if score @s macroengine.pid = $pex_pid macroengine.tmp at @s run $(cmd)

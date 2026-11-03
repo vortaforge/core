@@ -12,7 +12,7 @@
 #
 # RETURN 1 when at least one entry is pending, else 0.
 # The id is read as a number and compared on a scoreboard; it is never pasted into a macro.
-# Entries pushed back by the fire spacing (see docs/cb.md) report their current counter.
+# Entries pushed back by the fire spacing (see packs/macroEngine-Datapack-v26.3/README.md#macro-reference-cb) report their current counter.
 #
 # EXAMPLE:
 #   data modify storage macroengine:input cb set value {cmd:"say hi",delay:100}

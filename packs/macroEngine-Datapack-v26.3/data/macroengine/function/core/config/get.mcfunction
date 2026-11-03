@@ -1,6 +1,6 @@
 # macroengine:core/config/get
 # Reads one runtime config value.
-# INPUT  macroengine:engine config_in.key   any key from docs/config.md
+# INPUT  macroengine:engine config_in.key   any key from packs/macroEngine-Datapack-v26.3/README.md#macro-reference-config
 # OUTPUT macroengine:output result          the value (removed first, so a stale value never survives a miss)
 # RETURN 1 when the key exists, 0 otherwise.
 execute unless score #macroengine.open vortaforge.gate matches 1 run return 0

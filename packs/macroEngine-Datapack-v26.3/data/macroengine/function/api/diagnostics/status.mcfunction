@@ -1,6 +1,6 @@
 # macroengine:api/diagnostics/status
 # Machine-readable health check. Runs systems/diagnostics/collect and returns the number of issues
-# (0 = healthy). Prints nothing. Full result: macroengine:output diagnostics (see docs/diagnostics.md).
+# (0 = healthy). Prints nothing. Full result: macroengine:output diagnostics (see packs/macroEngine-Datapack-v26.3/README.md#macro-reference-diagnostics).
 # Read-only: it never enables a module, changes config or touches permissions.
 #
 # Usage:

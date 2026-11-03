@@ -134,7 +134,7 @@ class WardServerSafetyInvariants(unittest.TestCase):
     """The Ward job is the one place that starts a Minecraft server. These tests
     stop later edits from quietly loosening its isolation or dropping its warnings."""
 
-    WARNED_FILES = ["docs/MAINTAINER_GUIDE.md", "README.md", "CONTRIBUTING.md", "NOTICE.md",
+    WARNED_FILES = ["MAINTAINER_GUIDE.md", "README.md", "CONTRIBUTING.md", "NOTICE.md",
                     "SECURITY.md", "scripts/README.md", ".github/workflows/ward.yml",
                     "scripts/ward_ci.sh", "scripts/ward_guard.py"]
 
