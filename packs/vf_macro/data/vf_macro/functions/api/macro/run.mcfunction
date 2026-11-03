@@ -17,3 +17,7 @@ execute if score #vf_macro.skip vf_macro matches 0 if data storage vf_macro:engi
 execute if score #vf_macro.skip vf_macro matches 0 run tellraw @a [{"text":"[VF Macro] running: ","color":"dark_gray"},{"nbt":"Command","storage":"vf_macro:engine","color":"green"}]
 
 execute if score #vf_macro.skip vf_macro matches 0 run function vf_macro:core/engine/run
+
+# Cleanup — clears vf_macro:in/out/internal/engine leftovers so the next
+# call (whether via parts, template, or a direct api/macro/run) starts clean
+function vf_macro:core/cleanup

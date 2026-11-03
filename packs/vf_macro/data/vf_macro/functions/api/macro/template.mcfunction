@@ -30,3 +30,7 @@ execute if score #vf_macro.skip vf_macro matches 0 run data modify storage vf_ma
 execute if score #vf_macro.skip vf_macro matches 0 run data modify storage vf_macro:out template set from storage vf_macro:in template
 
 execute if score #vf_macro.skip vf_macro matches 0 run function vf_macro:api/macro/run
+
+# Fallback cleanup — covers the early-skip path above (template missing),
+# where api/macro/run (and its own cleanup call) never gets invoked
+execute if score #vf_macro.skip vf_macro matches 1 run function vf_macro:core/cleanup
