@@ -258,7 +258,7 @@ class MaintainerSafetyPolicy(unittest.TestCase):
     """Preserve project safeguards when the repository AI agent is retired."""
 
     def test_project_rules_remain_in_human_facing_guide(self):
-        path = os.path.join(ROOT, "docs", "MAINTAINER_GUIDE.md")
+        path = os.path.join(ROOT, "MAINTAINER_GUIDE.md")
         with open(path, encoding="utf-8") as fh:
             guide = fh.read()
         for rule in ("Never rewrite Git history", "force-push", "release assets",
