@@ -16,7 +16,7 @@
 # Until a string library is integrated, supply the complete command string.
 
 scoreboard players set #vf_macro.returned vf_macro 0
-scoreboard players set #vf_macro.if_success vf_macro 1
+scoreboard players reset #vf_macro.if_success vf_macro
 data remove storage vf_macro:out return_success
 data remove storage vf_macro:out return_value
 
