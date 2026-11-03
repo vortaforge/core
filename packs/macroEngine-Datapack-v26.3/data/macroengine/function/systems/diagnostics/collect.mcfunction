@@ -10,7 +10,7 @@
 #   ok            1b when issues is empty, else 0b
 #   issue_count   length of issues
 #   notice_count  length of notices
-#   issues        list of problem codes, e.g. "module.mismatch:hook"   (see docs/diagnostics.md)
+#   issues        list of problem codes, e.g. "module.mismatch:hook"   (see packs/macroEngine-Datapack-v26.3/README.md#macro-reference-diagnostics)
 #   notices       list of informational codes, e.g. "security.dynamic_cmd_enabled"
 #   modules       {enabled:int, disabled:int}
 #   queue         {size:int, cap:int}

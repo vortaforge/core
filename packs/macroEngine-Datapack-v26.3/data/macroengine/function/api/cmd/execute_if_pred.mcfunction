@@ -3,6 +3,6 @@ execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.con
 execute if data storage macroengine:engine modules{cmd:0b} run return 0
 execute if score #perm_cmd macroengine.tick_flags matches 1 run data modify storage macroengine:perm_require in set value {perm:"cmd.execute_if_pred"}
 execute if score #perm_cmd macroengine.tick_flags matches 1 unless function macroengine:api/perm/require run return 0
-# Dynamic commands are off by default (config dynamic_cmd). See docs/cmd_gate.md.
+# Dynamic commands are off by default (config dynamic_cmd). See packs/macroEngine-Datapack-v26.3/README.md#macro-reference-cmd-gate.
 execute unless data storage macroengine:engine config{dynamic_cmd:1b} run return 0
 $execute as @a[limit=1] if predicate $(predicate) run $(command)

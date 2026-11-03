@@ -2,7 +2,7 @@
 # Sets one runtime config value, validated against the schema and applied at once.
 # Unknown keys, wrong value types and unsafe strings change nothing.
 #
-# INPUT  macroengine:engine config_in.key    any key from docs/config.md (e.g. "hud_rate", "module_store")
+# INPUT  macroengine:engine config_in.key    any key from packs/macroEngine-Datapack-v26.3/README.md#macro-reference-config (e.g. "hud_rate", "module_store")
 #        macroengine:engine config_in.value  bool keys: 0b/1b (or any number, > 0 = on)
 #                                            int keys: a number, clamped to the key's range
 #                                            string keys: a string (safe characters only, length-limited)

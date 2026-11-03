@@ -23,7 +23,7 @@ execute unless data storage macroengine:engine config run data modify storage ma
 # Defaults are only filled when a key is missing, so live values survive /reload.
 # Change values with core/config/set (validated and clamped, applied at once), read them with
 # core/config/get, list them with core/config/list, reset with core/config/reset.
-# core/config/apply copies them to the scores/storage the engine reads. Full table: docs/config.md.
+# core/config/apply copies them to the scores/storage the engine reads. Full table: packs/macroEngine-Datapack-v26.3/README.md#macro-reference-config.
 
 # Schema: type and range of every key (used by core/config/set)
 data modify storage macroengine:engine config_schema set value {}
@@ -107,11 +107,11 @@ execute unless data storage macroengine:engine config.store_keep_unknown run dat
 execute unless data storage macroengine:engine config.title_fade_in run data modify storage macroengine:engine config.title_fade_in set value 10
 execute unless data storage macroengine:engine config.title_stay run data modify storage macroengine:engine config.title_stay set value 70
 execute unless data storage macroengine:engine config.title_fade_out run data modify storage macroengine:engine config.title_fade_out set value 20
-# Stored-string command execution is OFF by default; see docs/cmd_gate.md.
+# Stored-string command execution is OFF by default; see packs/macroEngine-Datapack-v26.3/README.md#macro-reference-cmd-gate.
 execute unless data storage macroengine:engine config.dynamic_cmd run data modify storage macroengine:engine config.dynamic_cmd set value 0b
 execute unless data storage macroengine:engine config.dynamic_cmd_max_len run data modify storage macroengine:engine config.dynamic_cmd_max_len set value 256
 
-# Permission system switches (docs/perm.md).
+# Permission system switches (packs/macroEngine-Datapack-v26.3/README.md#macro-reference-perm).
 #   perm_default  (macroengine:engine perm_default, NOT inside config, so core/config/reset keeps it) is the value
 #                 perm_enforce takes when it is created or reset. Ships as 1b: nothing gets looser on update.
 #   perm_enforce  1b = api/perm/require and api/perm/check enforce permissions, 0b = every such check passes.

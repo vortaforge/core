@@ -7,7 +7,7 @@ Gradle/datapack split in this monorepo (what's covered by `ci`/`buildAll`
 and what isn't), what a PR should contain, and what will get a PR closed
 (obfuscated code, undisclosed behavior, misuse of the macro/command
 tooling for griefing or exploit purposes). This guide assumes you've
-already read it. The [maintainer guide](docs/MAINTAINER_GUIDE.md) contains
+already read it. The [maintainer guide](MAINTAINER_GUIDE.md) contains
 project-wide preservation, credential, review and testing rules; it applies to
 all contributors as well as maintainers.
 

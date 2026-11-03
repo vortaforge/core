@@ -117,7 +117,7 @@ may still exist and must be checked separately by an authorized person.
   `systems/validate/safe_name` while the value is still data in storage.
 - Prefer storage in, storage out; use plain strings where text components are
   unnecessary. `api/store/*` is the unified storage API; the old
-  `api/placeholder/*` and `api/data/*` modules are gone (`docs/store.md`).
+  `api/placeholder/*` and `api/data/*` modules are gone (`packs/macroEngine-Datapack-v26.3/README.md#macro-reference-store`).
 - Keep `pack.mcmeta` format ranges in sync with the target Minecraft version;
   do not guess them. Every loadable datapack needs a top-level `pack.mcmeta`.
 - In `merge-manifest.json`, `output.min_format` / `output.max_format` must match
