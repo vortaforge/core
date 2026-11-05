@@ -47,7 +47,7 @@ root/            only files GitHub Pages needs + the four Gradle entry files
 scripts/repo/    guard, kill switch, archive validator, watermark checker
 scripts/git/     pre-commit, pre-push
 scripts/ops/     backup-org.sh (invoked by a workflow)
-scripts/site/    build_site_data.php
+scripts/site/    build_site_data.py
 scripts/tests/   offline regression suites
 archived/tools/  guigenmc, fix_text_components, remove_handover, dpgen, ward, ...
 ```

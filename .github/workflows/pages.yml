@@ -3,14 +3,17 @@
 # Publishes the static download page (index.html) to GitHub Pages and refreshes
 # its data snapshot.
 #
-# Why PHP runs here and not on the site: GitHub Pages serves static files only,
-# so PHP can never execute when a visitor opens the page. PHP is used as a
-# BUILD step instead: scripts/site/build_site_data.php asks the GitHub API for
-# the packs-latest release and the mods/ directory with this workflow's
-# GITHUB_TOKEN and writes data/site-data.json into the artifact. index.html
-# reads that file first (same origin, no anonymous 60-requests/hour limit) and
-# only falls back to the live GitHub API from the browser if the file is
-# missing, malformed or older than 3 hours.
+# Why a script runs at build time and not on the site: GitHub Pages serves static
+# files only, so nothing can execute when a visitor opens the page. A Python
+# build step fills that role instead - scripts/site/build_site_data.py asks the
+# GitHub API for the mods/ directory with this workflow's GITHUB_TOKEN and
+# writes data/site-data.json into the artifact.
+#
+# Datapacks are retired, so no release is queried and no pack download data is
+# emitted. index.html does not currently read the snapshot (it calls the API
+# directly); the file is published as a durable, rate-limit-free record for
+# anything that wants it, and the validation step below refuses to publish it if
+# pack data ever reappears.
 #
 # One-time setup (a workflow cannot do this with GITHUB_TOKEN): repository
 # Settings -> Pages -> Build and deployment -> Source: "GitHub Actions". Until
@@ -31,9 +34,10 @@ on:
       - .nojekyll
       - scripts/site/**
       - .github/workflows/pages.yml
-  # Refresh the snapshot after the CI workflow (which publishes packs-latest)
-  # finishes on main. Events created with GITHUB_TOKEN, such as a release
-  # published by CI, do not start workflows, but workflow_run does.
+  # Refresh the snapshot after the CI workflow finishes on main. Events created
+  # with GITHUB_TOKEN do not start workflows, but workflow_run does. (The
+  # release-publishing job in CI is disabled: datapacks are retired. The
+  # trigger still keeps the snapshot current after a CI run.)
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -64,26 +68,19 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
-        with:
-          php-version: "8.3"
-          extensions: curl, json
-          coverage: none
-
-      - name: Lint PHP
-        run: php -l scripts/site/build_site_data.php
+      - name: Lint the data builder
+        run: python3 -m py_compile scripts/site/build_site_data.py
 
       - name: Stage static files
         run: |
           mkdir -p _site/data
           cp index.html banner.png robots.txt sitemap.xml .nojekyll _site/
 
-      - name: Build data snapshot (PHP)
+      - name: Build data snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: php scripts/site/build_site_data.php --out=_site/data/site-data.json
+        run: python3 scripts/site/build_site_data.py --out=_site/data/site-data.json
 
       - name: Validate site
         run: |

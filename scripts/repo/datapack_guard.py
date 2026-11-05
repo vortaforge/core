@@ -458,11 +458,28 @@ def identity_of(root: Path) -> list[tuple[str, str]]:
     return identities
 
 
+def add_blocklist_finding(report: Report, blocklist: Blocklist, hit: dict,
+                          rule: str, where: str, what: str,
+                          allow_review: bool = False) -> None:
+    """The single enforcement decision for a blocklist hit.
+
+    Every path that acts on a match - login, commit identity, numeric id -
+    goes through here, so `enforcement: review` behaves the same way wherever
+    the match came from. A `review` entry demotes to a warning when the
+    maintainer override is present; a `block` entry stays an error.
+    """
+    overridable = blocklist.enforcement_of(hit) == "review" and allow_review
+    report.add("warn" if overridable else "error", rule, where,
+               what + ("" if overridable else f": {hit.get('reason', 'blocked')}"))
+
+
 def check_blocklist(report: Report, blocklist: Blocklist, logins: list[str],
                     identities: list[tuple[str, str]] | None = None,
                     committers: bool = True,
                     scope: str | None = None,
-                    allow_review: bool = False) -> None:
+                    allow_review: bool = False,
+                    rule: str = "blocklist-account",
+                    what: str = "account is on the datapack blocklist") -> None:
     """Record an error for every login or commit identity the blocklist denies.
 
     `scope` is the action being checked ("pull_request", "push" or
@@ -477,11 +494,8 @@ def check_blocklist(report: Report, blocklist: Blocklist, logins: list[str],
     seen: set[str] = set()
 
     def record(rule: str, where: str, hit: dict, what: str) -> None:
-        enforcement = blocklist.enforcement_of(hit)
-        overridable = enforcement == "review" and allow_review
-        report.add("warn" if overridable else "error", rule, where,
-                   what + ("" if overridable
-                           else f": {hit.get('reason', 'blocked')}"))
+        add_blocklist_finding(report, blocklist, hit, rule, where, what,
+                              allow_review=allow_review)
 
     for login in logins:
         if not login or login in seen:
@@ -489,8 +503,7 @@ def check_blocklist(report: Report, blocklist: Blocklist, logins: list[str],
         seen.add(login)
         hit = blocklist.matches(login, scope=scope)
         if hit:
-            record("blocklist-account", login, hit,
-                   "account is on the datapack blocklist")
+            record(rule, login, hit, what)
     for email, name in identities or []:
         if not email:
             continue
@@ -549,7 +562,7 @@ def parse_args(argv: list[str]) -> dict:
         "check_archive": False, "protect": False, "blocklist": False, "pr": False,
         "push": False, "warn_only": False, "json": False, "report": None,
         "override": False, "repo_root": None, "logins": [], "login_ids": [],
-        "no_remote": False,
+        "no_remote": False, "membership": False,
     }
     i = 0
     while i < len(argv):
@@ -589,6 +602,8 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--repo-root":
             i += 1
             opts["repo_root"] = argv[i]
+        elif arg == "--membership":
+            opts["membership"] = True
         elif arg == "--login-id":
             i += 1
             if i >= len(argv):
@@ -627,12 +642,15 @@ def main(argv: list[str]) -> int:
         modes.append("push")
     if opts["audit_refs"]:
         modes.append("refs")
+    if opts["membership"]:
+        modes.append("membership")
 
     report = Report(mode="+".join(modes) or "local")
 
     # Default policy: protection ON. CI/push/pre-commit all pass --protect.
     protect = opts["protect"] or not (opts["pr"] or opts["push"] or opts["audit_refs"])
-    want_blocklist = opts["blocklist"] or opts["push"] or opts["pr"] or opts["audit_refs"]
+    want_blocklist = (opts["blocklist"] or opts["push"] or opts["pr"]
+                      or opts["audit_refs"] or opts["membership"])
 
     try:
         blocklist = Blocklist.load(root / DEFAULT_BLOCKLIST) if want_blocklist else None
@@ -672,20 +690,23 @@ def main(argv: list[str]) -> int:
             check_changes(report, changes)
 
         # --- pull-request specifics --------------------------------------
-        if opts["pr"] and blocklist is not None and opts["logins"]:
+        if opts["pr"] and blocklist is not None and (opts["logins"] or opts["login_ids"]):
+            overridden = bool(opts["override"]
+                              or os.environ.get("DATAPACK_GUARD_LABEL_PRESENT") == "1")
             # Numeric ids cannot be spoofed by renaming an account. When the
             # caller supplies one (CI reads it from the pull request payload),
             # it is checked separately from the login, so a renamed account
-            # still matches its `user_ids` entry.
+            # still matches its `user_ids` entry. This goes through the same
+            # enforcement decision as a login: a `review` entry is cleared by
+            # the label, a `block` entry is not.
             for user_id in opts["login_ids"]:
                 hit = blocklist.matches(f"id:{user_id}", user_id=user_id,
                                         scope="pull_request")
                 if hit:
-                    report.add("error", "blocklist-user-id", f"user id {user_id}",
-                               f"account id is on the datapack blocklist: "
-                               f"{hit.get('reason', 'blocked')}")
-            overridden = bool(opts["override"]
-                              or os.environ.get("DATAPACK_GUARD_LABEL_PRESENT") == "1")
+                    add_blocklist_finding(report, blocklist, hit,
+                                          "blocklist-user-id", f"user id {user_id}",
+                                          "account id is on the datapack blocklist",
+                                          allow_review=overridden)
             check_blocklist(report, blocklist, opts["logins"],
                             scope="pull_request", allow_review=overridden)
             blocked_accounts = [f for f in report.errors
@@ -708,6 +729,22 @@ def main(argv: list[str]) -> int:
                 report.add("error", "force-push", os.environ.get("PRE_PUSH_REF", "?"),
                            "force-push to a protected branch is not allowed; archived "
                            "history must stay intact")
+
+        # --- organisation membership --------------------------------------
+        # `org_membership` is a declared scope. Nothing in this repository can
+        # invite anyone, so the useful check is the inverse: given a list of
+        # accounts someone is about to add or invite, refuse the ones the
+        # blocklist has scoped to org_membership. Without this, the scope was
+        # a promise in the data file that no code kept.
+        if opts["membership"] and blocklist is not None:
+            if not opts["logins"]:
+                report.add("error", "membership-empty", "-",
+                           "--membership needs at least one --login to check")
+            else:
+                check_blocklist(report, blocklist, opts["logins"],
+                                scope="org_membership",
+                                rule="blocklist-membership",
+                                what="account may not be added to the organisation")
 
         # --- ref audit ---------------------------------------------------
         if opts["audit_refs"] and blocklist is not None:

@@ -111,7 +111,16 @@ STRICT=0
 # derived from ORG, and --org has to be parsed first for that to be right.
 ORG="${ORG:-vortaforge}"
 OUT_DIR="${OUT_DIR:-$HOME/backup-out}"
-ENCRYPT="${ENCRYPT:-none}"
+ENCRYPT="${ENCRYPT:-gpg}"
+# Pinned github-backup release. There is no floating "latest": a backup tool
+# with organisation-read access is not something to resolve at run time.
+GHBK_VERSION="${GHBK_VERSION:-0.67.0}"
+# sha256 of github_backup-0.67.0-py3-none-any.whl, as published on PyPI.
+# Refresh both lines together when bumping the version; the install refuses to
+# proceed without a hash, so a bare version bump fails loudly instead of
+# silently installing unverified code.
+GHBK_HASH="${GHBK_HASH:-dc112537678851d698037d07b4fbe3adc00cb3e8f1fc1f9a1c1ef8b3f1494086}"
+GHBK_VENV="${GHBK_VENV:-$HOME/.venvs/github-backup}"
 INCLUDE_SOURCE="${INCLUDE_SOURCE:-1}"
 WITH_HOOKS="${WITH_HOOKS:-0}"
 KEEP="${KEEP:-7}"
@@ -161,6 +170,12 @@ on_err() {
 trap 'on_err $LINENO' ERR
 
 case "$ENCRYPT" in 7z|gpg|none) ;; *) die "ENCRYPT must be 7z, gpg, or none" ;; esac
+# An unencrypted archive is only defensible while it stays on this machine. The
+# workflow sets UPLOAD_ARCHIVE=1 because the artifact leaves the runner, so the
+# two states are mutually exclusive by construction rather than by convention.
+if [ "$ENCRYPT" = none ] && [ "${UPLOAD_ARCHIVE:-0}" = 1 ]; then
+  die "ENCRYPT=none refused: UPLOAD_ARCHIVE=1 means the archive leaves this machine. Use ENCRYPT=gpg (or 7z) with ARCHIVE_PASSWORD."
+fi
 
 case "$JOBS" in
   ''|*[!0-9]*) die "JOBS must be a positive integer, got: $JOBS" ;;
@@ -327,24 +342,48 @@ if [ "$DRY_RUN" != 1 ]; then
 fi
 
 if ! command -v github-backup >/dev/null 2>&1; then
-  log "installing github-backup"
+  log "installing github-backup ${GHBK_VERSION}"
   if [ "$DRY_RUN" = 1 ]; then
-    log "[dry-run] pip install github-backup"
+    log "[dry-run] python3 -m venv $GHBK_VENV && $GHBK_VENV/bin/pip install github-backup==${GHBK_VERSION}"
   else
-    # FIX: modern distros mark the system interpreter as externally managed
-    # (PEP 668), so a plain `pip install` fails. Fall back in order.
-    if ! pip install --quiet github-backup 2>/dev/null; then
-      if [ "$PIP_BREAK_SYSTEM" = 1 ]; then
-        pip install --quiet --break-system-packages github-backup
-      else
-        warn "pip install failed (PEP 668?). Re-run with PIP_BREAK_SYSTEM=1,"
-        warn "or install into a venv:  python3 -m venv ~/.venvs/ghbk && \\"
-        warn "  ~/.venvs/ghbk/bin/pip install github-backup"
-        die "github-backup could not be installed"
-      fi
+    # Pinned, isolated, and installed with no credential in the environment.
+    #
+    # Three separate problems, all removed here:
+    #   1. `pip install github-backup` resolved whatever was newest at run
+    #      time. A compromised or typosquatted release would run its setup
+    #      code as whoever invoked this script.
+    #   2. That install ran with VC_TOKEN/GH_TOKEN still exported, so setup
+    #      code could read an organisation-read credential out of the
+    #      environment. `env -u` removes it for the duration of the install;
+    #      the token is only reintroduced for the github-backup call itself.
+    #   3. It installed into the system interpreter (or needed
+    #      --break-system-packages), mixing a backup tool into the distro's
+    #      Python. It now goes into a private venv.
+    #
+    # GHBK_HASH pins the artefact and is required: there is no path through
+    # this block that installs an unverified release.
+    python3 -m venv "$GHBK_VENV" || die "could not create a venv at $GHBK_VENV"
+    # pip --require-hashes makes pip itself verify the artefact's sha256
+    # against this file before running any of its code, which is the part
+    # `pip install "pkg==version"` alone does not give you: the version pins
+    # *which* release, the hash pins *those exact bytes*.
+    reqs="$(mktemp "${TMPDIR:-/tmp}/ghbk-req.XXXXXXXX")"
+    # shellcheck disable=SC2064
+    trap "rm -f -- '$reqs'" RETURN 2>/dev/null || true
+    printf 'github-backup==%s --hash=sha256:%s\n' "$GHBK_VERSION" "$GHBK_HASH" > "$reqs"
+    if ! env -u GH_TOKEN -u VC_TOKEN -u GITHUB_TOKEN \
+        "$GHBK_VENV/bin/pip" install --quiet --disable-pip-version-check \
+        --require-hashes -r "$reqs" ; then
+      rm -f -- "$reqs"
+      die "github-backup ${GHBK_VERSION} failed hash verification or could not be installed"
     fi
+    rm -f -- "$reqs"
+    log "github-backup ${GHBK_VERSION} installed from a hash-verified artefact"
+    PATH="$GHBK_VENV/bin:$PATH"
   fi
 fi
+command -v github-backup >/dev/null 2>&1 \
+  || die "github-backup is not on PATH; set GHBK_VENV to the venv that has it, or let this script install it"
 
 mkdir -p "$BACKUP_DIR" "$OUT_DIR" "$(dirname "$LOG_FILE")"
 exec > >(tee -a "$LOG_FILE") 2>&1

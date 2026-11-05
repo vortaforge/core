@@ -179,10 +179,13 @@ jobs:
       # Node is still required, but only for the website behaviour test
       # (scripts/tests/site_behavior.test.mjs). The dpgen and datapack_lint
       # npm caches that used to live here were archived with the programme.
-      - name: Set up Node.js 20
+      # Node 20 went EOL on 2026-04-30; 24 is the supported LTS line. Note this
+      # is the runtime the tests execute under, which is a separate thing from
+      # the Node version the setup-node action itself is built on.
+      - name: Set up Node.js 24
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6

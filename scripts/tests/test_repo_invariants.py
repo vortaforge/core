@@ -289,9 +289,11 @@ class ArchivedGradleLogic(unittest.TestCase):
         directory = os.path.join(ROOT, "archived", "build")
         if not names:
             names = tuple(sorted(n for n in os.listdir(directory) if n.endswith(".gradle")))
-        return "\n".join(
-            open(os.path.join(directory, name), encoding="utf-8").read() for name in names
-        )
+        parts = []
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as fh:
+                parts.append(fh.read())
+        return "\n".join(parts)
 
     def test_root_build_has_no_datapack_packaging_tasks(self):
         with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:

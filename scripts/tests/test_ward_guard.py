@@ -31,6 +31,10 @@ class Listener:
     def close(self):
         self.proc.kill()
         self.proc.wait()
+        # The stdout pipe stays open otherwise, and Python reports it as an
+        # unclosed file at interpreter shutdown.
+        if self.proc.stdout:
+            self.proc.stdout.close()
 
 
 class SeedTests(unittest.TestCase):
@@ -45,13 +49,16 @@ class SeedTests(unittest.TestCase):
         self.assertEqual(props["motd"], "hello")
         self.assertEqual(ward_guard.check_properties(self.dir), [])
         for name in ("whitelist.json", "ops.json"):
-            self.assertEqual(open(os.path.join(self.dir, name)).read().strip(), "[]")
+            with open(os.path.join(self.dir, name)) as fh:
+                self.assertEqual(fh.read().strip(), "[]")
 
     def test_tampered_properties_are_reported(self):
         ward_guard.seed(self.dir)
         path = os.path.join(self.dir, "server.properties")
-        text = open(path).read().replace("server-ip=127.0.0.1", "server-ip=")
-        open(path, "w").write(text)
+        with open(path) as fh:
+            text = fh.read().replace("server-ip=127.0.0.1", "server-ip=")
+        with open(path, "w") as fh:
+            fh.write(text)
         self.assertTrue(any("server-ip" in p for p in ward_guard.check_properties(self.dir)))
 
     def test_eula_is_not_accepted_unless_explicitly_enabled(self):
@@ -104,8 +111,12 @@ class DiscoverTests(unittest.TestCase):
         for pack, has_test in (("a", True), ("b", False)):
             base = os.path.join(root, "packs", pack)
             os.makedirs(os.path.join(base, "data", "ns", "test" if has_test else "function"))
-            open(os.path.join(base, "pack.mcmeta"), "w").write("{}")
-            open(os.path.join(base, "data", "ns", "test" if has_test else "function", "x.mcfunction"), "w").write("say x\n")
+            with open(os.path.join(base, "pack.mcmeta"), "w") as fh:
+                fh.write("{}")
+            with open(os.path.join(base, "data", "ns",
+                                   "test" if has_test else "function",
+                                   "x.mcfunction"), "w") as fh:
+                fh.write("say x\n")
         self.assertEqual(ward_guard.discover(root), ["packs/a"])
 
 

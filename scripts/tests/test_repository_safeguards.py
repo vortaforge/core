@@ -417,6 +417,135 @@ class NegativeControls(unittest.TestCase):
 
 
 
+
+
+class BackupSafety(unittest.TestCase):
+    """The backup path must not mix a credential with unpinned or plaintext data.
+
+    Audit 2026-11-05: `pip install github-backup` resolved a floating version
+    while GH_TOKEN was exported, and ENCRYPT defaulted to `none` even though
+    the workflow uploads the archive as an artifact for 14 days.
+    """
+
+    @staticmethod
+    def _code(text: str) -> str:
+        """Drop full-line and trailing `#` comments.
+
+        The script documents the old behaviour it removed ("pip install
+        github-backup resolved whatever was newest"), so matching the raw file
+        finds the explanation instead of the code. Assertions must read code.
+        """
+        out = []
+        for line in text.splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            out.append(line.split("  #", 1)[0] if "  #" in line else line)
+        return "\n".join(out)
+
+    def setUp(self):
+        self.script = self._code(
+            (ROOT / "scripts" / "ops" / "backup-org.sh").read_text(encoding="utf-8"))
+        self.raw_script = (ROOT / "scripts" / "ops" / "backup-org.sh").read_text(encoding="utf-8")
+        self.workflow = (ROOT / ".github" / "workflows" / "backup-org.yml").read_text(encoding="utf-8")
+
+    def test_dependency_is_pinned_and_hash_checked(self):
+        self.assertNotRegex(self.script, r"pip install[^\n]*github-backup(?![=])",
+                            "an unpinned `pip install github-backup` is back")
+        self.assertIn("--require-hashes", self.script)
+        self.assertRegex(self.script, r'GHBK_VERSION="\$\{GHBK_VERSION:-[0-9]+\.[0-9]+\.[0-9]+\}"')
+        self.assertRegex(self.script, r'GHBK_HASH="\$\{GHBK_HASH:-[0-9a-f]{64}\}"')
+
+    def test_install_runs_without_the_token_in_the_environment(self):
+        self.assertTrue(any("env -u GH_TOKEN" in l for l in self.script.splitlines()),
+                        "the pip install no longer clears the token")
+
+    def test_install_is_isolated_in_a_venv(self):
+        self.assertIn("python3 -m venv", self.script)
+        self.assertIn("GHBK_VENV", self.script)
+        self.assertNotIn("--break-system-packages", self.script)
+
+    def test_unencrypted_archive_cannot_be_uploaded(self):
+        self.assertIn("UPLOAD_ARCHIVE", self.script)
+        self.assertIn("ENCRYPT=none refused", self.script)
+        self.assertIn('UPLOAD_ARCHIVE: "1"', self.workflow)
+        self.assertNotIn("options: [gpg, 7z, none]", self.workflow)
+        upload = self.workflow.split("Upload archive", 1)[1]
+        self.assertNotIn("*.tar.gz\n", upload)
+
+    def test_encryption_defaults_to_gpg(self):
+        self.assertRegex(self.script, r'ENCRYPT="\$\{ENCRYPT:-gpg\}"')
+        self.assertIn("default: gpg", self.workflow)
+
+    def test_workflow_still_fails_without_a_passphrase(self):
+        self.assertIn("BACKUP_ARCHIVE_PASSWORD secret set", self.workflow)
+
+
+class VersionMatrix(unittest.TestCase):
+    """docs/VERSION_MATRIX.md must describe the build files that exist.
+
+    The audit of 2026-11-05 found the supported-version story untracked: the
+    two shipped mods target 1.21.1, the example targets a newer line, and only
+    the template floated on a Loom -SNAPSHOT. A table nobody verifies becomes
+    wrong on the next bump, so this compares it to the source of truth.
+    """
+
+    PROJECTS = {
+        "mods/afk-manager": "1.21.1",
+        "mods/join-throttle": "1.21.1",
+        "examples/opmod-example": "26.3",
+        "mods/TEMPLATE-MOD": "26.1.2",
+    }
+
+    def _properties(self, project):
+        text = (ROOT / project / "gradle.properties").read_text(encoding="utf-8")
+        out = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                out[key.strip()] = value.strip()
+        return out
+
+    def test_documented_minecraft_versions_match_the_files(self):
+        doc = (ROOT / "docs" / "VERSION_MATRIX.md").read_text(encoding="utf-8")
+        for project, expected in self.PROJECTS.items():
+            actual = self._properties(project)["minecraft_version"]
+            self.assertEqual(actual, expected, f"{project} minecraft_version")
+            # The row must name both the project and its version.
+            row = [l for l in doc.splitlines() if f"`{project}`" in l]
+            self.assertTrue(row, f"VERSION_MATRIX has no row for {project}")
+            self.assertIn(expected, row[0], f"{project} row is stale: {row[0]}")
+
+    def test_no_floating_build_tool_versions(self):
+        # A -SNAPSHOT or a bare '+' lets an unchanged commit build against
+        # different tool code tomorrow.
+        checked = 0
+        for base in ("mods", "examples"):
+            for props in (ROOT / base).rglob("gradle.properties"):
+                for key, value in self._properties(props.parent).items():
+                    if key.endswith("_version"):
+                        checked += 1
+                        self.assertNotIn("-SNAPSHOT", value,
+                                         f"{props}: {key} is a snapshot")
+                        self.assertNotEqual(value, "+", f"{props}: {key} floats")
+                        self.assertFalse(value.endswith("+"),
+                                         f"{props}: {key} floats")
+        self.assertGreater(checked, 0, "no version properties found")
+
+    def test_loom_is_the_same_pinned_release_everywhere(self):
+        versions = set()
+        for build in list((ROOT / "mods").rglob("build.gradle")) + \
+                     list((ROOT / "examples").rglob("build.gradle")):
+            for line in build.read_text(encoding="utf-8").splitlines():
+                match = re.search(r"id\s+['\"]fabric-loom['\"]\s+version\s+['\"]([^'\"]+)['\"]", line)
+                if match:
+                    versions.add(match.group(1))
+        self.assertTrue(versions, "no fabric-loom plugin declarations found")
+        self.assertEqual(len(versions), 1, f"Loom versions diverge: {versions}")
+        self.assertNotIn("-SNAPSHOT", versions.pop())
+
+
 class SiteDataSnapshot(unittest.TestCase):
     """The published snapshot must agree with the page it feeds.
 
@@ -425,26 +554,30 @@ class SiteDataSnapshot(unittest.TestCase):
     wrote pack download URLs into `_site/data/site-data.json`. The file was
     also referenced by nothing, so it was published dead weight that
     reintroduced exactly the datapack links the retirement removed.
+
+    The builder is now `scripts/site/build_site_data.py` (see
+    test_site_data.py for its behaviour); these assertions keep the *policy*
+    that no pack data may reappear in either the builder or the page.
     """
 
     def setUp(self):
-        self.php = (ROOT / "scripts" / "site" / "build_site_data.php").read_text(encoding="utf-8")
+        self.builder = (ROOT / "scripts" / "site" / "build_site_data.py").read_text(encoding="utf-8")
         self.html = (ROOT / "index.html").read_text(encoding="utf-8")
 
     def test_builder_does_not_query_the_retired_release(self):
-        self.assertNotIn("packs-latest", self.php)
-        self.assertNotIn("RELEASE_TAG", self.php)
-        self.assertNotIn("/releases/tags/", self.php)
+        self.assertNotIn("packs-latest", self.builder)
+        self.assertNotIn("RELEASE_TAG", self.builder)
+        self.assertNotIn("/releases/tags/", self.builder)
 
     def test_builder_emits_no_pack_fields(self):
-        for legacy in ("'packs' =>", "'release' =>", "'noRelease' =>", "downloadUrl"):
-            self.assertNotIn(legacy, self.php, f"{legacy} is datapack-era output")
-        self.assertIn("'datapacksRetired' => true", self.php)
+        for legacy in ('"packs":', '"release":', '"noRelease":', "downloadUrl"):
+            self.assertNotIn(legacy, self.builder, f"{legacy} is datapack-era output")
+        self.assertIn('"datapacksRetired": True', self.builder)
 
     def test_builder_has_no_dead_pack_helpers(self):
         for gone in ("packs_from_assets", "pretty_name", "HISTORICAL_PACK_ASSETS",
                      "assetPrefix"):
-            self.assertNotIn(gone, self.php, f"{gone} is dead since the retirement")
+            self.assertNotIn(gone, self.builder, f"{gone} is dead since the retirement")
 
     def test_page_does_not_fetch_the_retired_release(self):
         # The page and the snapshot must agree: neither may ask for packs.

@@ -16,7 +16,7 @@ Grouped by what each script owns, so a reader can tell policy from plumbing:
 | [`repo/`](repo/) | Repository policy checks: the guard, the kill switch, the archive validator, the watermark checker. |
 | [`git/hooks/`](git/hooks/) | Versioned `pre-commit` / `pre-push` hooks (`git config core.hooksPath scripts/git/hooks`). |
 | [`ops/`](ops/) | Operational helpers a workflow invokes, e.g. `backup-org.sh` (run by `.github/workflows/backup-org.yml`). |
-| [`site/`](site/) | `build_site_data.php`, the data-snapshot builder for the landing page. |
+| [`site/`](site/) | `build_site_data.py`, the data-snapshot builder for the landing page (Python, like every other script here; the PHP original is archived). |
 | [`tests/`](tests/) | Offline regression tests for everything above. No network, no Minecraft. |
 
 ## Repository tooling

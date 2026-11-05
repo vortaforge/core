@@ -36,10 +36,10 @@ on:
   workflow_dispatch:
     inputs:
       encrypt:
-        description: "Archive encryption"
+        description: "Archive encryption (there is no unencrypted option: the artifact leaves the runner)"
         type: choice
         default: gpg
-        options: [gpg, 7z, none]
+        options: [gpg, 7z]
       include_source:
         description: "Also include plain (non-bare) source checkouts"
         type: boolean
@@ -71,7 +71,10 @@ jobs:
       INCLUDE_SOURCE: ${{ (inputs.include_source && '1') || '0' }}
       JOBS: "2" # matches the standard ubuntu-latest runner's 2 vCPUs
       KEEP: "1" # the runner is thrown away after the run; no history to prune
-      PIP_BREAK_SYSTEM: "1"
+      # The script refuses ENCRYPT=none when this is set. The artifact below is
+      # downloadable for 14 days, so an unencrypted archive here would expose
+      # private repository contents and organisation metadata.
+      UPLOAD_ARCHIVE: "1"
 
     steps:
       - name: Checkout
@@ -101,7 +104,7 @@ jobs:
             echo "::error::ORG_READ_TOKEN secret is missing or empty."
             exit 1
           fi
-          if [ "$ENCRYPT" != none ] && [ -z "${ARCHIVE_PASSWORD:-}" ]; then
+          if [ -z "${ARCHIVE_PASSWORD:-}" ]; then
             echo "::error::encrypt=$ENCRYPT needs the BACKUP_ARCHIVE_PASSWORD secret set."
             exit 1
           fi
@@ -148,16 +151,20 @@ jobs:
             echo "missing token scope). The archive is still usable, but it is"
             echo "not a complete backup of the organization."
           } >> "$GITHUB_STEP_SUMMARY"
+          # Defensive: the input no longer offers `none`, and the script
+          # refuses it under UPLOAD_ARCHIVE=1, but a hand-edited run or a
+          # future input must not be able to upload plaintext.
           if [ "$ENCRYPT" = none ]; then
-            echo "::warning::Archive is NOT encrypted (encrypt=none) and stays downloadable as an artifact for 14 days."
+            echo "::error::encrypt=none cannot upload an archive. Refusing to publish plaintext."
+            exit 1
           fi
 
       - name: Upload archive
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.ORG }}-backup-${{ github.run_id }}
+          # No bare *.tar.gz: only the encrypted form may be uploaded.
           path: |
-            ${{ env.OUT_DIR }}/*.tar.gz
             ${{ env.OUT_DIR }}/*.tar.gz.gpg
             ${{ env.OUT_DIR }}/*.7z
             ${{ env.OUT_DIR }}/*.sha256

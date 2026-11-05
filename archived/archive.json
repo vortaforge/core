@@ -813,6 +813,29 @@
         "Spent migration script; the files it targets are gone, so it is permanently a no-op.",
         "Deletes files by pattern with no dry-run mode."
       ]
+    },
+    {
+      "id": "build-site-data-php",
+      "name": "build_site_data.php",
+      "kind": "script",
+      "status": "superseded",
+      "archived_on": "2026-11-05",
+      "reason": "Replaced by scripts/site/build_site_data.py. The repository builds with Gradle and tests with Python; this 172-line script was the only PHP in the tree and therefore the only reason the Pages workflow had to install a whole PHP toolchain through a third-party action (setup-php) on every run, pinned or not. Python 3 is already on the runner and is already used by the neighbouring site-validation step. The port is a behaviour-for-behaviour translation - same three attempts with linear backoff, same HTTPS-only and no-redirect rules, same fail-closed exit codes, same mod filtering, same atomic write - and it is now covered by tests, which the PHP version never was.",
+      "last_version": "main@2026-11-05",
+      "license": "Unlicense",
+      "deploy": "not_recommended",
+      "path": "archived/site/build_site_data.php",
+      "source_url": "https://github.com/vortaforge/core",
+      "original_path": "scripts/site/build_site_data.php",
+      "successor": "scripts/site/build_site_data.py",
+      "disarmed": true,
+      "is_datapack": false,
+      "description": "PHP build-time generator for the GitHub Pages data snapshot.",
+      "last_commit": "2026-11-05 (Legends11)",
+      "known_issues": [
+        "Required a PHP toolchain (setup-php) on every Pages run for one script.",
+        "Had no tests; a bad API response was only caught by reading the log."
+      ]
     }
   ]
 }

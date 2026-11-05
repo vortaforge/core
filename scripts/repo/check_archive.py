@@ -226,9 +226,19 @@ def main(argv: list[str]) -> int:
         elif succ:
             if succ == pid:
                 err(f"{tag}: successor cannot be itself")
-            elif not (ROOT / "packs" / succ).exists():
-                warn(f"{tag}: successor '{succ}' is not a live pack under packs/ "
-                     f"(expected while the datapack programme is retired)")
+            elif p.get("kind") == "datapack":
+                # A datapack is replaced by a pack, so the name is resolved
+                # under packs/.
+                if not (ROOT / "packs" / succ).exists():
+                    warn(f"{tag}: successor '{succ}' is not a live pack under packs/ "
+                         f"(expected while the datapack programme is retired)")
+            else:
+                # Anything else names a real path (a script, a mod directory).
+                # A successor that does not exist is a dangling pointer: the
+                # entry says "use that instead" and there is nothing there.
+                candidate = ROOT / succ
+                if not candidate.exists():
+                    err(f"{tag}: successor '{succ}' does not exist")
 
     # --- completeness: archived/packs/** and archived/tools/** registered --
     for base in ("archived/packs", "archived/tools"):
