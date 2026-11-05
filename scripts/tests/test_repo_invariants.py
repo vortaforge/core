@@ -105,8 +105,23 @@ class ReusableQualityWorkflowInvariants(unittest.TestCase):
 
         self.assertIn("workflow_call:", quality)
         self.assertIn("contents: read", quality)
-        self.assertIn("./gradlew ci -PconfirmZip=yes", quality)
+        # Packs are retired: the canonical graph is `ci`, and -PconfirmZip (the
+        # old "yes, really zip the packs" flag) has no effect and must not be
+        # advertised any more.
+        self.assertIn("./gradlew ci --console=plain", quality)
+        # -PconfirmZip may still appear in an explanatory comment (it says the
+        # flag is no longer passed); it must not appear as an actual argument.
+        self.assertNotIn("-PconfirmZip=yes", quality)
         self.assertIn("SHA256SUMS", quality)
+
+        # Regression: after the packs went away the release path kept pointing
+        # at *.zip - both the checksum step and the artifact upload. The
+        # checksum step died on an empty glob (exit 1) and the upload would
+        # have failed too, because it is declared if-no-files-found: error.
+        self.assertIn("sha256sum -- *.jar", quality)
+        self.assertNotIn("sha256sum -- *.zip", quality)
+        self.assertIn("release-assets/*.jar", quality)
+        self.assertNotIn("release-assets/*.zip", quality)
         self.assertNotIn("softprops/action-gh-release", quality)
 
         self.assertIn("uses: ./.github/workflows/quality.yml", build)

@@ -54,11 +54,6 @@ the project name, so the description said nothing about what is in here.
 > plain player using a datapack with **no client mod installed**, and the same
 > class of problems kept coming back in pull requests.
 >
-> *Datapack'de tip güvenliği, güvenlik modeli, hata ayıklama, uyarılar ve birçok
-> önemli şey olmadığı ve düşük puanlı olduğu için vazgeçiyorum. Client'a mod
-> kurmadan datapack kullanırken bile sorunlar yaşadım ve PR'lerde de aynı
-> sorunlar çıktı; olmasaydı daha iyi olurdu.*
->
 > **Blocked automatically:** new datapack content, new packs, revival of the
 > archived tooling and blocklisted datapack developers are refused by
 > `scripts/datapack_guard.py` in `pre-commit`, `pre-push` and CI

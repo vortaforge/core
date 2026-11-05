@@ -84,8 +84,6 @@ def cmd_status(_args: argparse.Namespace) -> int:
     reason = data.get("reason") or data.get("disabled_reason") or ""
     if reason:
         print(f"[datapacks_disable] reason: {reason}")
-    if data.get("reason_tr"):
-        print(f"[datapacks_disable] sebep (tr): {data['reason_tr']}")
     print(f"[datapacks_disable] marker={'present' if MARKER.is_file() else 'MISSING'}")
     return 0
 

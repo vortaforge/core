@@ -64,7 +64,7 @@ SCHEMA_VERSION = 2
 
 REQUIRED = ["id", "name", "kind", "status", "archived_on", "reason",
             "last_version", "license", "deploy", "successor"]
-OPTIONAL = {"minecraft", "path", "source_url", "known_issues", "reason_tr",
+OPTIONAL = {"minecraft", "path", "source_url", "known_issues",
             "original_path", "disarmed", "is_datapack", "quality_score",
             "pack_format", "description", "last_commit"}
 ALLOWED = set(REQUIRED) | OPTIONAL

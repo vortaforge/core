@@ -1,7 +1,7 @@
 # packs/ — retired
 
 > [!NOTE]
-> **Bu dizin bilerek boştur.** Buradaki tek izinli dosya bu README ve `.gitkeep`'tir. Yeni paket eklemek guard tarafından reddedilir (`live-packs-tree`).
+> **This directory is empty on purpose.** The only files allowed here are this README and `.gitkeep`. Adding a new pack is refused by the guard (`live-packs-tree`).
 
 This directory is intentionally empty.
 

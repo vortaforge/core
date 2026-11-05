@@ -212,6 +212,74 @@ def secret_labels(text):
     return [label for label, pattern in SECRET_PATTERNS if pattern.search(text)]
 
 
+class EnglishOnly(unittest.TestCase):
+    """The repository is English-only; a regression here is a review failure.
+
+    Turkish text used to appear in documentation, alerts, the archive registry
+    and even in script output (`sebep (tr): ...`). All of it was removed on
+    2026-11-05. `archived/packs/` is exempt: those are frozen upstream
+    artefacts whose bytes are provenance, and they are never edited again.
+    """
+
+    #: Turkish-specific letters. The official name of a Turkish regulatory
+    #: decision is quoted in a citation (README, CREDITS) and is not text this
+    #: repository wrote; see ALLOWED below.
+    TURKISH = re.compile(r"[\u011F\u011E\u0131\u0130\u015F\u015E\u00F6\u00D6\u00FC\u00DC\u00E7\u00C7]")
+
+    #: (path, needle that is allowed despite matching the pattern above)
+    ALLOWED = [("README.md", "DK-\u0130D"), ("CREDITS.md", "DK-\u0130D")]
+
+    #: This file has to spell out the pattern it searches for, so it cannot be
+    #: its own subject.
+    SELF = "scripts/tests/test_repository_safeguards.py"
+
+    EXCLUDED_PREFIXES = ("archived/packs/", ".git/", "build/", "dist/",
+                         "node_modules/", "__pycache__/")
+    SUFFIXES = (".md", ".py", ".json", ".yml", ".yaml", ".gradle", ".html",
+                ".mjs", ".sh", ".properties", ".toml")
+
+    def test_no_turkish_text_in_the_live_tree(self):
+        offenders = []
+        for path in ROOT.rglob("*"):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(ROOT).as_posix()
+            if rel == self.SELF:
+                continue
+            if any(rel.startswith(prefix) for prefix in self.EXCLUDED_PREFIXES):
+                continue
+            if not rel.endswith(self.SUFFIXES):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue   # binary asset, not prose
+            for number, line in enumerate(text.splitlines(), 1):
+                if not self.TURKISH.search(line):
+                    continue
+                if any(rel == allowed_path and allowed_text in line
+                       for allowed_path, allowed_text in self.ALLOWED):
+                    continue
+                offenders.append(f"{rel}:{number}: {line.strip()[:120]}")
+        self.assertEqual(offenders, [],
+                         "Turkish text found in the live tree:\n" + "\n".join(offenders))
+
+    def test_maintainer_guide_states_the_rule(self):
+        guide = (ROOT / "docs" / "MAINTAINER_GUIDE.md").read_text(encoding="utf-8")
+        self.assertIn("Use English, only English", guide)
+
+    def test_no_turkish_reason_field_survives(self):
+        # `reason_tr` was removed from the registry, the schema, the switch file
+        # and the switch CLI together; a partial removal would rot silently.
+        for rel in ("archived/archive.json", "archived/archive.schema.json",
+                    "datapacks.disabled.json"):
+            with self.subTest(path=rel):
+                self.assertNotIn("reason_tr", (ROOT / rel).read_text(encoding="utf-8"))
+        cli = (ROOT / "scripts" / "datapacks_disable.py").read_text(encoding="utf-8")
+        self.assertNotIn("reason_tr", cli)
+        self.assertNotIn("sebep (tr)", cli)
+
+
 class LiveTreeSafeguards(unittest.TestCase):
     """The archived packs are still parsed, so a regression there is caught.
 

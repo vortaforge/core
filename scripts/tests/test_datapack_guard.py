@@ -227,7 +227,6 @@ class KillSwitch(unittest.TestCase):
         self.assertIs(data["enabled"], False)
         self.assertTrue(data.get("reenable_token"))
         self.assertTrue(data.get("reason"))
-        self.assertTrue(data.get("reason_tr"))
 
     def test_marker_exists(self):
         self.assertTrue((ROOT / "archived" / "datapacks.disabled").is_file())

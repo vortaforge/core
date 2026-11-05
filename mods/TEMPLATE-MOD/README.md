@@ -1,7 +1,7 @@
 # TEMPLATE-MOD
 
 > [!TIP]
-> **Bu bir şablondur.** Kopyalayıp `settings.gradle`'ın bulacağı şekilde `mods/<ad>/` altına koyun; `mods/TEMPLATE-MOD` dizinini kendisi build edilmez.
+> **This is a template.** Copy it into `mods/<name>/` so that `settings.gradle` discovers it; the `mods/TEMPLATE-MOD` directory itself is not built.
 
 A Fabric mod template for Minecraft 26.1.2.
 

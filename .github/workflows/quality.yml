@@ -258,9 +258,9 @@ jobs:
       - name: Upload release candidate
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: release-packs
+          name: release-mods
           path: |
-            release-assets/*.zip
+            release-assets/*.jar
             release-assets/SHA256SUMS
           if-no-files-found: error
           retention-days: 7

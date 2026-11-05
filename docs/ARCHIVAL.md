@@ -1,18 +1,17 @@
-# Datapack retirement, kill switch and guard — `docs/ARCHIVAL.md`
+# Datapack retirement, kill switch and guard - `docs/ARCHIVAL.md`
 
 > [!IMPORTANT]
-> **Bu sistem fail-closed çalışır.** Bozuk bir blocklist, eksik bir git ref veya okunamayan bir artefakt "geçti" sayılmaz — hata verir. Kırmızı bir kapı, kuralın çalıştığının kanıtıdır.
+> **This system is fail-closed.** A malformed blocklist, a missing git ref or an unreadable artefact is never treated as a pass - it is an error. A red gate is proof that the rule works.
 
-> **Türkçe** aşağıda: [Nasıl kurarım?](#türkçe--nasıl-kurarım) ·
-> **English** below: [How do I install it?](#english--how-do-i-install-it)
->
-> Yamalar: `archived/patches/` (core) ve `archived/patches-gh/`
-> (`vortaforge/.github`). Patch: 28 kayıt / 76 test / Gradle 9.8.2 ile
-> doğrulandı.
+> [!NOTE]
+> **Patches:** `archived/patches/` (core) and `archived/patches-gh/`
+> (`vortaforge/.github`). Validated with 28 registry entries, 81 Python tests
+> and Gradle 9.8.2. Installation steps: [`INSTALL.md`](../INSTALL.md).
 
 This document is the operator manual for the 2026-11-05 datapack retirement in
 `vortaforge/core`: what was moved, what is now blocked, how to install and use
-the guard, and how to reverse the decision deliberately.
+the guard, and how to reverse the decision deliberately. Why the programme was
+retired at all is in [`README.md`](../README.md#why-datapacks-are-not-accepted-any-more).
 
 | Piece | Where | What it does |
 |---|---|---|
@@ -26,116 +25,9 @@ the guard, and how to reverse the decision deliberately.
 | CI | `.github/workflows/quality.yml`, job `datapack-guard` | runs the guard + registry + switch; blocks the quality gate |
 | Org-wide mirror | `vortaforge/.github` | `blocklist/`, `scripts/blocklist_sync.py`, `workflows/datapack-blocklist-sync.yml` |
 | Extracted Gradle | `archived/build/*.gradle` | the datapack logic that was in the root `build.gradle` |
-
 ---
 
-## Türkçe — Nasıl kurarım?
-
-### 1. Yamaları uygula (önerilen yol)
-
-Bütün değişiklikler `archived/patches/` altında **git format-patch** biçiminde
-duruyor; geçmiş korunur, tek tek veya topluca uygulanabilir:
-
-```bash
-git clone https://github.com/vortaforge/core.git
-cd core
-git checkout -b datapacks-retired            # asla doğrudan main'e uygulamayın
-
-# Hepsini sırayla uygula (mailbox biçimi, commit mesajları korunur):
-git am archived/patches/*.patch
-
-# Yalnızca bir kısmını denemek isterseniz:
-git apply --stat archived/patches/0001-*.patch   # önce özet
-git apply --check archived/patches/0001-*.patch  # sonra deneme
-git apply archived/patches/0001-*.patch
-
-# Uygulama başarısız olursa temiz duruma dönün; hunk'ları elle düzeltmeyin:
-git am --abort
-```
-
-> `git am` uygulanan commit'leri **yeniden oluşturur** (hash'ler değişir); bu
-> normaldir ve `main` geçmişini yeniden yazmaz, yeni bir dal oluşturur.
-> Yamalar `archived/patches/README.md` içindeki sırayla uygulanmalıdır.
-
-### 2. `.github` deposu (organizasyon geneli)
-
-```bash
-git clone https://github.com/vortaforge/.github.git && cd .github
-git checkout -b datapack-blocklist
-git am /path/to/core/archived/patches-gh/*.patch
-```
-
-`.github` deposundaki `blocklist/blocklist.json`, `core` deposundakinden
-**türetilir** (`scripts/blocklist_sync.py`) ve `datapack-blocklist-sync.yml`
-iş akışıyla güncel tutulur. Elle düzenlemeyin; `core`'dakini düzenleyip
-senkronizasyonu çalıştırın.
-
-### 3. Yerel kancaları (hooks) kur — push öncesi engelleme
-
-```bash
-# Depo kökünde:
-git config core.hooksPath .githooks
-
-# Deneme:
-python3 scripts/datapack_guard.py --staged --protect --blocklist
-.git/hooks/pre-commit 2>/dev/null || .githooks/pre-commit   # kanca doğrudan da çalışır
-```
-
-`pre-commit` her commit'te, `pre-push` her push'ta guard'ı çalıştırır. Atlatmak
-mümkündür (`--no-verify`) — bu yüzden **aynı kontroller CI'da da çalışır**
-(`datapack-guard` işi) ve atlatma orada yakalanır.
-
-### 4. Doğrula
-
-```bash
-python3 scripts/datapacks_disable.py status      # enabled=false görmelisiniz
-python3 scripts/datapacks_disable.py verify      # 0 problem
-python3 scripts/check_archive.py --strict        # 28 kayıt, 0 hata
-./gradlew checkDatapackSwitch checkArchive       # Gradle tarafı
-python3 scripts/origin_watermarks.py --check     # 15 watermark, 11 datapack (arşivde)
-./gradlew verifyProject                          # guard + testler
-python3 -m unittest discover -s scripts/tests -v # 76 test
-node scripts/tests/site_behavior.test.mjs        # site davranışı
-```
-
-### 5. Günlük kullanım
-
-| İstek | Komut |
-|---|---|
-| Datapack'ler kapalı mı? | `python3 scripts/datapacks_disable.py status` |
-| Neden arşivlendi, neler var? | `./gradlew printArchiveList` · `archived/README.md` |
-| Yeni datapack engellensin mi? | Otomatik: kanca + CI. Elle: `python3 scripts/datapack_guard.py --staged --protect` |
-| Birini blocklist'e ekle | `blocklist/blocklist.json` → `blocked[]` (zorunlu: `reason`, `added_on`) → `python3 scripts/datapack_guard.py --audit-refs --blocklist` |
-| Datapack'leri geri aç (bilinçli) | `python3 scripts/datapacks_disable.py enable --token VORTAFORGE-DATAPACKS-2026-11-05-DISARMED --reason "..."` |
-
-### 6. Geri açma (re-enable) — bilinçli ve pahalı
-
-Geri açma **yalnızca anahtarı** çevirir. Paketler `archived/packs/` altında
-`disarmed` olarak kalır ve build'e girmez. Tam geri dönüş için:
-
-1. `python3 scripts/datapacks_disable.py enable --token ... --reason "..."`
-2. Her paketi `git mv archived/packs/<ad> packs/<ad>` ile geri taşı, kayıt
-   defterinden girdisini sil, `original_path` alanını temizle.
-3. `archived/build/*.gradle` bölümlerini **elle** kök `build.gradle`'a geri
-   uygula (otomatik "apply" edilmez; bilinçli bir karar olsun diye).
-4. `scripts/check_archive.py` ve `./gradlew verifyProject` çalıştır.
-5. Eski `archived/tools/` araçlarını geri getirmek **yeni bir proje teklifi**
-   sayılır: eski halinin hak etmediği incelemeyi ister.
-
-### 7. Sorun giderme
-
-| Belirti | Sebep / çözüm |
-|---|---|
-| `datapack_guard: fail-closed: ...` | Guard bir girdiyi okuyamadı (git ref yok, blocklist bozuk). Hata **geçiş değil**, düzeltin. |
-| `check_archive: path 'archived/...' does not exist` | Kayıt defteri ile dizin uyuşmuyor; `git status` ile dosyayı geri alın ya da girdiyi düzeltin. |
-| `checkDatapackSwitch failed` | `datapacks.disabled.json` `enabled=false` değil veya marker/registry tutarsız. |
-| Push reddedildi: `force-push` | Korumalı dala force-push engelli. Geçmişi yeniden yazmak yerine yeni commit ekleyin (bkz. `docs/MAINTAINER_GUIDE.md`). |
-| CI `Datapack guard` kırmızı | PR diff'i yeni datapack içeriyor, hesap blocklist'te veya bir arşiv kuralı ihlal edildi. Rapor artifact'ında (`datapack-guard-report`) hangi kural olduğu yazar. |
-| Tar/source arşivi (`.git` yok) | Diff tabanlı kontroller atlanır (uyarı olarak raporlanır); registry ve blocklist kontrolleri yine çalışır. |
-
----
-
-## English — How do I install it?
+## How do I install it?
 
 ### 1. Apply the patch series (recommended)
 
@@ -193,9 +85,18 @@ node scripts/tests/site_behavior.test.mjs
 ```
 
 Expected: switch `enabled=false`, `verify` 0 problems, registry 28 entries /
-0 errors, 76 Python tests OK, website test passes.
+0 errors, 81 Python tests OK, website test passes.
 
-### 5. What blocks what
+### 5. Day-to-day use
+
+```bash
+python3 scripts/datapacks_disable.py status                       # is it off?
+./gradlew printArchiveList                                        # what was archived, and why
+python3 scripts/datapack_guard.py --staged --protect --blocklist  # manual check
+python3 scripts/datapack_guard.py --audit-refs --blocklist        # branch/tag names
+```
+
+### 6. What blocks what
 
 | Surface | Rule | Where |
 |---|---|---|
@@ -209,7 +110,7 @@ Expected: switch `enabled=false`, `verify` 0 problems, registry 28 entries /
 | Workflow file under `archived/` | blocked | `check_archive.py` |
 | A new datapack-shaped test fixture | allowed | `scripts/tests/fixtures/` and `archived/` are exempt |
 
-### 6. Blocking an account
+### 7. Blocking an account
 
 1. Add the login to `blocklist/blocklist.json` under `blocked[]` with `reason`,
    `added_on`, `added_by`, `scope`, `enforcement`. Exact logins only; use
@@ -223,7 +124,7 @@ Expected: switch `enabled=false`, `verify` 0 problems, registry 28 entries /
    account is refused (fail-closed) until the issue is resolved. Public profile
    fields only — never private data.
 
-### 7. Re-enabling (deliberate and expensive)
+### 8. Re-enabling (deliberate and expensive)
 
 ```bash
 python3 scripts/datapacks_disable.py enable \
@@ -237,7 +138,7 @@ means moving each pack back with `git mv`, deleting its registry entry and
 hand, then running `check_archive.py` and `verifyProject`. Treat it as a new
 project proposal with the review the first one never had.
 
-### 8. Troubleshooting
+### 9. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|

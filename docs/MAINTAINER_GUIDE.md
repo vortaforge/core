@@ -1,7 +1,7 @@
 # Maintainer guide
 
 > [!TIP]
-> **Kural eklemeden önce nereye ait olduğunu sorun.** Depo durumuyla ilgili bir kural `scripts/check_archive.py`'ye, diff'le ilgili bir kural `scripts/datapack_guard.py`'ye, hesapla ilgili bir kural `blocklist/blocklist.json`'a gider.
+> **Before adding a rule, decide where it belongs.** A rule about repository state goes in `scripts/check_archive.py`, a rule about a diff goes in `scripts/datapack_guard.py`, and a rule about an account goes in `blocklist/blocklist.json`.
 
 This is the human-facing project guidance for `vortaforge/core`. It preserves
 project rules and technical context previously kept in the AI-specific
@@ -44,9 +44,11 @@ current deployment: verify each pack's metadata and deployment separately.
    loose patches. Do not describe an AI or bot comment, a passing CI job or a
    ruleset bypass as independent human review. If no independent review occurred,
    say **not independently reviewed (Anti-Review)**.
-5. **Use English** for code, comments, commit messages, issues, PR text and
-   documentation, except for documented translation files such as `lang/tr_tr.json`
-   and the Turkish text-engine tables.
+5. **Use English, only English.** Code, comments, commit messages, issues, PR
+   text, documentation, JSON string values and script output are all English.
+   There is no second language anywhere in the repository, including "just a
+   greeting". The archived packs under `archived/packs/` are frozen history and
+   are not an exception to write in; they are never edited again.
 6. **Report evidence accurately.** Claim a check passed only when it was run;
    distinguish static validation, builds, runtime tests and checks not run.
 7. **Do not run Minecraft-server tests locally or against a live server.** No

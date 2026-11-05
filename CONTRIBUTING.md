@@ -1,7 +1,7 @@
 # Contributing to vortaforge/core
 
 > [!WARNING]
-> **Datapack katkısı kabul edilmiyor.** `.mcfunction`, `data/<ns>/`, `pack.mcmeta` veya datapack üreten bir araç içeren PR'lar otomatik olarak kapatılır. Özellik Fabric modu olarak gelir; gerekçe [`README.md`](README.md#why-datapacks-are-not-accepted-any-more).
+> **Datapack contributions are not accepted.** Pull requests that add `.mcfunction` files, a `data/<ns>/` tree, a `pack.mcmeta` or a datapack generator are closed automatically. A feature arrives as a Fabric mod; see [`README.md`](README.md#why-datapacks-are-not-accepted-any-more) for the reasoning.
 
 Thanks for your interest in contributing to this project.
 

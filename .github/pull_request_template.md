@@ -1,6 +1,6 @@
 
 > [!IMPORTANT]
-> **PR açmadan önce:** datapack içeriği eklemediğinizden emin olun. Eklerseniz CI `datapack-guard` işi kırmızı olur ve PR kapatılır.
+> **Before opening a pull request:** make sure it adds no datapack content. If it does, the `datapack-guard` CI job fails and the pull request is closed.
 
 ## 📝 Description
 <!-- Briefly describe the changes introduced in this PR. Why is this change necessary? -->

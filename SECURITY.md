@@ -1,7 +1,7 @@
 # Security Policy
 
 > [!CAUTION]
-> **Datapack'lerin güvenlik modeli yoktur.** Sunucu yetkisiyle komut çalıştırırlar; sandbox, yetki listesi, imza veya denetim izi yoktur. Bir güvenlik açığı bildirirken **canlı bir dünyada veya üretim sunucusunda** denemeyin.
+> **Datapacks have no security model.** They execute commands with the server's own authority, with no sandbox, no capability list, no signature and no audit trail. Never reproduce a reported issue **in a live world or on a production server**.
 
 ## Reporting a vulnerability
 

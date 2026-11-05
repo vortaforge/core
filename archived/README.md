@@ -1,7 +1,7 @@
 # archived/
 
 > [!CAUTION]
-> **Arşiv donmuştur.** `archived/` altındaki hiçbir şey çalışmaz, build'e girmez veya yayınlanmaz. Buradaki bir projeyi geri getirmek "revert" değil, **yeni bir proje teklifi** sayılır ve o incelemeden geçer.
+> **The archive is frozen.** Nothing under `archived/` runs, builds or ships. Bringing a project back is not a revert: it counts as a **new project proposal** and goes through that review.
 
 Everything in this directory is **frozen, reference-only and hard-disarmed**.
 Nothing under `archived/` is built, merged, zipped, linted, tested or executed
@@ -34,11 +34,6 @@ It was bad enough that it would have been better had it not shipped at all. The
 maintainer gave up on it after hitting real problems as a plain player using
 a datapack **with no client mod installed**, and the same class of problems
 kept showing up in pull requests.
-
-*Türkçe:* Datapack'de tip güvenliği, güvenlik modeli, hata ayıklama, uyarılar
-ve birçok önemli şey olmadığı ve düşük puanlı olduğu için vazgeçiyorum.
-Client'a mod kurmadan datapack kullanırken bile sorunlar yaşadım ve PR'lerde de
-aynı sorunlar çıktı; olmasaydı daha iyi olurdu.
 
 ## Layout
 

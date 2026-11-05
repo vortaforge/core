@@ -1,7 +1,7 @@
 # blocklist/
 
 > [!WARNING]
-> **Bu dosya herkese açıktır ve engellenen kişi tarafından okunacaktır.** Her girdi bir *politika kararı* yazmalıdır; kişisel bir suçlama değil. Gerekçesiz girdi testte reddedilir.
+> **This file is public and will be read by the person who is blocked.** Every entry must state a *policy decision*, not a personal accusation. An entry without a reason is rejected by the tests.
 
 Account-level blocklist for the retired datapack programme.
 

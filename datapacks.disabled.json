@@ -4,7 +4,6 @@
   "enabled": false,
   "since": "2026-11-05",
   "reason": "The datapack programme is retired. Datapacks have no type safety, no security model, no debugging, no warnings and no error surface, scored low in review, and were bad enough that they would have been better not shipped at all. The maintainer gave up on them after hitting real problems as a plain player using a datapack with no client mod installed, and the same class of problems kept appearing in pull requests.",
-  "reason_tr": "Datapack'de tip güvenliği, güvenlik modeli, hata ayıklama, uyarılar ve birçok önemli şey olmadığı ve düşük puanlı olduğu için vazgeçiyorum. Client'a mod kurmadan datapack kullanırken bile sorunlar yaşadım ve PR'lerde de aynı sorunlar çıktı; olmasaydı daha iyi olurdu.",
   "approved_by": "vortaforge maintainer",
   "reenable_token": "VORTAFORGE-DATAPACKS-2026-11-05-DISARMED",
   "registry": "archived/archive.json",

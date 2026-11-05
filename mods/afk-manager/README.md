@@ -1,7 +1,7 @@
 # AFK Manager
 
 > [!TIP]
-> **AFK yönetimi sunucu tarafındadır.** Mod yalnızca zamanlayıcı ve komut yüzeyi sağlar; oyuncunun istemcisinde hiçbir şey kurulu olmak zorunda değildir.
+> **AFK handling is server-side.** The mod only provides the timer and the command surface; nothing has to be installed on a player's client.
 
 Server-side Fabric mod (Minecraft **1.21.1**, Java 21, dedicated server). Vanilla clients can join; nothing
 is needed on the client.

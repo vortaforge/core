@@ -1,7 +1,7 @@
 # LevelOp
 
 > [!NOTE]
-> **Örnek kod, üretim kodu değildir.** Yetki kontrolü, kalıcılık ve hata yönetimi kasıtlı olarak asgari tutulmuştur; kopyalarken kendi gereksinimlerinize göre sertleştirin.
+> **This is example code, not production code.** Permission checks, persistence and error handling are deliberately minimal; harden it to your own requirements when you copy it.
 
 Fabric mod for Minecraft 26.3 that extends the vanilla `/op` command with an
 explicit permission-level argument.

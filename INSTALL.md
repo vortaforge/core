@@ -1,32 +1,37 @@
-# Kurulum / Installation
+# Installation
 
 > [!IMPORTANT]
-> **Bu bir kurulum kılavuzudur, geri alma kılavuzu değildir.** Yamalar `main`'i değiştirir: datapack programı kapanır, `packs/` boşalır, 3546 dosya `archived/`'a taşınır. Geri almak istiyorsanız önce [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) §6'yı okuyun.
+> **This is an installation guide, not a rollback guide.** The patches change
+> `main`: the datapack programme is switched off, `packs/` is emptied and 3546
+> files move into `archived/`. Read [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) §6
+> before you plan any reversal.
 
-Bu depo (`vortaforge/core`) için 2026-11-05 datapack emekliliğini uygulayan
-yamalar ve adımlar. Ayrıntılı sistem açıklaması: [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md)
-(Türkçe + İngilizce). Politika: [`archived/README.md`](archived/README.md).
+This page covers the patches that implement the 2026-11-05 datapack retirement
+in `vortaforge/core`. The full system description, in one language, is
+[`docs/ARCHIVAL.md`](docs/ARCHIVAL.md). The policy itself is
+[`archived/README.md`](archived/README.md).
 
-Yama dosyaları:
-
-| Depo | Yama |
+| Repository | Patch |
 |---|---|
 | `vortaforge/core` | `archived/patches/0001-chore-datapacks-retire-the-datapack-programme-disarm.patch` |
 | `vortaforge/.github` | `archived/patches-gh/0001-feat-blocklist-organisation-wide-datapack-blocklist-.patch` |
 
-## 1. Core deposu
+Order matters: apply `core` first, then `vortaforge/.github`.
+
+## 1. `vortaforge/core`
 
 ```bash
 git clone https://github.com/vortaforge/core.git
 cd core
 git checkout -b datapacks-retired
-git am archived/patches/*.patch        # sıra: dosya adına göre
+git am archived/patches/*.patch        # applied in filename order
 ```
 
-`git am` commit'i yeniden oluşturur (hash değişir), `main`'i yeniden yazmaz.
-Uygulama patlarsa `git am --abort` ile temiz duruma dönün.
+`git am` recreates the commits, so their hashes change. It never rewrites
+`main`. If the series fails to apply, run `git am --abort` and start again
+rather than editing hunks by hand.
 
-Alternatif (yalnızca dosyalar, kendi commit'inizle):
+Files only (your own commit message):
 
 ```bash
 git apply --stat  archived/patches/0001-*.patch
@@ -34,7 +39,7 @@ git apply --check archived/patches/0001-*.patch
 git apply         archived/patches/0001-*.patch
 ```
 
-## 2. .github deposu (core'dan SONRA)
+## 2. `vortaforge/.github` (after `core`)
 
 ```bash
 git clone https://github.com/vortaforge/.github.git
@@ -43,58 +48,71 @@ git checkout -b datapack-blocklist
 git am /path/to/core/archived/patches-gh/*.patch
 ```
 
-## 3. Kancaları kur (push öncesi engelleme)
+The mirror in `.github/blocklist/blocklist.json` is **generated** from
+`core/blocklist/blocklist.json` by `scripts/blocklist_sync.py`. Edit the source
+in `core`; never hand-edit the mirror.
+
+## 3. Install the hooks (pre-push blocking)
 
 ```bash
 cd core
 git config core.hooksPath .githooks
 ```
 
-## 4. Doğrula
+## 4. Verify
 
 ```bash
-python3 scripts/check_archive.py --strict          # 28 kayıt, 0 hata
-python3 scripts/datapacks_disable.py verify         # 0 problem
-python3 scripts/origin_watermarks.py --check        # 15 watermark, 11 datapack
-python3 -m unittest discover -s scripts/tests       # 77 test
+python3 scripts/check_archive.py --strict          # 28 entries, 0 errors
+python3 scripts/datapacks_disable.py verify        # 0 problems
+python3 scripts/origin_watermarks.py --check       # 15 watermarks, 11 datapacks
+python3 -m unittest discover -s scripts/tests      # 81 tests
 node scripts/tests/site_behavior.test.mjs
 ./gradlew checkDatapackSwitch checkArchive verifyProject
 ```
 
-Beklenen son durum: `packs/` yalnızca `README.md` içerir; `archived/packs/`
-altında 12 paket, `archived/tools/` altında 6 araç, `archived/build/` altında
-kök `build.gradle`'dan çıkarılmış 6 Gradle bölümü vardır;
-`datapacks.disabled.json` → `"enabled": false`.
+Expected end state:
 
-## 5. Günlük kullanım
+- `packs/` contains only `README.md` and `.gitkeep`;
+- `archived/packs/` holds 12 packs, `archived/tools/` holds 6 tools and
+  `archived/build/` holds the 6 Gradle sections extracted from the root
+  `build.gradle`;
+- `datapacks.disabled.json` reads `"enabled": false`.
+
+## 5. Day-to-day use
 
 ```bash
-python3 scripts/datapacks_disable.py status        # kapalı mı?
-./gradlew printArchiveList                         # ne arşivlendi, neden
-python3 scripts/datapack_guard.py --staged --protect --blocklist   # elle kontrol
+python3 scripts/datapacks_disable.py status                       # is it off?
+./gradlew printArchiveList                                        # what was archived, and why
+python3 scripts/datapack_guard.py --staged --protect --blocklist  # manual check
 ```
 
-## 6. Geri açma (bilinçli)
+## 6. Re-enabling (deliberate)
 
 ```bash
 python3 scripts/datapacks_disable.py enable \
     --token VORTAFORGE-DATAPACKS-2026-11-05-DISARMED \
-    --reason "neden geri açıldığını anlatan bir cümle"
+    --reason "one sentence explaining why this is being re-enabled"
 ```
 
-Bu yalnızca anahtarı çevirir; paketler `archived/` altında `disarmed` kalır.
-Tam geri dönüş adımları `docs/ARCHIVAL.md` içinde.
+This only turns the switch. The packs stay `disarmed` under `archived/`. The
+complete reversal procedure is in [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md).
 
-## Notlar
+## Notes
 
-- Ağaç ile yama birebir aynı sonucu verir (uygulama sonrası `diff -r` boş).
-- Yama, arşivlenen paketlerin `_vc_origin.mcfunction` watermark'larını
-  **değiştirmez**: onlar `packs/<ad>` kaynak yolunu kaydeden provenans
-  kaydıdır; `scripts/origin_watermarks.py` taşınmış ağacı anlar.
-- Doğrulandı: `check_archive --strict`, `datapacks_disable verify`,
-  `origin_watermarks --check`, 77 Python testi, Node site testi, Groovy parse,
-  ve Gradle 9.8.2 (JDK 21) ile `guardArchives checkDatapackSwitch checkArchive
-  verifyMod testRepository writeProjectInventory` + `printArchiveList`.
-  Doğrulanmadı: gerçek `mods/` ağacıyla tam `./gradlew ci` (Fabric Loom +
-  ağ), `testGuiGenerator` (pytest + guigenmc kurulumu), Ward (sunucu
-  başlatılmadı), `.github` workflow'unun çalışması (yalnızca YAML doğrulandı).
+> [!NOTE]
+> The applied tree and the patch are byte-identical: `diff -r` is empty after
+> applying. If it is not, the patch is not the artefact you think it is.
+
+- The patch does **not** rewrite the `_vc_origin.mcfunction` watermarks of the
+  archived packs. Those are provenance records that name the historical
+  `packs/<name>` source path, and `scripts/origin_watermarks.py` understands the
+  moved tree.
+- **Verified:** `check_archive --strict`, `datapacks_disable verify`,
+  `origin_watermarks --check`, 81 Python tests, the Node site test, Groovy
+  parsing, and Gradle 9.8.2 (JDK 21) with `guardArchives checkDatapackSwitch
+  checkArchive verifyMod testRepository writeProjectInventory` plus
+  `printArchiveList`.
+- **Not verified:** a full `./gradlew ci` against a real `mods/` tree (Fabric
+  Loom plus network), `testGuiGenerator` (needs pytest and an installed
+  guigenmc), Ward (no Minecraft server was started), and the `.github`
+  workflows themselves (only their YAML was validated).

@@ -1,7 +1,7 @@
 # Join Throttle
 
 > [!NOTE]
-> **Bu mod bir güvenlik sınırı değildir.** Kaba kuvvet/ spam bağlantı denemelerini yavaşlatır; gerçek DDoS koruması için proxy katmanı gerekir.
+> **This mod is not a security boundary.** It slows down brute-force and spam connection attempts; real DDoS protection needs a proxy layer in front of the server.
 
 Server-side Fabric mod (Minecraft **1.21.1**, Java 21, dedicated server) that limits how often a single
 address may log in within a time window.
