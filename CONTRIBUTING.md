@@ -1,5 +1,8 @@
 # Contributing to vortaforge/core
 
+> [!WARNING]
+> **Datapack katkısı kabul edilmiyor.** `.mcfunction`, `data/<ns>/`, `pack.mcmeta` veya datapack üreten bir araç içeren PR'lar otomatik olarak kapatılır. Özellik Fabric modu olarak gelir; gerekçe [`README.md`](README.md#why-datapacks-are-not-accepted-any-more).
+
 Thanks for your interest in contributing to this project.
 
 **Read [NOTICE.md](NOTICE.md) before opening a PR.** It covers the

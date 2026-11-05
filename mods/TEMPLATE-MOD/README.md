@@ -1,5 +1,8 @@
 # TEMPLATE-MOD
 
+> [!TIP]
+> **Bu bir şablondur.** Kopyalayıp `settings.gradle`'ın bulacağı şekilde `mods/<ad>/` altına koyun; `mods/TEMPLATE-MOD` dizinini kendisi build edilmez.
+
 A Fabric mod template for Minecraft 26.1.2.
 
 ## Requirements

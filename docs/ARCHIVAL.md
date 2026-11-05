@@ -1,5 +1,8 @@
 # Datapack retirement, kill switch and guard — `docs/ARCHIVAL.md`
 
+> [!IMPORTANT]
+> **Bu sistem fail-closed çalışır.** Bozuk bir blocklist, eksik bir git ref veya okunamayan bir artefakt "geçti" sayılmaz — hata verir. Kırmızı bir kapı, kuralın çalıştığının kanıtıdır.
+
 > **Türkçe** aşağıda: [Nasıl kurarım?](#türkçe--nasıl-kurarım) ·
 > **English** below: [How do I install it?](#english--how-do-i-install-it)
 >

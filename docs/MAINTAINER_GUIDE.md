@@ -1,5 +1,8 @@
 # Maintainer guide
 
+> [!TIP]
+> **Kural eklemeden önce nereye ait olduğunu sorun.** Depo durumuyla ilgili bir kural `scripts/check_archive.py`'ye, diff'le ilgili bir kural `scripts/datapack_guard.py`'ye, hesapla ilgili bir kural `blocklist/blocklist.json`'a gider.
+
 This is the human-facing project guidance for `vortaforge/core`. It preserves
 project rules and technical context previously kept in the AI-specific
 instruction files, without requiring an automated AI agent.

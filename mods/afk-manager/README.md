@@ -1,5 +1,8 @@
 # AFK Manager
 
+> [!TIP]
+> **AFK yönetimi sunucu tarafındadır.** Mod yalnızca zamanlayıcı ve komut yüzeyi sağlar; oyuncunun istemcisinde hiçbir şey kurulu olmak zorunda değildir.
+
 Server-side Fabric mod (Minecraft **1.21.1**, Java 21, dedicated server). Vanilla clients can join; nothing
 is needed on the client.
 

@@ -1,5 +1,8 @@
 # ● guigenmc
 
+> [!TIP]
+> **Bu araç bir datapack üreticisi değildir** — GUI *veri* dosyaları üretir ve çıktısı `dist/` altındadır. Datapack üreten eski araçlar `archived/tools/` altındadır ve çalışmaz.
+
 **JSON → Minecraft GUI datapack** generator.
 
 - **CLI** — generate from a config file in the terminal  

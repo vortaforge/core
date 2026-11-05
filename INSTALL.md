@@ -1,5 +1,8 @@
 # Kurulum / Installation
 
+> [!IMPORTANT]
+> **Bu bir kurulum kılavuzudur, geri alma kılavuzu değildir.** Yamalar `main`'i değiştirir: datapack programı kapanır, `packs/` boşalır, 3546 dosya `archived/`'a taşınır. Geri almak istiyorsanız önce [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) §6'yı okuyun.
+
 Bu depo (`vortaforge/core`) için 2026-11-05 datapack emekliliğini uygulayan
 yamalar ve adımlar. Ayrıntılı sistem açıklaması: [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md)
 (Türkçe + İngilizce). Politika: [`archived/README.md`](archived/README.md).

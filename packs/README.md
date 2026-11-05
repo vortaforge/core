@@ -1,5 +1,8 @@
 # packs/ — retired
 
+> [!NOTE]
+> **Bu dizin bilerek boştur.** Buradaki tek izinli dosya bu README ve `.gitkeep`'tir. Yeni paket eklemek guard tarafından reddedilir (`live-packs-tree`).
+
 This directory is intentionally empty.
 
 **Datapacks were retired on 2026-11-05.** Every pack, datapack generator,

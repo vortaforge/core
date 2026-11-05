@@ -1,5 +1,8 @@
 # scripts/
 
+> [!WARNING]
+> **Buradaki her betik "düşük güvenilirlik" varsayılanıyla ele alınır** (`NOTICE.md`). Çalıştırmadan önce okuyun; ayrıcalıklı kimlik bilgileriyle kalite araçları çalıştırmayın.
+
 Helper tooling for this monorepo. `NOTICE.md` treats everything here as
 **lower trust by default**: inspect code and dependencies before use, and
 avoid running quality tooling with privileged credentials.

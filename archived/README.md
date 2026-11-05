@@ -1,5 +1,8 @@
 # archived/
 
+> [!CAUTION]
+> **Arşiv donmuştur.** `archived/` altındaki hiçbir şey çalışmaz, build'e girmez veya yayınlanmaz. Buradaki bir projeyi geri getirmek "revert" değil, **yeni bir proje teklifi** sayılır ve o incelemeden geçer.
+
 Everything in this directory is **frozen, reference-only and hard-disarmed**.
 Nothing under `archived/` is built, merged, zipped, linted, tested or executed
 by the Gradle build or by CI. `settings.gradle` does not scan this directory.

@@ -68,6 +68,127 @@ the project name, so the description said nothing about what is in here.
 > [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) for the whole system in Turkish and
 > English, including how to install and how to re-enable it deliberately.
 
+## Why datapacks are not accepted any more
+
+> [!WARNING]
+> **New datapack contributions are not accepted, in any form.** This is a
+> permanent policy decision, not a temporary pause: pull requests that add
+> `.mcfunction` files, a `data/<namespace>/` tree, a `pack.mcmeta`, a datapack
+> generator or a datapack test harness are closed automatically by
+> `scripts/datapack_guard.py`. If a feature cannot be built as a Fabric mod, it
+> is not built here.
+
+The retirement list below is why. It is written from the maintainer's own
+experience shipping, reviewing and *playing with* these packs — not from a
+generic "vanilla vs modded" debate.
+
+### 1. No type safety, anywhere
+
+> [!CAUTION]
+> Everything that crosses a boundary in a datapack is an **untyped string**.
+> A function argument, a `data storage` read, a scoreboard value, a macro
+> expansion, an NBT path — none of them have a type, a schema, or a compiler.
+> A typo in a selector or a storage key is discovered at runtime, by the
+> player, in the world.
+
+| What a mod gives you | What a datapack gives you |
+|---|---|
+| A compile step (`javac`), types, generics | Nothing between your file and the world |
+| IDE completion from the real API | Completion only if a third-party schema is current |
+| Deterministic refactors | `grep` and hope |
+| Unit tests that fail the build | Manual play-testing in a world |
+
+A datapack's "type system" is a JSON schema maintained by volunteers. When
+Mojang changes a format, the schema lags, the tooling lags, and the failure
+mode is a silent no-op: the function runs and does nothing, or throws one line
+into a log nobody reads.
+
+### 2. The security model is not a security model
+
+> [!IMPORTANT]
+> Datapack code is executed by the server at `function-permission-level`
+> (default 2). A pack that stores a string and later feeds it to `function`
+> turns any writable surface — a sign, a book, a name tag, an anvil rename, a
+> chat message, another pack's storage — into a **command execution surface**.
+
+This is not theoretical in this repository: `macroEngine` and `TunnelScript`
+both existed to execute user-authored command strings, which is why their own
+documentation carried warnings that the content is "third-party content, not
+audited, verified or endorsed". Once a pack can execute a string, the trust
+boundary is whatever the weakest installed pack writes into storage. There is:
+
+- **no sandbox** — the pack runs with the server's own authority;
+- **no capability list** — nothing distinguishes "needs to read a scoreboard"
+  from "needs `op`-level commands";
+- **no audit trail** — a command is executed and the log records nothing by
+  default;
+- **no signature** — a datapack is a ZIP of plain files with no provenance.
+
+Mods are not magically safe either (Java is arbitrary code), but a mod at least
+has a reviewable source tree, a build artifact, a hash, and a loader that names
+what it touches. A datapack has none of that and *still* executes commands.
+
+### 3. No debugging, no inspection, no warnings
+
+- There is **no debugger**. The only feedback is `/function` plus watching the
+  world change.
+- Errors are **one line in `latest.log`**, usually swallowed; a failed function
+  call does not stop the caller.
+- There is **no stack trace** and no call-site information — macro-expanded
+  functions are unattributable once the string is built.
+- There is **no lint** in vanilla. A whole ecosystem of third-party linters and
+  language servers had to exist to approximate what `javac` gives for free; two
+  of the packs here depended on exactly that tooling to stay coherent.
+- **No coverage, no assertions, no CI-observable behaviour.** Testing meant
+  standing on a server and clicking things.
+
+> [!TIP]
+> If you are looking for a rule of thumb: **anything you cannot write a failing
+> test for before fixing is not engineering, it is a rehearsal.** That is the
+> single biggest reason the programme is retired.
+
+### 4. Low score on every axis that mattered
+
+| Axis | Datapacks | Fabric mods |
+|---|---|---|
+| Type safety | none | Java |
+| Security model | server authority, string execution | reviewed source + loader |
+| Debugging | none | debugger, stack traces |
+| Warnings / lint | third-party, version-lagged | compiler |
+| Testing | manual, in-game | JUnit, CI |
+| Client-side features | impossible | first class |
+| Performance ceiling | command interpreter, per tick | native code |
+| Upgrade cost | formats change every major version | mapped APIs |
+
+### 5. The maintainer's own experience as a player
+
+> [!NOTE]
+> The decisive argument was not architectural. It was that using these datapacks
+> **without a client mod installed** — the entire selling point of datapacks —
+> still produced real problems: silent breakage, behaviour that depended on
+> another pack in the same world, and no way to tell what had gone wrong. If the
+> unique advantage of the platform does not survive contact with a normal
+> player, the platform is not worth the cost.
+
+The same class of problems kept arriving in pull requests, which is why the
+guard now refuses the *shape* of the contribution rather than reviewing it each
+time.
+
+### What this means for contributors
+
+> [!TIP]
+> Bring a **Fabric mod**, not a datapack. `mods/` is where features live, the
+> Gradle graph builds it, the tests run in CI, and the release pipeline ships
+> the jar. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+- Datapack-shaped trees, `.mcfunction` files, `pack.mcmeta` and datapack
+  tooling are **refused by the guard** in `pre-commit`, `pre-push` and CI.
+- Archived content is **frozen**: it can be read, it cannot be revived. Adding
+  it back is a new project proposal, not a revert.
+- Accounts on the [blocklist](blocklist/blocklist.json) are refused unless a
+  maintainer adds the `datapack-approved` label — and that label does not
+  override the account block itself.
+
 ## Structure
 
 - `mods/`        — Fabric mods (Gradle subprojects, auto-discovered by `settings.gradle`)

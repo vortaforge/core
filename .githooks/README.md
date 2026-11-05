@@ -1,5 +1,8 @@
 # .githooks/
 
+> [!IMPORTANT]
+> **Kancalar varsayılan olarak kapalıdır.** `git config core.hooksPath .githooks` çalıştırılana kadar hiçbir şey engellenmez. Kurulumdan sonra `git commit --no-verify` ile atlanabilir — bu yüzden asıl kapı CI'dır, kanca değil.
+
 Versioned git hooks. Git does not read hooks from this directory unless you
 point it there:
 

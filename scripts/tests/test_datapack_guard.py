@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -141,6 +142,58 @@ class Blocklist(unittest.TestCase):
             with self.subTest(login=login):
                 self.assertIsNone(self.blocklist.matches(login))
 
+    def test_maintainers_are_exempt_and_their_pushes_are_not_blocked(self):
+        """Regression: the blocklist once contained the maintainer's own accounts.
+
+        `tickwarden` (the org owner, id 235496468) and `legends11` were listed
+        under `known-datapack-authors`, which made CI refuse every push and pull
+        request from the person who administers the organisation. They moved to
+        `managed.accounts`; this test keeps them there.
+        """
+        data = json.loads(BLOCKLIST.read_text(encoding="utf-8"))
+        managed = {str(x).lower() for x in data["managed"]["accounts"]}
+        for login in ("tickwarden", "legends11"):
+            with self.subTest(login=login):
+                self.assertIn(login, managed,
+                              f"{login} is a maintainer account and must stay in managed.accounts")
+                self.assertIsNone(self.blocklist.matches(login),
+                                  f"{login} must never match a blocked entry")
+
+        # Every blocked login must also be absent from managed: the two lists
+        # would otherwise contradict each other silently.
+        blocked = {str(login).lower() for entry in data["blocked"]
+                   for login in entry.get("logins", [])}
+        self.assertFalse(blocked & managed,
+                         f"these logins are both blocked and managed: {sorted(blocked & managed)}")
+
+    def test_engineers_who_are_not_maintainers_are_not_listed_by_name(self):
+        """Blocking someone needs a verified account, not a similar-looking login.
+
+        `ironcrest` / `IronCrest-sudo` (ids 204314210 / 234182831) are different
+        people from the maintainers and were never part of this project, so they
+        must not appear anywhere in the blocklist. A similar login is not
+        evidence of anything.
+        """
+        for login in ("IronCrest", "IronCrest-sudo", "ironcrest"):
+            with self.subTest(login=login):
+                self.assertIsNone(self.blocklist.matches(login))
+
+    def test_blocked_entries_carry_verified_numeric_ids(self):
+        """A login can be renamed; the numeric id cannot.
+
+        Every account entry that names real people must pin `user_ids` so a
+        rename cannot quietly lift the block.
+        """
+        data = json.loads(BLOCKLIST.read_text(encoding="utf-8"))
+        for entry in data["blocked"]:
+            if not entry.get("logins") or entry.get("match_bot_suffix") or entry.get("match_ai_accounts"):
+                continue
+            with self.subTest(entry=entry["id"]):
+                self.assertTrue(entry.get("user_ids"),
+                                f"'{entry['id']}' lists logins but no user_ids")
+                self.assertEqual(len(entry["user_ids"]), len(entry["logins"]),
+                                 f"'{entry['id']}': every login needs exactly one numeric id")
+
     def test_bot_suffix_rule(self):
         self.assertIsNotNone(self.blocklist.matches("some-helper[bot]"))
         self.assertIsNotNone(self.blocklist.matches("helpful-bot"))
@@ -213,33 +266,83 @@ class Wiring(unittest.TestCase):
         Regression: the guard job asked for `pull-requests: read` while the
         caller (build.yml) granted only `contents: read`. GitHub rejects that
         at parse time with a bare `startup_failure` and no annotation, so CI
-        went red for a reason nobody could see. Every permission requested by
-        a job in quality.yml must already be granted at the top of quality.yml
-        AND by build.yml.
+        went red for a reason nobody could see.
+
+        Deliberately parsed with a small text scanner instead of PyYAML: the
+        CI image installs only the packages the repository actually needs, and
+        a test that needs a missing import silently becomes an error, not a
+        skip (this test originally did exactly that).
         """
-        import yaml  # stdlib-adjacent; requirements pin PyYAML for the site build
+        def permissions_block(text: str) -> dict[str, str]:
+            """{scope: access} from the first top-level `permissions:` block."""
+            lines = text.splitlines()
+            try:
+                start = lines.index("permissions:")
+            except ValueError:
+                return {}
+            scopes: dict[str, str] = {}
+            for line in lines[start + 1:]:
+                if line and not line.startswith(" "):
+                    break            # next top-level key
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if ":" in stripped:
+                    scope, _, access = stripped.partition(":")
+                    scopes[scope.strip()] = access.strip()
+            return scopes
 
-        build = yaml.safe_load(self.read(".github", "workflows", "build.yml"))
-        quality = yaml.safe_load(self.read(".github", "workflows", "quality.yml"))
+        def job_permission_blocks(text: str) -> dict[str, dict[str, str]]:
+            """{job_id: permissions} for every job that declares its own block."""
+            lines = text.splitlines()
+            jobs_at = lines.index("jobs:")
+            result: dict[str, dict[str, str]] = {}
+            current: str | None = None
+            collecting: str | None = None
+            scopes: dict[str, str] = {}
+            for line in lines[jobs_at + 1:]:
+                if re.match(r"^  [A-Za-z0-9_-]+:\s*$", line):
+                    if current and scopes:
+                        result[current] = scopes
+                    current = line.strip().rstrip(":")
+                    scopes = {}
+                    collecting = None
+                    continue
+                if current is None:
+                    continue
+                if line.startswith("    ") and not line.startswith("      "):
+                    key = line.strip()
+                    collecting = key if key == "permissions:" else None
+                    continue
+                if collecting and line.startswith("      "):
+                    stripped = line.strip()
+                    if stripped and ":" in stripped and not stripped.startswith("#"):
+                        scope, _, access = stripped.partition(":")
+                        scopes[scope.strip()] = access.strip()
+            if current and scopes:
+                result[current] = scopes
+            return result
 
-        build_granted = set(build.get("permissions") or {})
-        quality_top = set(quality.get("permissions") or {})
+        build_granted = permissions_block(self.read(".github", "workflows", "build.yml"))
+        quality_top = permissions_block(self.read(".github", "workflows", "quality.yml"))
         self.assertTrue(build_granted, "build.yml must declare top-level permissions")
+        self.assertTrue(quality_top, "quality.yml must declare top-level permissions")
 
-        for job_id, job in (quality.get("jobs") or {}).items():
-            if not isinstance(job, dict) or "uses" in job:
-                continue  # reusable-workflow call jobs: no steps, no permissions
-            job_perms = set(job.get("permissions") or {})
+        guards = job_permission_blocks(self.read(".github", "workflows", "quality.yml"))
+        self.assertIn("datapack-guard", guards, "the guard job should pin its own permissions")
+
+        for job_id, scopes in guards.items():
+            widened_top = set(scopes) - set(quality_top)
+            widened_caller = set(scopes) - set(build_granted)
             with self.subTest(job=job_id):
-                self.assertLessEqual(
-                    job_perms, quality_top,
-                    f"quality.yml job '{job_id}' requests {sorted(job_perms - quality_top)} "
-                    "which the reusable workflow itself does not declare")
-                self.assertLessEqual(
-                    job_perms, build_granted,
-                    f"quality.yml job '{job_id}' requests {sorted(job_perms - build_granted)} "
-                    "which the caller build.yml does not grant - GitHub fails the whole "
-                    "run with startup_failure")
+                self.assertFalse(
+                    widened_top,
+                    f"quality.yml job '{job_id}' requests {sorted(widened_top)}, which the "
+                    "reusable workflow itself does not declare")
+                self.assertFalse(
+                    widened_caller,
+                    f"quality.yml job '{job_id}' requests {sorted(widened_caller)}, which the "
+                    "caller build.yml does not grant - GitHub fails with startup_failure")
 
     def test_ci_runs_the_guard_before_verification(self):
         quality = self.read(".github", "workflows", "quality.yml")

@@ -1,5 +1,8 @@
 # Security Policy
 
+> [!CAUTION]
+> **Datapack'lerin güvenlik modeli yoktur.** Sunucu yetkisiyle komut çalıştırırlar; sandbox, yetki listesi, imza veya denetim izi yoktur. Bir güvenlik açığı bildirirken **canlı bir dünyada veya üretim sunucusunda** denemeyin.
+
 ## Reporting a vulnerability
 
 If you find a security issue in any project under this repository (Fabric

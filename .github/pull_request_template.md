@@ -1,3 +1,7 @@
+
+> [!IMPORTANT]
+> **PR açmadan önce:** datapack içeriği eklemediğinizden emin olun. Eklerseniz CI `datapack-guard` işi kırmızı olur ve PR kapatılır.
+
 ## 📝 Description
 <!-- Briefly describe the changes introduced in this PR. Why is this change necessary? -->
 

@@ -1,5 +1,8 @@
 # blocklist/
 
+> [!WARNING]
+> **Bu dosya herkese açıktır ve engellenen kişi tarafından okunacaktır.** Her girdi bir *politika kararı* yazmalıdır; kişisel bir suçlama değil. Gerekçesiz girdi testte reddedilir.
+
 Account-level blocklist for the retired datapack programme.
 
 - `blocklist.json` — the list itself (schema: the file's own `$comment`s and
