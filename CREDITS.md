@@ -691,3 +691,35 @@ that nothing under `packs/` is archived. This pass completes the reversal.
 - **Scope:** reverts the comment-only edits above, plus the two extra lines in `guikit-datapack`'s load function noted above. No scoring, gating, or data-storage logic was changed beyond that.
 - **Verified:** `scripts/check_archive.py` (passes: `1 project(s), 0 error(s)` — the single `archived/archive.json` entry is `runtoolkit/suite`, unaffected by this change).
 - **Not verified:** `./gradlew checkArchive` was not run (no network access to `services.gradle.org` to fetch the Gradle distribution in this environment); nothing was run in a Minecraft server.
+
+## 2026-11-05 - datapack retirement, kill switch, guard and blocklist
+
+**AI involvement:** written by an Arena.ai agent at the request of the
+maintainer. Not independently reviewed (Anti-Review).
+
+**What changed:** the datapack programme was retired. Every pack, generator,
+linter and test harness was moved with `git mv` into `archived/` (history
+kept), the datapack Gradle logic was extracted verbatim from the root
+`build.gradle` into `archived/build/*.gradle`, `archived/archive.json` was
+rebuilt as schema v2 with a `reason` for every entry, and the enforcement was
+added: `scripts/datapack_guard.py`, `scripts/datapacks_disable.py`,
+`blocklist/blocklist.json`, `.githooks/`, the `datapack-guard` CI job and the
+org-wide sync in `vortaforge/.github`.
+
+**Verified (run here):** `python3 scripts/check_archive.py --strict` (27
+entries, 0 errors), `scripts/datapacks_disable.py verify` (0 problems), the
+Python suite (76 tests) and the Node website test, Groovy parse of
+`build.gradle` / `settings.gradle` / `build-logic/project-tasks.gradle`, and a
+real `gradle checkArchive checkDatapackSwitch verifyMod printArchiveList` run
+plus `verifyProject writeProjectInventory` (mods and examples removed from a
+throw-away copy) against Gradle 9.8.2 on JDK 21.
+
+**Not verified:** `testGuiGenerator` (needs `pytest` and an editable
+`guigenmc` install), a full `./gradlew ci` with the real `mods/` tree (Fabric
+Loom needs network and a long build), the archived Ward runtime tests (a
+Minecraft server must not be started), and any in-game behaviour. The
+`vortaforge/.github` workflow was validated as YAML only; it has not run.
+
+**Not a claim of quality:** the retirement reason records that the datapacks
+lacked type safety, a security model, debugging and warnings and scored low in
+review. Nothing here re-certifies the archived code.

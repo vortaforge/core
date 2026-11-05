@@ -15,21 +15,21 @@ next to it:
   tasks still work for a quick local pass). Changes here must build
   cleanly across **all** subprojects, not just the one you touched — a
   shared dependency bump or API change can silently break a sibling mod.
-- `packs/` — Datapacks. These are checked by `verifyProject` as part of
-  the same `ci` graph (syntax/reference tooling listed in `SECURITY.md`
-  § "Validation tooling": Spyglass/JSON lint, `checkPacks`, `mergeDatapacks`), but
-  are not Gradle-*compiled* — there is nothing to build for them, so
-  `buildAll` alone says nothing about a datapack change.
+- `packs/` — **Empty. Datapacks are retired (2026-11-05).** Every pack, its
+  generator, linter and test harness is archived and disarmed in
+  `archived/archive.json`. `scripts/datapack_guard.py` refuses new datapack
+  content here, in `pre-commit`, `pre-push` and CI. See `docs/ARCHIVAL.md`.
 - `scripts/` — Helper tooling, lower trust by default. Review before
   running locally.
 - `examples/` — Templates and sample code. Not shipped, not covered by the
-  same security posture as `mods/` or `packs/`.
-- `archived/` — Frozen, reference only.
+  same security posture as `mods/`. The datapack template was archived.
+- `archived/` — Frozen, reference only, hard-disarmed.
+- `blocklist/` — Account blocklist enforced by the guard.
+- `.githooks/` — `pre-commit` / `pre-push` guard hooks.
 
-If your change spans both a mod and a pack (e.g. a Fabric mod that reads
-data from a companion datapack), say so explicitly in the PR description —
-`ci` covers both `mods/` and `packs/`, but calling it out still helps
-review.
+If your change spans both a mod and a datapack, it will be refused: the
+datapack half cannot land. Say so in the PR description instead, so the
+datapack part can be redirected to an issue.
 
 ## Gradle specifics
 
@@ -40,12 +40,10 @@ review.
   project CI task graph" step of the `Verify, test and package` job (see
   `.github/workflows/quality.yml`); there is no separate `buildAll`/`lint`
   step in CI to pass independently.
-- When `ci` actually runs, `verifyProject` invokes Spyglass and strict JSON
-  lint. Error diagnostics fail the graph unless advisory mode is explicitly
-  selected. Ward-test exclusions, permission warnings, one-version-per-pack
-  coverage and the patched decompressor are explained in
-  `scripts/datapack_lint/README.md`. Static checks do not prove a pack loads
-  or behaves correctly; workflow enablement is a separate GitHub setting.
+- When `ci` actually runs, `verifyProject` invokes the datapack guard, the
+  kill switch, the archive-registry validator and the regression suites.
+  Spyglass/JSON lint and the Ward runtime tests are archived with the packs and
+  are not invoked any more (`archived/tools/datapack-lint/README.md`).
 - Building a single subproject during iteration is fine
   (`./gradlew :mods:<subproject-name>:build`), but run the full `ci`
   before opening the PR — cross-subproject breakage is the most common
@@ -55,22 +53,17 @@ review.
 
 ## Datapacks specifics
 
-- Datapacks in `packs/` follow the pack-format and namespace conventions
-  documented per-project — check the subproject's own README before
-  assuming a version target.
-- Namespace isolation matters: don't introduce function/tag names that can
-  collide with another pack in this repo or with common third-party packs.
-- Macro-heavy or command-generation logic is a known risk area in this
-  project (see `SECURITY.md`). If your change touches macro expansion,
-  dynamic function generation, or anything that assembles commands from
-  external input, call that out explicitly in the PR — it will get closer
-  review than an average change.
-- Packs listed in `archived/archive.json` are frozen. Don't submit feature PRs
-  against them; fixes only, and only if the issue is significant. Note that
-  **nothing is currently archived under `packs/`** - the registry's only
-  entry is the retired `runtoolkit/suite` repository with `"path": null`, so
-  today every pack in `packs/` accepts normal PRs. Validate with
-  `./gradlew printArchiveList` rather than trusting this sentence.
+- **Datapacks are retired.** Do not submit one. `scripts/datapack_guard.py`
+  refuses new packs, new `.mcfunction` files and revived archived tooling in
+  `pre-commit`, `pre-push` and CI (`datapack-guard` job), and
+  `datapacks.disabled.json` is the switch that records the decision.
+- Packs listed in `archived/archive.json` are frozen and disarmed. Fixes are
+  not accepted either: re-enabling anything there is a deliberate, reviewed
+  decision with a written reason (`docs/ARCHIVAL.md`).
+- The reasons the programme was retired - no type safety, no security model,
+  no debugging, no warnings, low review score, and real problems for a player
+  using a datapack without any client mod - are recorded in
+  `archived/README.md`. Read them before proposing a replacement.
 
 ## Do not misuse this project
 
@@ -98,12 +91,11 @@ or clearly malicious cases, the contributor being blocked from the repo.
 
 ## Before opening a PR
 
-> **⚠️ Warning:** the CI job `ward.yml` starts an isolated, loopback-only Minecraft test server to run Ward datapack tests (see `SECURITY.md`, "Validation tooling"). Do not start a server yourself for a PR check, and never run `scripts/ward_ci.sh` outside GitHub Actions.
+> **⚠️ Warning:** the Ward CI job that used to start an isolated, loopback-only Minecraft test server is archived (`archived/tools/ward/`) and inert. Do not start a server yourself for a PR check, and never run `archived/tools/ward/ward_ci.sh` anywhere.
 
-- [ ] `./gradlew ci -PconfirmZip=yes` passes
-- [ ] If you touched `packs/`, you've validated the pack loads correctly
-      (Gradle passing does not cover this)
-- [ ] PR description explains **what** changed and **why**, and says
-      whether the change touches mods, packs, or both
+- [ ] `git config core.hooksPath .githooks` is set, so the guard runs locally
+- [ ] `./gradlew ci` passes (it runs the guard and the archive checks)
+- [ ] The PR does not add datapack content or revive archived tooling
+- [ ] PR description explains **what** changed and **why**
 - [ ] No unexplained dependencies, obfuscation, or behavior not covered by
       the description

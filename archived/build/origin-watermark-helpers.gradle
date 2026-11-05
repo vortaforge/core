@@ -1,0 +1,249 @@
+// =============================================================================
+// ARCHIVED - Section 3 - origin watermark helpers (findOriginWatermarks, findPackDirs, findMissingWatermarks, showOriginWatermarks, cleanOriginWatermarks, checkOriginWatermarks)
+//
+// Extracted verbatim from the root build.gradle of vortaforge/core on
+// 2026-11-05, when the datapack programme was retired (see archived/README.md
+// and archived/archive.json, id "build-{slug}"). This file is NOT applied by
+// the live build: settings.gradle does not scan archived/, and no build.gradle
+// includes it. It is kept because the Gradle logic is the only exact record of
+// how the packs were validated, merged and packaged.
+//
+// Do not delete it. If this logic is ever needed again, it is the starting
+// point - but read archived/README.md first: the programme was retired for
+// reasons (no type safety, no security model, no debugging, no warnings) and
+// re-enabling it is a deliberate, reviewed decision.
+//
+// Original line range in build.gradle: 99-329.
+// =============================================================================
+
+// -----------------------------------------------------------------------
+// 3. Origin watermark helpers
+//
+// Every pack under packs/ is expected to carry a _vc_origin.mcfunction file
+// (under data/<namespace>/function/) proving it came from this monorepo and
+// wasn't hand-assembled or swapped before packaging. Kept as shared closures
+// so zipPacks, showOriginWatermarks, and cleanOriginWatermarks all agree on
+// how a watermark file - and a pack directory - is found.
+// -----------------------------------------------------------------------
+def findOriginWatermarks = { File packsRoot ->
+    def found = []
+    if (packsRoot.exists()) {
+        packsRoot.eachFileRecurse { f ->
+            if (f.name == '_vc_origin.mcfunction' && !f.path.contains("${File.separator}build${File.separator}")) {
+                found << f
+            }
+        }
+    }
+    found
+}
+
+def findPackDirs = { File packsRoot ->
+    def dirs = []
+    if (packsRoot.exists()) {
+        packsRoot.eachFileRecurse { f ->
+            if (f.name == 'pack.mcmeta' && !f.path.contains("${File.separator}build${File.separator}")) {
+                dirs << f.parentFile
+            }
+        }
+    }
+    dirs
+}
+
+// Shared provenance guard: given the pack dirs found by findPackDirs, returns
+// how many were exempted as resource-pack-only, and which datapacks are
+// missing their _vc_origin.mcfunction watermark. Used by both zipPacks (which
+// aborts the build on a miss) and checkOriginWatermarks (a standalone,
+// non-interactive check with no zip/build side effects) so the "what counts
+// as missing a watermark" logic is defined exactly once.
+def findMissingWatermarks = { List<File> packDirs ->
+    def resourcePackCount = 0
+    def missing = packDirs.findAll { dir ->
+        def isResourcePack = new File(dir, 'assets').exists() && !new File(dir, 'data').exists()
+        if (isResourcePack) {
+            resourcePackCount++
+            return false
+        }
+        // The location is verified too: the error message says the watermark
+        // must live "under data/<namespace>/function/", but the previous code
+        // accepted the file ANYWHERE in the pack (a stray copy that had
+        // drifted into tags/function/ counted as present). Only watermarks
+        // under the correct tree are counted now.
+        def hasWatermark = false
+        def dataDir = new File(dir, 'data')
+        if (dataDir.exists()) {
+            dataDir.eachFileRecurse { f ->
+                if (f.name != '_vc_origin.mcfunction') return
+                def rel = dataDir.toPath().relativize(f.toPath()).toString()
+                def parts = rel.split(java.util.regex.Pattern.quote(File.separator))
+                // <namespace>/function(s)/...  (pack_format < 48 'functions' kullanir)
+                if (parts.length >= 3 && (parts[1] == 'function' || parts[1] == 'functions')) {
+                    hasWatermark = true
+                }
+            }
+        }
+        !hasWatermark
+    }
+    [resourcePackCount: resourcePackCount, missing: missing]
+}
+
+// -----------------------------------------------------------------------
+// 3b. Copy/zip helpers (used by zipPacks)
+//
+// Deliberately plain java.nio.file/java.util.zip instead of ant.copy/
+// ant.zip: AntBuilder is exposed via Project.getAnt(), and calling it from
+// inside a doLast/doFirst action is exactly the "Invocation of Task.project
+// at execution time" pattern Gradle deprecated and removes in Gradle 10.
+// These helpers touch no Project API at all, so they stay valid there with
+// no change in behavior (same recursive copy, same zip entry layout).
+// -----------------------------------------------------------------------
+// SECURITY: copyDirRecursive/zipDirectory previously copied and zipped
+// *every* file under a pack directory with zero filtering. That means a
+// stray .git/, .env, IDE folder, or credential file accidentally sitting
+// inside a packs/<name>/ directory would be silently included in the
+// public distribution ZIP shipped to Modrinth/CurseForge/GitHub Releases.
+// Nothing sensitive was found in any current packs/ directory (checked),
+// but the pipeline itself had no safety net against it happening in the
+// future. This denylist is defense-in-depth, not a full whitelist rewrite
+// (that would need to know every legitimate top-level file every pack
+// uses, which risks silently dropping something valid) -- it blocks the
+// specific, well-known classes of accidental leaks the packaging skill
+// calls out.
+def SENSITIVE_PATH_NAMES = ['.git', '.env', '.idea', '.vscode', '.DS_Store', 'Thumbs.db', 'node_modules'] as Set
+def isLicenseNoticeName = { String filename ->
+    def name = filename.toUpperCase(Locale.ROOT)
+    name == 'LICENSE' || name.startsWith('LICENSE.') ||
+        name == 'COPYING' || name.startsWith('COPYING.') ||
+        name == 'NOTICE' || name.startsWith('NOTICE.') || name.startsWith('THIRD_PARTY_LICENSE')
+}
+def isSensitivePathEntry = { File srcDir, File f ->
+    srcDir.toPath().relativize(f.toPath()).any { part ->
+        def name = part.toString()
+        SENSITIVE_PATH_NAMES.contains(name) ||
+            name.startsWith('.env.') ||
+            name.endsWith('.pem') ||
+            name.endsWith('.key') ||
+            name.endsWith('.p12')
+    }
+}
+// Generated folders at a pack root must never be re-packaged. Do not blanket
+// exclude nested names like data/<namespace>/function/build/: those can be
+// legitimate runtime identifiers and must remain intact.
+def isGeneratedPathEntry = { File srcDir, File f ->
+    def parts = srcDir.toPath().relativize(f.toPath())
+    parts.nameCount >= 2 && ['build', 'dist', '.gradle', '.cache', 'node_modules'].contains(parts.getName(0).toString())
+}
+// Ward's data/<namespace>/test/** files contain non-vanilla commands. Keep
+// them in source for CI, but omit them from runtime distribution archives.
+def isWardTestPath = { File srcDir, File f ->
+    def parts = srcDir.toPath().relativize(f.toPath())
+    parts.nameCount >= 3 && parts.getName(0).toString() == 'data' && parts.getName(2).toString() == 'test'
+}
+
+def copyDirRecursive = { File srcDir, File destDir ->
+    srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+        if (isSensitivePathEntry(srcDir, f) || isGeneratedPathEntry(srcDir, f) || isWardTestPath(srcDir, f)) return
+        def rel = srcDir.toPath().relativize(f.toPath())
+        def target = destDir.toPath().resolve(rel)
+        java.nio.file.Files.createDirectories(target.parent)
+        java.nio.file.Files.copy(f.toPath(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
+def zipDirectory = { File srcDir, File zipFile ->
+    zipFile.parentFile.mkdirs()
+    new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(zipFile)).withCloseable { zos ->
+        def files = []
+        // Second, independent check at zip time (not just at copy time):
+        // stays correct even if a future caller zips a directory directly
+        // without going through copyDirRecursive first.
+        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            if (!isSensitivePathEntry(srcDir, f) && !isGeneratedPathEntry(srcDir, f) && !isWardTestPath(srcDir, f)) files << f
+        }
+        files.sort { it.path }.each { f ->
+            def rel = srcDir.toPath().relativize(f.toPath()).toString().replace(File.separator, '/')
+            zos.putNextEntry(new java.util.zip.ZipEntry(rel))
+            f.withInputStream { is -> zos << is }
+            zos.closeEntry()
+        }
+    }
+}
+
+tasks.register('showOriginWatermarks') {
+    group = 'verification'
+    description = 'Prints the content of every _vc_origin.mcfunction watermark found under packs/.'
+    def packsRoot = rootProject.file('packs')
+    doLast {
+        def watermarks = findOriginWatermarks(packsRoot)
+        if (watermarks.isEmpty()) {
+            println "[showOriginWatermarks] no _vc_origin.mcfunction watermark files found under packs/."
+            return
+        }
+        println "[showOriginWatermarks] found ${watermarks.size()} watermark file(s):"
+        watermarks.sort { it.path }.each { f ->
+            println "==================================================================="
+            println "Watermark: ${packsRoot.toPath().relativize(f.toPath())}"
+            println "-------------------------------------------------------------------"
+            println f.text
+        }
+        println "==================================================================="
+        println "[showOriginWatermarks] ${watermarks.size()} watermark file(s) listed."
+    }
+}
+
+// cleanOriginWatermarks: DISABLED BY DESIGN.
+//
+// Previously this task deleted _vc_origin.mcfunction files from packs/ (the
+// real source tree) as a finalizedBy step after zipPacks. That is no longer
+// the desired behavior: watermarks must persist permanently in packs/ as
+// proof of origin, and are only ever stripped from the disposable
+// build/packs-remap/ working copy that zipPacks builds ZIPs from (see
+// section 4). This task stays registered - so external references to
+// `cleanOriginWatermarks` don't break - but always refuses to run, so
+// nothing can delete a watermark from packs/ anymore, accidentally or
+// otherwise.
+tasks.register('cleanOriginWatermarks') {
+    group = 'build'
+    description = 'DISABLED: watermarks in packs/ are no longer deleted by the build. See zipPacks (build/packs-remap/).'
+    doLast {
+        throw new GradleException(
+            "[cleanOriginWatermarks] disabled: watermarks in packs/ are permanent and are never deleted " +
+            "by this build anymore. zipPacks now strips watermarks only from the disposable " +
+            "build/packs-remap/ copy it builds ZIPs from. packs/ is never touched."
+        )
+    }
+}
+
+// checkOriginWatermarks: standalone, non-interactive provenance check.
+//
+// zipPacks already refuses to build if a datapack is missing its watermark,
+// but that check only runs as a side effect of the full (interactive,
+// confirmation-gated) zip build. There was previously no way to ask "does
+// every pack have its watermark?" on its own - e.g. in a PR-check CI job
+// that shouldn't also produce ZIPs or prompt for confirmation. This task
+// runs the same findMissingWatermarks guard used by zipPacks, but only
+// reads packs/ - it never writes to build/ and never touches packs/.
+tasks.register('checkOriginWatermarks') {
+    group = 'verification'
+    description = 'Verifies every non-resource-pack folder under packs/ has a _vc_origin.mcfunction watermark. Read-only: unlike zipPacks, never prompts, never zips, never touches build/.'
+    def packsRoot = rootProject.file('packs')
+    doLast {
+        def packDirs = findPackDirs(packsRoot)
+        println "[checkOriginWatermarks] scanning ${packsRoot} -> found ${packDirs.size()} pack(s) with a pack.mcmeta."
+        if (packDirs.isEmpty()) {
+            return
+        }
+        def guard = findMissingWatermarks(packDirs)
+        def watermarkedCount = packDirs.size() - guard.resourcePackCount - guard.missing.size()
+        println "[checkOriginWatermarks] ${guard.resourcePackCount} resource-pack-only dir(s) exempted, " +
+                "${watermarkedCount} datapack(s) have a watermark."
+        if (guard.missing) {
+            def details = guard.missing.collect { "  - ${packsRoot.toPath().relativize(it.toPath())}" }.join('\n')
+            throw new GradleException(
+                "[checkOriginWatermarks] failed: the following pack(s) are missing a _vc_origin.mcfunction " +
+                "watermark under data/<namespace>/function/:\n${details}"
+            )
+        }
+        println "[checkOriginWatermarks] OK: all ${watermarkedCount} datapack(s) have a watermark."
+    }
+}
+

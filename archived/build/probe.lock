@@ -1,0 +1,36 @@
+{
+  "source": "build.gradle",
+  "extracted_on": "2026-11-05",
+  "ranges": {
+    "origin-watermark-helpers.gradle": {
+      "start": 99,
+      "end": 329,
+      "section": "Section 3 - origin watermark helpers (findOriginWatermarks, findPackDirs, findMissingWatermarks, showOriginWatermarks, cleanOriginWatermarks, checkOriginWatermarks)"
+    },
+    "pack-packaging-helpers.gradle": {
+      "start": 169,
+      "end": 329,
+      "section": "Section 3b - copy/zip helpers used by zipPacks"
+    },
+    "zip-packs.gradle": {
+      "start": 330,
+      "end": 594,
+      "section": "Section 4 - zipPacks"
+    },
+    "pack-validation-helpers.gradle": {
+      "start": 595,
+      "end": 613,
+      "section": "Section 5 - shared datapack-validation helpers (vc* closures)"
+    },
+    "check-packs.gradle": {
+      "start": 614,
+      "end": 1033,
+      "section": "Section 5 - checkPacks / printPackList / printPackFormats"
+    },
+    "merge-datapacks.gradle": {
+      "start": 1034,
+      "end": 1915,
+      "section": "Section 6 - mergeDatapacks"
+    }
+  }
+}

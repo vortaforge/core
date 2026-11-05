@@ -14,7 +14,7 @@ assert.notEqual(startup, -1, 'could not isolate the network startup');
 // Execute the actual page script and its DOM listeners, suppressing only the
 // initial API request. Expose its real functions for offline assertions.
 const script = match[1].slice(0, startup) + `\n  globalThis.subject = {
-  FALLBACK_PACKS, FALLBACK_MODS, packsFromReleaseAssets, modsFromContents,
+  FALLBACK_MODS, packsFromReleaseAssets, modsFromContents,
   renderPacks, startDownload, el
 };\n})();`;
 
@@ -47,46 +47,43 @@ const sandbox = {
 };
 vm.runInNewContext(script, sandbox, {filename: 'index.html'});
 const s = sandbox.subject;
-assert.ok(!s.FALLBACK_PACKS.some(p => p.zip === 'guikit-datapack.zip'));
-assert.ok(!s.FALLBACK_MODS.some(m => ['datapack-fixer', 'rtwrapper-mod'].includes(m.dir)));
+// ---------------------------------------------------------------------------
+// Datapacks are retired (2026-11-05): the page must never offer a pack again.
+// ---------------------------------------------------------------------------
+assert.ok(!('FALLBACK_PACKS' in s), 'the static pack list must be gone');
 
-s.renderPacks(s.FALLBACK_PACKS, 'offline list');
-assert.equal(s.el.packsGrid.children.length, s.FALLBACK_PACKS.length);
-for (const card of s.el.packsGrid.children) {
-  const actions = card.children.find(x => x.className === 'card-actions');
-  assert.ok(actions.children.every(x => x.disabled), 'offline downloads and copy must be disabled');
-  assert.match(card.children.at(-1).textContent, /not verified/i);
-}
-
+// Even a stale packs-latest release with real .zip assets renders no download
+// cards: renderPacks always produces the retired notice.
 const base = 'https://github.com/vortaforge/core/releases/download/packs-latest/';
 const assets = s.packsFromReleaseAssets([
   {name: 'DailyBonus.zip', browser_download_url: base + 'DailyBonus.zip'},
-  {name: 'guikit-datapack.zip', browser_download_url: base + 'guikit-datapack.zip'},
-  {name: 'missing.zip'},
+  {name: 'guikitfw.zip', browser_download_url: base + 'guikitfw.zip'},
   {name: 'evil.zip', browser_download_url: 'https://example.com/evil.zip'},
-  {name: 'readme.txt', browser_download_url: base + 'readme.txt'},
 ]);
-assert.equal(assets.length, 2, 'do not construct guessed URLs or accept other hosts');
-assert.match(assets.find(p => p.zip === 'guikit-datapack.zip').name, /historical asset/i);
-const live = assets.find(p => p.zip === 'DailyBonus.zip');
-s.renderPacks([live], 'live');
-let actions = s.el.packsGrid.children[0].children.find(x => x.className === 'card-actions');
-assert.ok(actions.children.every(x => !x.disabled && typeof x.handlers.click === 'function'));
-s.renderPacks([live], 'cached');
-actions = s.el.packsGrid.children[0].children.find(x => x.className === 'card-actions');
-assert.ok(actions.children.every(x => x.disabled), 'cached release assets can be stale');
-s.renderPacks([{name: 'bad', zip: 'bad.zip', downloadUrl: 'javascript:alert(1)'}], 'live');
-actions = s.el.packsGrid.children[0].children.find(x => x.className === 'card-actions');
-assert.ok(actions.children.every(x => x.disabled), 'live cards still validate their URLs');
+assert.equal(assets.length, 0, 'pack assets must be ignored, not rendered');
+
+for (const list of [[], [{name: 'DailyBonus', zip: 'DailyBonus.zip', downloadUrl: base + 'DailyBonus.zip'}]]) {
+  s.renderPacks(list, 'live');
+  const nodes = s.el.packsGrid.children;
+  assert.equal(nodes.length, 1, 'exactly one notice, never a card');
+  assert.match(nodes[0].textContent, /retired/i);
+  assert.ok(!nodes[0].children || nodes[0].children.length === 0, 'no action buttons');
+}
+
+// Retired notice must be present in the markup for no-JS readers too.
+assert.match(html, /datapack programme is retired/i);
 
 const mods = s.modsFromContents(['afk-manager', 'TEMPLATE-MOD', 'datapack-fixer', 'rtwrapper-mod']
   .map(name => ({name, type: 'dir'})));
 assert.equal(mods.length, 1);
 assert.equal(mods[0].dir, 'afk-manager');
 
+// The download path itself still refuses a 404 and never starts a download.
 const btn = new Element('button'), status = new Element();
-await s.startDownload(live, btn, status);
+const modAsset = {name: 'afk-manager.jar', zip: 'afk-manager.jar',
+  downloadUrl: base + 'afk-manager.jar'};
+await s.startDownload(modAsset, btn, status);
 assert.equal(fetches, 1);
 assert.match(status.textContent, /404/);
 assert.equal(document.body.children.length, 0, '404 must not start a download');
-console.log('Website fallback, live/cached assets, retirement and 404 checks passed.');
+console.log('Website retirement, mod list and 404 checks passed.');

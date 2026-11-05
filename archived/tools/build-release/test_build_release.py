@@ -1,6 +1,10 @@
-"""Offline tests for scripts/build_release.py.
+"""Offline tests for archived/tools/build-release/build_release.py.
 
-Run with:  python3 -m unittest discover scripts/tests
+Archived with the datapack programme on 2026-11-05 (archived/archive.json, id
+"build-release"). Run with:
+
+    python3 -m unittest discover archived/tools/build-release
+
 Nothing here starts, contacts or needs a Minecraft server.
 """
 import os
@@ -10,7 +14,7 @@ import tempfile
 import unittest
 import zipfile
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.dirname(__file__))
 import build_release  # noqa: E402
 
 
@@ -82,8 +86,8 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(out, "SHA256SUMS.txt")))
 
     def test_real_macroengine_notice_is_in_the_individual_zip(self):
-        repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        source = os.path.join(repo, "packs", "macroEngine-Datapack-v26.3")
+        repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        source = os.path.join(repo, "archived", "packs", "macroEngine-Datapack-v26.3")
         archive = os.path.join(self.tmp, "macro.zip")
         build_release.build_pack_zip(source, archive)
         with zipfile.ZipFile(archive) as zf:

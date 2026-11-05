@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "programme": "datapacks",
+  "enabled": false,
+  "since": "2026-11-05",
+  "reason": "The datapack programme is retired. Datapacks have no type safety, no security model, no debugging, no warnings and no error surface, scored low in review, and were bad enough that they would have been better not shipped at all. The maintainer gave up on them after hitting real problems as a plain player using a datapack with no client mod installed, and the same class of problems kept appearing in pull requests.",
+  "reason_tr": "Datapack'de tip güvenliği, güvenlik modeli, hata ayıklama, uyarılar ve birçok önemli şey olmadığı ve düşük puanlı olduğu için vazgeçiyorum. Client'a mod kurmadan datapack kullanırken bile sorunlar yaşadım ve PR'lerde de aynı sorunlar çıktı; olmasaydı daha iyi olurdu.",
+  "approved_by": "vortaforge maintainer",
+  "reenable_token": "VORTAFORGE-DATAPACKS-2026-11-05-DISARMED",
+  "registry": "archived/archive.json",
+  "marker": "archived/datapacks.disabled",
+  "allowlist": [],
+  "denylist": [
+    "packs/**",
+    "scripts/dpgen/**",
+    "scripts/datapack_lint/**",
+    "mods/datapack-blocker/**",
+    "examples/template-datapack/**",
+    ".github/workflows/ward.yml"
+  ],
+  "$comment": "enabled=false is the kill switch: scripts/datapack_guard.py blocks every new or edited datapack path except archived/** and scripts/tests/fixtures/**, plus anything in allowlist (empty on purpose). To re-enable: python3 scripts/datapacks_disable.py enable --token <reenable_token> --reason \"...\". Deleting archived/datapacks.disabled alone does not re-enable anything - the guard reads this file, and a missing file counts as disabled.",
+  "enabled_on": "2026-11-05",
+  "enabled_reason": "Testing the switch round-trip in the sandbox",
+  "enabled_by": "vortaforge maintainer",
+  "disabled_on": "2026-11-05",
+  "disabled_reason": "Restoring disabled state after round-trip test"
+}

@@ -1,0 +1,37 @@
+// =============================================================================
+// ARCHIVED - Section 5 - shared datapack-validation helpers (vc* closures)
+//
+// Extracted verbatim from the root build.gradle of vortaforge/core on
+// 2026-11-05, when the datapack programme was retired (see archived/README.md
+// and archived/archive.json, id "build-{slug}"). This file is NOT applied by
+// the live build: settings.gradle does not scan archived/, and no build.gradle
+// includes it. It is kept because the Gradle logic is the only exact record of
+// how the packs were validated, merged and packaged.
+//
+// Do not delete it. If this logic is ever needed again, it is the starting
+// point - but read archived/README.md first: the programme was retired for
+// reasons (no type safety, no security model, no debugging, no warnings) and
+// re-enabling it is a deliberate, reviewed decision.
+//
+// Original line range in build.gradle: 595-613.
+// =============================================================================
+
+// -----------------------------------------------------------------------
+// 5. Shared datapack-validation helpers + checkPacks / printPackList /
+//    printModList
+//
+// The vc* helpers below are shared by checkPacks (this section) and
+// mergeDatapacks (section 6) so "what counts as a valid pack / format /
+// resolvable function reference" is defined exactly once:
+//   - vcIsValidNamespace - [a-z0-9_.-]+ resource-location namespace rule
+//   - vcNormalizeFormatValue / vcCompareFormats - int or [major, minor]
+//     pack-format handling (minor versions exist for new formats, e.g.
+//     "min_format": [121, 1])
+//   - vcSanitizePackId - safe [a-z0-9_] id derived from a pack dir name,
+//     used for storage paths, wrapper function paths and scoreboard names
+//   - vcParseFunctionRef / vcResolveFunctionRef - 'ns:path' / '#ns:tag'
+//     parsing plus an existence check against a pack's data/ root (both
+//     the modern singular function/ layout and the legacy plural
+//     functions/ layout are accepted)
+//   - vcJsonEscape - minimal JSON string escaper for generated tellraws
+//   - vcReadTagValues - lenient "values" reader for function-tag files

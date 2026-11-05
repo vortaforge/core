@@ -1,0 +1,12 @@
+Restoring disabled state after round-trip test
+
+DATAPACKS DISABLED - vortaforge/core
+
+The datapack programme in this repository is retired and HARD-DISABLED.
+Read /datapacks.disabled.json for the switch and archived/README.md for the
+policy, the reason and the list of everything that was archived.
+
+Re-enabling is deliberate and needs the token recorded in
+datapacks.disabled.json:
+
+    python3 scripts/datapacks_disable.py enable --token <token> --reason "..."

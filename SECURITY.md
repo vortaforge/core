@@ -15,7 +15,7 @@ opening a public issue.
 Do not include working exploit code or live payloads in public issues or pull requests (see "Prohibited content and practices" below).
 
 Please include:
-- Affected project/path (e.g. `packs/RTWrapper`, `mods/...`)
+- Affected project/path (e.g. `mods/afk-manager`, `scripts/datapack_guard.py`)
 - Steps to reproduce, or a minimal example
 - Impact (what an attacker could actually do)
 - Minecraft/Fabric/Loom version, if relevant
@@ -32,15 +32,20 @@ This repo consolidates multiple projects with different security postures:
 | Area | Status |
 |---|---|
 | `mods/` | Fabric mods. Compiled, type-safe. |
-| `packs/` | Datapack and resource-pack roots, including a nested historical RTWrapper datapack. The archive registry currently lists no pack paths; an in-tree historical banner is not the same as a registered archive. |
+| `packs/` | **Empty since 2026-11-05.** The datapack programme was retired; every pack is audited, disarmed and frozen under `archived/packs/` (`archived/archive.json`). New datapack content is refused by `scripts/datapack_guard.py`. |
 | `scripts/` | Helper tooling. Treat as lower trust; review before running. |
 | `examples/` | Templates and sample code. Not intended for production use. |
-| `archived/` | Reserved for no-longer-maintained projects, kept for reference only — do not deploy on a live server without review. Tracked in `archived/archive.json`; see `archived/README.md`. |
+| `archived/` | **Every** retired project, kept for reference only — never deploy without review. Tracked in `archived/archive.json` (schema v2, every entry `"disarmed": true`); see `archived/README.md` and `docs/ARCHIVAL.md`. Nothing here is built, linted, tested or executed. |
+| `blocklist/`, `scripts/datapack_guard.py`, `datapacks.disabled.json` | The retirement's enforcement: account blocklist, fail-closed guard and kill switch. Weakening them is a security-relevant change. |
 
 Datapacks and Fabric mods carry different security postures by nature; where
-practical, security-sensitive logic lives in a Fabric mod rather than a
-datapack. Projects that have stopped receiving updates are frozen and marked
-archived rather than left in an inconsistent, partially-hardened state.
+practical, security-sensitive logic belongs in a Fabric mod (compiled and
+type-safe) rather than a datapack. That difference is one of the documented
+reasons the datapack programme was retired: a datapack has no type system and
+no enforced permission boundary, so stored-string command execution has to be
+gated by hand in every pack. Projects that have stopped receiving updates are
+frozen and marked archived rather than left in an inconsistent,
+partially-hardened state.
 
 ## Validation tooling
 
@@ -49,23 +54,19 @@ actually runs, and what each tool does and does not prove:
 
 | Tool | Invoked by | Checks | Does **not** check |
 |---|---|---|---|
-| `scripts/lint_datapacks.sh` (Spyglass 0.4.70 + strict JSON) | `verifyProject` / the CI graph **when run** | Static diagnostics at one inferred version per pack; strict JSON and coverage checks; explicit Ward and permission exceptions | All supported versions, real permissions, complete reference resolution, loading or runtime behaviour |
-| `python3 -m unittest discover -s scripts/tests` | `verifyProject` / the CI graph **when run** | Focused pack/merge invariants, action pinning and common credential shapes | GitHub org settings, all secret types, runtime behaviour; see `scripts/README.md` for gaps |
-| `python3 scripts/build_release.py --check` | manual (not a CI step yet) | release ZIPs are deterministic and the release minifier is idempotent; the build also inventories dynamic command-execution surfaces (`docs/dynamic-command-gate.md`) | Runtime behaviour; whether a listed surface is reachable by an untrusted player |
-| `./gradlew checkPacks` | `quality.yml` via `verifyProject` in the `ci` graph | `pack.mcmeta` shape and format range, JSON validity, cross-references between packs | Command semantics |
-| `./gradlew checkOriginWatermarks` | `quality.yml` via `verifyProject`; `zipPacks` also runs its provenance guard during packaging | every pack carries `data/<namespace>/function/_vc_origin.mcfunction` | Content of the watermark (covered by the next row) |
-| `python3 scripts/origin_watermarks.py --check` | `quality.yml` via Gradle task `checkProvenance` in `verifyProject` | every watermark equals what the template generates for its pack and namespace, and contains only comments (a no-op) | That the pack's code is what the watermark claims; it proves consistency, not authorship |
-| `./gradlew mergeDatapacks` | `quality.yml` via `packageProject` -> root `build` in the `ci` graph | load/tick reference resolution (`strictLoadRefs`), pack-format agreement across the merged set | Runtime behaviour |
-| `./gradlew buildAll` | `quality.yml` via `packageProject` in the `ci` graph | the **Gradle** subprojects (mods and other discovered Gradle projects) | Datapack behaviour. The root `lint` task is a narrower local Checkstyle task and is not a separate CI step |
-| `scripts/ward_ci.sh` (mcward 1.4.0, Ward) | `ward.yml` when that workflow is enabled - **starts a Minecraft test server**, CI only. It was manually disabled at the 2026-10-29 audit | Behaviour of datapack functions through `data/<namespace>/test/**.mcfunction` tests, on an isolated loopback-only server (`scripts/ward_guard.py` proves it before and after) | Anything without a Ward test; mods; multi-player behaviour |
+| `scripts/datapack_guard.py` | `pre-commit`, `pre-push`, and the `datapack-guard` job in `quality.yml`; `guardArchives` in `verifyProject` | No new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent | Whether a rule should have an exception; whether an account is a datapack developer beyond the public-profile rule |
+| `scripts/check_archive.py` | `./gradlew checkArchive`, `scripts/datapacks_disable.py verify`, the `datapack-guard` CI job | registry shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/` | Historical accuracy of a `reason` field |
+| `python3 scripts/datapacks_disable.py verify` | `datapack-guard` CI job, manual | switch + marker + registry agree, no live datapack tooling | Nothing runtime; it is a repository-state check |
+| `python3 -m unittest discover -s scripts/tests` | `verifyProject` / the CI graph **when run** | guard/blocklist/switch behaviour, archive invariants, action pinning, common credential shapes, the static site's retirement notices | GitHub org settings, all secret types, runtime behaviour; see `scripts/README.md` for gaps |
+| **Archived:** Spyglass + strict JSON (`archived/tools/datapack-lint/`), `checkPacks`, `checkOriginWatermarks`, `mergeDatapacks`, `build_release.py --check`, Ward (`archived/tools/ward/`) | nothing - archived 2026-11-05 | were the static/runtime datapack checks | not run any more; kept as reference for a future restore |
+| `./gradlew buildAll` | `quality.yml` via `packageProject` in the `ci` graph | the **Gradle** subprojects (mods and other discovered Gradle projects) | Anything non-Gradle |
 
-> **⚠️ Warning:** `ward.yml` is the only place in this repository that starts a Minecraft server. It runs on GitHub-hosted runners only, binds to `127.0.0.1`, enforces an empty whitelist, fails if any socket is reachable outside loopback, and deletes the server afterwards. It downloads Fabric, mods and a JRE from third-party hosts (listed in the workflow header), so a compromised upstream is a supply-chain risk for that job. It has no secrets and a read-only token.
+> **⚠️ Warning:** the Ward workflow (`ward.yml`) used to be the only place in this repository that started a Minecraft server. It is now archived at `archived/tools/ward/ward.yml` and inert, because GitHub only runs workflows under `.github/workflows/`. Nothing live in this repository starts, connects to or tests against a Minecraft server.
 
-A green CI run therefore says the repository *parses and builds*. Ward tests
-add behaviour evidence only when `ward.yml` is enabled and that separate run
-is green. A green `build.yml` run has never
-said a datapack behaves correctly - that still needs a load test in a real
-world, which is what the `NOTICE.md` checklist asks for.
+A green CI run therefore says the repository *parses and builds*, that the
+datapack guard is engaged, and that the archive registry is consistent. It has
+never said a datapack behaves correctly, which is why the datapacks were
+retired instead of re-certified.
 
 ## Prohibited content and practices
 

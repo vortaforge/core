@@ -29,6 +29,17 @@ class RealTreeWatermarks(unittest.TestCase):
         result = run_watermarks(SCRIPT, "--check")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_watermark_checker_actually_scans_the_archived_packs(self):
+        # 2026-11-05 regression: packs/README.md made the tool pick the (empty)
+        # live tree and report "ok (0 watermark file(s) in 0 datapack(s))" -
+        # a green result that checked nothing.
+        result = run_watermarks(SCRIPT, "--report")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # 11 datapacks + 1 resource pack, and 15 watermark files: the real
+        # archived tree, not an empty scan that trivially passes.
+        self.assertIn("11 datapack(s), 15 watermark file(s)", result.stdout)
+        self.assertIn("pack(s) without one", result.stdout)
+
 
 class WatermarkCheckerBehaviour(unittest.TestCase):
     """Negative controls on a throw-away copy of the layout the tool expects."""
@@ -134,9 +145,13 @@ class WardServerSafetyInvariants(unittest.TestCase):
     """The Ward job is the one place that starts a Minecraft server. These tests
     stop later edits from quietly loosening its isolation or dropping its warnings."""
 
+    # 2026-11-05: the Ward kit and its workflow were archived; the warning now
+    # lives in archived/README.md + scripts/README.md, and the guard tests point
+    # at the archived copies so the isolation rules are still asserted.
     WARNED_FILES = ["docs/MAINTAINER_GUIDE.md", "README.md", "CONTRIBUTING.md", "NOTICE.md",
-                    "SECURITY.md", "scripts/README.md", ".github/workflows/ward.yml",
-                    "scripts/ward_ci.sh", "scripts/ward_guard.py"]
+                    "SECURITY.md", "scripts/README.md", "archived/README.md",
+                    "archived/tools/ward/ward.yml", "archived/tools/ward/ward_ci.sh",
+                    "archived/tools/ward/ward_guard.py"]
 
     def read(self, rel):
         with open(os.path.join(ROOT, rel), encoding="utf-8") as fh:
@@ -151,7 +166,9 @@ class WardServerSafetyInvariants(unittest.TestCase):
         self.assertEqual(missing, [])
 
     def test_workflow_stays_isolated(self):
-        wf = self.read(".github/workflows/ward.yml")
+        wf = self.read("archived/tools/ward/ward.yml")
+        self.assertFalse(os.path.exists(os.path.join(ROOT, ".github/workflows/ward.yml")),
+                         "the Ward workflow was archived and must not come back")
         runners = re.findall(r"(?m)^\s*runs-on:\s*(\S+)", wf)
         self.assertEqual(runners, ["ubuntu-latest"], "only GitHub-hosted runners")
         self.assertRegex(wf, r"(?m)^permissions:\n  contents: read$")
@@ -162,7 +179,7 @@ class WardServerSafetyInvariants(unittest.TestCase):
         self.assertRegex(wf, r'MCWARD_VERSION: "1\.4\.0"')
 
     def test_script_keeps_guards_verification_and_cleanup(self):
-        sh = self.read("scripts/ward_ci.sh")
+        sh = self.read("archived/tools/ward/ward_ci.sh")
         for needle in ("trap cleanup EXIT", "ward_guard.py", 'verify "$ENV_DIR"', '$GUARD seed "$ENV_DIR"',
                        'GITHUB_ACTIONS:-}" != "true"'):
             self.assertIn(needle, sh)
@@ -171,7 +188,7 @@ class WardServerSafetyInvariants(unittest.TestCase):
         self.assertLess(sh.index('$GUARD seed "$ENV_DIR"'), sh.index("mcward start"))
 
     def test_locked_properties_cannot_be_loosened(self):
-        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        sys.path.insert(0, os.path.join(ROOT, "archived", "tools", "ward"))
         import ward_guard
         locked = ward_guard.LOCKED_PROPERTIES
         self.assertEqual(locked["server-ip"], "127.0.0.1")
@@ -182,11 +199,12 @@ class WardServerSafetyInvariants(unittest.TestCase):
 
 
 class DailyBonusFirstClaim(unittest.TestCase):
-    """Static guard for the unset-score defect (the behavioural proof is the Ward test
-    packs/DailyBonus/data/dailybonus/test/first_login_is_granted.mcfunction, run in CI)."""
+    """Static guard for the unset-score defect, kept on the archived pack so a
+    restore starts from a correct file. (Before 2026-11-05 the behavioural proof
+    was the Ward test run in CI; Ward is archived with the packs.)"""
 
     def test_players_without_a_score_are_granted_before_the_comparison(self):
-        base = os.path.join(ROOT, "packs", "DailyBonus", "data", "dailybonus")
+        base = os.path.join(ROOT, "archived", "packs", "DailyBonus", "data", "dailybonus")
         with open(os.path.join(base, "function", "tick.mcfunction"), encoding="utf-8") as fh:
             lines = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
         unset = [i for i, l in enumerate(lines) if "unless score @s db_last_day matches" in l and l.endswith("function dailybonus:grant")]
@@ -197,22 +215,28 @@ class DailyBonusFirstClaim(unittest.TestCase):
 
 
 class DownloadPageFallback(unittest.TestCase):
-    """The static page must not advertise packs the build cannot produce."""
+    """The static page must not advertise packs the build cannot produce.
 
-    def test_fallback_zip_names_match_pack_mcmeta_directories(self):
-        packs_root = os.path.join(ROOT, "packs")
-        expected = []
-        for current, dirs, files in os.walk(packs_root):
-            dirs[:] = [d for d in dirs if d not in {"build", ".gradle", "node_modules"}]
-            if "pack.mcmeta" not in files:
-                continue
-            relative = os.path.relpath(current, packs_root)
-            expected.append(relative.replace(os.sep, "-") + ".zip")
+    2026-11-05: the build produces no packs at all any more. The page now lists
+    the archived projects as *not downloadable*, so the invariant is inverted:
+    nothing in index.html may claim a .zip under packs-latest.
+    """
 
+    def test_no_pack_download_cards_remain(self):
         with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as fh:
-            listed = re.findall(r'zip: "([^"]+\.zip)"', fh.read())
+            html = fh.read()
+        self.assertNotIn("FALLBACK_PACKS", html, "pack download fallback must be gone")
+        self.assertRegex(html, r"retired|archived|disabled",
+                         "the page must say the datapack programme is retired")
 
-        self.assertEqual(sorted(listed), sorted(expected))
+    def test_live_packs_tree_is_empty(self):
+        packs_root = os.path.join(ROOT, "packs")
+        allowed = {"README.md", ".gitkeep"}
+        leftovers = sorted(n for n in os.listdir(packs_root)
+                           if n not in allowed) if os.path.isdir(packs_root) else []
+        self.assertEqual(leftovers, [])
+        # The directory must still explain itself to anyone who opens it.
+        self.assertTrue(os.path.isfile(os.path.join(packs_root, "README.md")))
 
     def test_offline_website_javascript(self):
         if not shutil.which("node"):
@@ -224,29 +248,57 @@ class DownloadPageFallback(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
-class GradleDryRunSafety(unittest.TestCase):
-    def test_generated_pack_root_outputs_are_excluded(self):
+class ArchivedGradleLogic(unittest.TestCase):
+    """The datapack Gradle logic moved to archived/build/*.gradle verbatim.
+
+    These assertions used to read the root build.gradle; they now read the
+    archived copy, so the safeguards inside that logic stay asserted even
+    though nothing applies it.
+    """
+
+    def read_archived(self, *names):
+        """Return one archived .gradle file, or all of them joined.
+
+        The extraction split build.gradle by section, so helpers used by
+        zipPacks live in pack-packaging-helpers.gradle while the task body lives
+        in zip-packs.gradle. Reading them concatenated keeps these assertions
+        meaningful without caring which file a line landed in.
+        """
+        directory = os.path.join(ROOT, "archived", "build")
+        if not names:
+            names = tuple(sorted(n for n in os.listdir(directory) if n.endswith(".gradle")))
+        return "\n".join(
+            open(os.path.join(directory, name), encoding="utf-8").read() for name in names
+        )
+
+    def test_root_build_has_no_datapack_packaging_tasks(self):
         with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
-            script = fh.read()
+            root = fh.read()
+        for task in ("zipPacks", "mergeDatapacks", "checkPacks", "checkOriginWatermarks"):
+            with self.subTest(task=task):
+                self.assertNotIn(f"tasks.register('{task}')", root,
+                                 f"{task} must stay archived, not re-registered")
+        self.assertIn("apply from: \"$rootDir/build-logic/project-tasks.gradle\"", root)
+
+    def test_generated_pack_root_outputs_are_excluded(self):
+        script = self.read_archived()
         self.assertIn("parts.getName(0).toString()", script)
         self.assertGreaterEqual(script.count("isGeneratedPathEntry(srcDir, f)"), 2)
         self.assertIn("isGeneratedPathEntry(dir, f)", script)
         self.assertIn("contains generated or Ward test content", script)
 
     def test_gradle_archive_paths_exclude_ward_test_directories(self):
-        with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
-            script = fh.read()
+        script = self.read_archived()
         self.assertIn("parts.getName(0).toString() == 'data'", script)
         self.assertIn("parts.getName(2).toString() == 'test'", script)
         self.assertGreaterEqual(script.count("isWardTestPath(srcDir, f)"), 2)
         self.assertIn("isWardTestPath(dir, f)", script)
-        pack_build = os.path.join(ROOT, "packs", "macroEngine-Datapack-v26.3", "build.gradle")
+        pack_build = os.path.join(ROOT, "archived", "packs", "macroEngine-Datapack-v26.3", "build.gradle")
         with open(pack_build, encoding="utf-8") as fh:
             self.assertIn("exclude 'data/*/test/**'", fh.read())
 
     def test_merge_dry_run_returns_before_output_mutation(self):
-        with open(os.path.join(ROOT, "build.gradle"), encoding="utf-8") as fh:
-            script = fh.read()
+        script = self.read_archived("merge-datapacks.gradle")
         merge = script.split("tasks.register('mergeDatapacks')", 1)[1]
         before_dry_return = merge.split('[mergeDatapacks] dry run OK:', 1)[0]
         self.assertNotIn("outDir.deleteDir()", before_dry_return)

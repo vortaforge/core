@@ -1,0 +1,438 @@
+// =============================================================================
+// ARCHIVED - Section 5 - checkPacks / printPackList / printPackFormats
+//
+// Extracted verbatim from the root build.gradle of vortaforge/core on
+// 2026-11-05, when the datapack programme was retired (see archived/README.md
+// and archived/archive.json, id "build-{slug}"). This file is NOT applied by
+// the live build: settings.gradle does not scan archived/, and no build.gradle
+// includes it. It is kept because the Gradle logic is the only exact record of
+// how the packs were validated, merged and packaged.
+//
+// Do not delete it. If this logic is ever needed again, it is the starting
+// point - but read archived/README.md first: the programme was retired for
+// reasons (no type safety, no security model, no debugging, no warnings) and
+// re-enabling it is a deliberate, reviewed decision.
+//
+// Original line range in build.gradle: 614-1033.
+// =============================================================================
+
+// -----------------------------------------------------------------------
+def vcIsValidNamespace = { String ns ->
+    ns != null && (ns ==~ /[a-z0-9_.-]+/)
+}
+
+def vcNormalizeFormatValue = { v ->
+    if (v instanceof Number) return [v.intValue(), 0]
+    if (v instanceof List && (v.size() == 1 || v.size() == 2) && v.every { it instanceof Number }) {
+        return [v[0].intValue(), (v.size() == 2 ? v[1].intValue() : 0)]
+    }
+    return null
+}
+
+def vcCompareFormats = { List a, List b ->
+    (a[0] != b[0]) ? (a[0] <=> b[0]) : (a[1] <=> b[1])
+}
+
+def vcSanitizePackId = { String name ->
+    def id = (name ?: 'pack').toLowerCase().replaceAll('[^a-z0-9_]+', '_').replaceAll('^_+|_+$', '')
+    if (!id) id = 'pack'
+    if (id.length() > 30) id = id.substring(0, 30).replaceAll('_+$', '')
+    if (!id) id = 'pack'
+    id
+}
+
+def vcParseFunctionRef = { String ref ->
+    if (ref == null) return null
+    def m = (ref =~ /^(#)?([a-z0-9_.-]+):([a-z0-9_.\/-]+)$/)
+    if (!m.matches()) return null
+    [isTag: m.group(1) == '#', namespace: m.group(2), path: m.group(3)]
+}
+
+def vcResolveFunctionRef = { File dataRoot, Map ref ->
+    if (ref.isTag) {
+        return new File(dataRoot, "${ref.namespace}/tags/function/${ref.path}.json").exists() ||
+            new File(dataRoot, "${ref.namespace}/tags/functions/${ref.path}.json").exists()
+    }
+    return new File(dataRoot, "${ref.namespace}/function/${ref.path}.mcfunction").exists() ||
+        new File(dataRoot, "${ref.namespace}/functions/${ref.path}.mcfunction").exists()
+}
+
+def vcJsonEscape = { String s ->
+    (s ?: '').replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+}
+
+def vcReadTagValues = { groovy.json.JsonSlurper slurper, File tagFile ->
+    if (tagFile == null || !tagFile.exists()) return null
+    try {
+        def parsed = slurper.parse(tagFile)
+        return (parsed instanceof Map && parsed.values instanceof List) ? parsed.values : null
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+tasks.register('checkPacks') {
+    group = 'verification'
+    description = 'Validates every pack under packs/: pack.mcmeta (format range, description, overlays, filter), every JSON under data/, namespace rules, and load/tick + function reference resolution. Warnings fail the build only with -PcheckPacksStrict=true; -PcheckPacksJson=mcmeta checks pack.mcmeta files only; -PcheckPacksReport=<path> also writes a JSON summary to that path.'
+    def packsRoot = rootProject.file('packs')
+    // Captured at configuration time - see the 'lint' task above for why
+    // 'project.findProperty' can't be called from inside doLast itself.
+    def jsonScopeProp = project.findProperty('checkPacksJson')
+    def strictProp = project.findProperty('checkPacksStrict')
+    def reportPathProp = project.findProperty('checkPacksReport')
+    def reportProjectDir = projectDir
+    doLast {
+        def jsonScope = (jsonScopeProp ?: 'all').toString().toLowerCase()
+        def strict = (strictProp?.toString()?.toLowerCase() == 'true')
+        if (!packsRoot.exists()) {
+            println "[checkPacks] no packs/ directory found, skipping."
+            return
+        }
+        println "[checkPacks] scope: json=${jsonScope}, strict=${strict}."
+        def slurper = new groovy.json.JsonSlurper()
+        def packDirs = findPackDirs(packsRoot)
+        def errors = []
+        def warnings = []
+        def jsonChecked = 0
+        def funcChecked = 0
+
+        packDirs.sort { it.path }.each { dir ->
+            def packLabel = packsRoot.toPath().relativize(dir.toPath()).toString()
+            def metaFile = new File(dir, 'pack.mcmeta')
+            def meta = null
+            try {
+                meta = slurper.parse(metaFile)
+            } catch (Exception e) {
+                errors << "${packLabel}/pack.mcmeta: invalid JSON - ${e.message}"
+                return
+            }
+            def pack = (meta instanceof Map) ? meta.pack : null
+            if (!(pack instanceof Map)) {
+                errors << "${packLabel}/pack.mcmeta: missing 'pack' object"
+                return
+            }
+            // --- format declarations (legacy pack_format and/or 1.21.9+ min/max) ---
+            def legacyFmt = vcNormalizeFormatValue(pack.pack_format)
+            def minFmt = vcNormalizeFormatValue(pack.min_format)
+            def maxFmt = vcNormalizeFormatValue(pack.max_format)
+            if (pack.pack_format != null && legacyFmt == null) {
+                errors << "${packLabel}/pack.mcmeta: 'pack.pack_format' must be an int or [major, minor] pair, got: ${pack.pack_format}"
+            }
+            if ((pack.min_format != null || pack.max_format != null) && (minFmt == null || maxFmt == null)) {
+                errors << "${packLabel}/pack.mcmeta: 'pack.min_format'/'pack.max_format' must each be an int or [major, minor] pair"
+            } else if (minFmt != null && maxFmt != null && vcCompareFormats(minFmt, maxFmt) > 0) {
+                errors << "${packLabel}/pack.mcmeta: min_format ${pack.min_format} is newer than max_format ${pack.max_format}"
+            }
+            if (pack.pack_format == null && (minFmt == null || maxFmt == null)) {
+                errors << "${packLabel}/pack.mcmeta: neither 'pack.pack_format' nor 'pack.min_format'+'max_format' present"
+            }
+            if (pack.supported_formats != null && !(pack.supported_formats instanceof List) && !(pack.supported_formats instanceof Map)) {
+                warnings << "${packLabel}/pack.mcmeta: 'pack.supported_formats' should be a list or {min_inclusive,max_inclusive} object"
+            }
+            // --- description (string, single component, or component list) ---
+            def desc = pack.description
+            if (desc == null) {
+                warnings << "${packLabel}/pack.mcmeta: missing 'pack.description'"
+            } else if (!(desc instanceof String) && !(desc instanceof Map) && !(desc instanceof List)) {
+                errors << "${packLabel}/pack.mcmeta: 'pack.description' must be a string, text component, or list of components"
+            } else if (desc instanceof List && !desc.every { it instanceof String || it instanceof Map }) {
+                errors << "${packLabel}/pack.mcmeta: 'pack.description' list entries must be strings or text components"
+            }
+            // --- overlays: {entries: [{formats, directory}]} + dir must exist ---
+            if (pack.overlays != null) {
+                def entries = (pack.overlays instanceof Map) ? pack.overlays.entries : null
+                if (!(entries instanceof List)) {
+                    warnings << "${packLabel}/pack.mcmeta: 'pack.overlays' should be {\"entries\": [...]}"
+                } else {
+                    entries.eachWithIndex { entry, idx ->
+                        if (!(entry instanceof Map) || entry.directory == null || entry.formats == null) {
+                            warnings << "${packLabel}/pack.mcmeta: overlays.entries[${idx}] needs 'formats' + 'directory'"
+                        } else if (!new File(dir, "overlays/${entry.directory}").exists()) {
+                            warnings << "${packLabel}/pack.mcmeta: overlays.entries[${idx}] directory 'overlays/${entry.directory}' does not exist"
+                        }
+                    }
+                }
+            }
+            // --- filter.block[]: each entry needs namespace + path ---
+            if (meta.filter != null) {
+                def blocks = (meta.filter instanceof Map) ? meta.filter.block : null
+                if (blocks != null) {
+                    if (!(blocks instanceof List)) {
+                        warnings << "${packLabel}/pack.mcmeta: 'filter.block' should be a list"
+                    } else {
+                        blocks.eachWithIndex { b, idx ->
+                            if (!(b instanceof Map) || b.namespace == null || b.path == null) {
+                                warnings << "${packLabel}/pack.mcmeta: filter.block[${idx}] needs 'namespace' + 'path'"
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (jsonScope == 'mcmeta') return
+
+            def dataRoot = new File(dir, 'data')
+            if (!dataRoot.exists()) {
+                if (!new File(dir, 'assets').exists()) {
+                    warnings << "${packLabel}: pack has neither data/ nor assets/ - nothing to load"
+                }
+                return
+            }
+            // --- namespace rules (vanilla requires lowercase [a-z0-9_.-]) ---
+            dataRoot.eachFile { nsDir ->
+                if (nsDir.isDirectory() && !vcIsValidNamespace(nsDir.name)) {
+                    warnings << "${packLabel}: invalid namespace '${nsDir.name}' (must match [a-z0-9_.-]+, lowercase)"
+                }
+            }
+            // --- every JSON under data/ must parse; tags need "values" ---
+            def jsonFiles = []
+            dataRoot.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                if (f.name.endsWith('.json')) jsonFiles << f
+            }
+            jsonFiles.sort { it.path }.each { jf ->
+                jsonChecked++
+                def rel = dir.toPath().relativize(jf.toPath()).toString().replace(File.separator, '/')
+                def parsed = null
+                try {
+                    parsed = slurper.parse(jf)
+                } catch (Exception e) {
+                    errors << "${packLabel}/${rel}: invalid JSON - ${e.message}"
+                    return
+                }
+                if (rel.contains('/tags/')) {
+                    if (!(parsed instanceof Map) || !(parsed.values instanceof List)) {
+                        warnings << "${packLabel}/${rel}: tag file should be an object with a \"values\" array"
+                    }
+                } else if (!(parsed instanceof Map)) {
+                    def actual = (parsed == null) ? 'null' : parsed.getClass().simpleName
+                    warnings << "${packLabel}/${rel}: data JSON should be an object (top-level ${actual})"
+                }
+            }
+            // --- minecraft load/tick references: resolvable or external ---
+            ['load', 'tick'].each { hook ->
+                ['function', 'functions'].each { tagsDir ->
+                    def tagFile = new File(dataRoot, "minecraft/tags/${tagsDir}/${hook}.json")
+                    def values = vcReadTagValues(slurper, tagFile)
+                    if (values == null) return
+                    values.each { v ->
+                        if (!(v instanceof String)) {
+                            warnings << "${packLabel}/data/minecraft/tags/${tagsDir}/${hook}.json: non-string tag value: ${v}"
+                            return
+                        }
+                        def ref = vcParseFunctionRef(v.toString())
+                        if (ref == null) {
+                            warnings << "${packLabel}/data/minecraft/tags/${tagsDir}/${hook}.json: malformed reference '${v}'"
+                        } else if (!vcResolveFunctionRef(dataRoot, ref)) {
+                            warnings << "${packLabel}/data/minecraft/tags/${tagsDir}/${hook}.json: '${v}' not found in this pack (external pack or typo)"
+                        }
+                    }
+                }
+            }
+            // --- 'function <ref>' lines inside .mcfunction files ---
+            def packFuncWarnings = 0
+            def funcFiles = []
+            dataRoot.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                if (f.name.endsWith('.mcfunction')) funcFiles << f
+            }
+            funcFiles.sort { it.path }.each { ff ->
+                funcChecked++
+                if (packFuncWarnings > 25) return
+                def rel = dir.toPath().relativize(ff.toPath()).toString().replace(File.separator, '/')
+                def lineNo = 0
+                ff.eachLine { line ->
+                    lineNo++
+                    if (packFuncWarnings > 25) return
+                    def trimmed = line.trim()
+                    if (!trimmed || trimmed.startsWith('#')) return
+                    if (trimmed.contains('$(')) return // macro line - cannot resolve statically
+                    def m = (trimmed =~ /\bfunction\s+(#?[A-Za-z0-9_.\/-]+:[A-Za-z0-9_.\/-]+)/)
+                    while (m.find()) {
+                        def refText = m.group(1)
+                        if (refText.contains('$')) continue
+                        def ref = vcParseFunctionRef(refText)
+                        if (ref == null) {
+                            warnings << "${packLabel}/${rel}:${lineNo}: suspicious function reference '${refText}'"
+                            packFuncWarnings++
+                        } else if (!vcResolveFunctionRef(dataRoot, ref)) {
+                            warnings << "${packLabel}/${rel}:${lineNo}: unresolved 'function ${refText}' (external pack or typo)"
+                            packFuncWarnings++
+                        }
+                    }
+                }
+            }
+            if (packFuncWarnings > 25) {
+                warnings << "${packLabel}: ... (function-reference warnings truncated at 25 for this pack)"
+            }
+        }
+
+        println "[checkPacks] checked ${packDirs.size()} pack(s), ${jsonChecked} JSON file(s), ${funcChecked} function file(s): ${errors.size()} error(s), ${warnings.size()} warning(s)."
+        warnings.each { println "[checkPacks] WARN: ${it}" }
+        if (reportPathProp) {
+            def reportFile = new File(reportPathProp.toString()).with { it.isAbsolute() ? it : new File(reportProjectDir, it.path) }
+            reportFile.parentFile?.mkdirs()
+            def json = new StringBuilder()
+            json << '{\n'
+            json << "  \"packCount\": ${packDirs.size()},\n"
+            json << "  \"jsonChecked\": ${jsonChecked},\n"
+            json << "  \"funcChecked\": ${funcChecked},\n"
+            json << "  \"errorCount\": ${errors.size()},\n"
+            json << "  \"warningCount\": ${warnings.size()},\n"
+            json << '  "errors": [' << errors.collect { "\"${vcJsonEscape(it)}\"" }.join(', ') << '],\n'
+            json << '  "warnings": [' << warnings.collect { "\"${vcJsonEscape(it)}\"" }.join(', ') << ']\n'
+            json << '}\n'
+            reportFile.text = json.toString()
+            println "[checkPacks] wrote report -> ${reportFile}"
+        }
+        if (errors) {
+            errors.each { println "[checkPacks] ERROR: ${it}" }
+            throw new GradleException("[checkPacks] failed: ${errors.size()} error(s) in ${packDirs.size()} pack(s).")
+        }
+        if (strict && warnings) {
+            throw new GradleException("[checkPacks] failed strict mode: ${warnings.size()} warning(s) treated as errors (-PcheckPacksStrict=true).")
+        }
+        println "[checkPacks] OK: all pack.mcmeta files are valid."
+    }
+}
+// Require validation before zipPacks
+tasks.named('zipPacks') { dependsOn 'checkPacks' }
+
+tasks.register('printPackList') {
+    group = 'help'
+    description = 'Lists every detected pack folder under packs/ without zipping anything.'
+    def packsRoot = rootProject.file('packs')
+    doLast {
+        if (!packsRoot.exists()) {
+            println "[printPackList] no packs/ directory found."
+            return
+        }
+        def found = []
+        packsRoot.eachFileRecurse { f ->
+            if (f.name == 'pack.mcmeta' && !f.path.contains("${File.separator}build${File.separator}")) {
+                found << packsRoot.toPath().relativize(f.parentFile.toPath()).toString()
+            }
+        }
+        if (found.isEmpty()) {
+            println "[printPackList] no packs found."
+        } else {
+            println "[printPackList] detected ${found.size()} pack(s):"
+            found.sort().each { println "[printPackList]   - ${it}" }
+        }
+    }
+}
+
+// printPackFormats: printPackList above only tells you a pack exists; this
+// answers the next question you'd usually then have to open pack.mcmeta
+// for - what pack_format (or min_format/max_format range) it declares.
+// Read-only, same as printPackList - it does not run any of checkPacks'
+// validation and will not fail the build on a bad or missing format.
+tasks.register('printPackFormats') {
+    group = 'help'
+    description = 'Lists every detected pack under packs/ with its declared pack_format (or min_format-max_format range), without validating anything.'
+    def packsRoot = rootProject.file('packs')
+    doLast {
+        if (!packsRoot.exists()) {
+            println "[printPackFormats] no packs/ directory found."
+            return
+        }
+        def slurper = new groovy.json.JsonSlurper()
+        def packDirs = findPackDirs(packsRoot)
+        if (packDirs.isEmpty()) {
+            println "[printPackFormats] no packs found."
+            return
+        }
+        println "[printPackFormats] ${packDirs.size()} pack(s):"
+        packDirs.sort { it.path }.each { dir ->
+            def packLabel = packsRoot.toPath().relativize(dir.toPath()).toString()
+            def metaFile = new File(dir, 'pack.mcmeta')
+            def rangeText
+            try {
+                def meta = slurper.parse(metaFile)
+                def pack = (meta instanceof Map) ? meta.pack : null
+                def minFmt = (pack instanceof Map) ? vcNormalizeFormatValue(pack.min_format) : null
+                def maxFmt = (pack instanceof Map) ? vcNormalizeFormatValue(pack.max_format) : null
+                def legacyFmt = (pack instanceof Map) ? vcNormalizeFormatValue(pack.pack_format) : null
+                if (minFmt != null && maxFmt != null) {
+                    rangeText = "min_format=${minFmt.join('.')} max_format=${maxFmt.join('.')}"
+                } else if (legacyFmt != null) {
+                    rangeText = "pack_format=${legacyFmt.join('.')}"
+                } else {
+                    rangeText = '(no valid format declared)'
+                }
+            } catch (Exception e) {
+                rangeText = "(invalid pack.mcmeta: ${e.message})"
+            }
+            println "[printPackFormats]   - ${packLabel}: ${rangeText}"
+        }
+    }
+}
+
+// printModList: the mods/ counterpart to printPackList above. There was
+// previously no way to list mod subprojects without either reading
+// settings.gradle by hand or running a real build ('buildAll'/':mods:x:build').
+// A mod folder is detected the same way Gradle itself would include it as a
+// subproject: it's an immediate child of mods/ with its own build.gradle.
+tasks.register('printModList') {
+    group = 'help'
+    description = 'Lists every detected Fabric mod folder under mods/ (immediate subfolders with their own build.gradle) without building anything.'
+    def modsRoot = rootProject.file('mods')
+    doLast {
+        if (!modsRoot.exists()) {
+            println "[printModList] no mods/ directory found."
+            return
+        }
+        def found = []
+        modsRoot.eachFile { d ->
+            if (d.isDirectory() && new File(d, 'build.gradle').exists()) {
+                found << d.name
+            }
+        }
+        if (found.isEmpty()) {
+            println "[printModList] no mods found."
+        } else {
+            println "[printModList] detected ${found.size()} mod(s):"
+            found.sort().each { println "[printModList]   - ${it}" }
+        }
+    }
+}
+
+// printModVersions: the id/version counterpart to printModList above -
+// read-only, does not build anything, and tolerates a missing or invalid
+// fabric.mod.json (reported inline rather than failing the task) since
+// unlike verifyMod this task is meant for a quick listing, not validation.
+tasks.register('printModVersions') {
+    group = 'help'
+    description = 'Lists every detected Fabric mod under mods/ with its id and version from fabric.mod.json, without building anything.'
+    def modsRoot = rootProject.file('mods')
+    doLast {
+        if (!modsRoot.exists()) {
+            println "[printModVersions] no mods/ directory found."
+            return
+        }
+        def slurper = new groovy.json.JsonSlurper()
+        def found = []
+        modsRoot.eachFile { d ->
+            if (d.isDirectory() && new File(d, 'build.gradle').exists()) {
+                def modJsonFile = new File(d, 'src/main/resources/fabric.mod.json')
+                def label
+                if (modJsonFile.exists()) {
+                    try {
+                        def modJson = slurper.parse(modJsonFile)
+                        label = "${modJson.id ?: '?'} (v${modJson.version ?: '?'})"
+                    } catch (Exception e) {
+                        label = "(invalid fabric.mod.json: ${e.message})"
+                    }
+                } else {
+                    label = '(no fabric.mod.json found)'
+                }
+                found << "${d.name}: ${label}"
+            }
+        }
+        if (found.isEmpty()) {
+            println "[printModVersions] no mods found."
+        } else {
+            println "[printModVersions] detected ${found.size()} mod(s):"
+            found.sort().each { println "[printModVersions]   - ${it}" }
+        }
+    }
+}
+

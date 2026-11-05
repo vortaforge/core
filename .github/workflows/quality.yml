@@ -4,6 +4,16 @@ name: Reusable Quality
 # checks out and executes repository code with a read-only token, then uploads
 # bounded artifacts. Keeping this as a reusable workflow makes the trust
 # boundary visible and lets other trusted workflows reuse the exact same gate.
+#
+# 2026-11-05 - datapack programme retired. Two changes here:
+#   * a new, separate "Datapack guard" job runs BEFORE verification and is
+#     fail-closed: scripts/datapack_guard.py blocks new datapack content,
+#     revived archived tooling, blocklisted accounts and a disengaged kill
+#     switch. It also runs on `pull_request_target`-free pull_request events
+#     from forks, where the token is read-only; its report is uploaded and,
+#     for PRs, annotated on the diff.
+#   * the "Collect release assets" step no longer expects pack ZIPs: the
+#     datapacks that produced them are archived, so only mod jars are shipped.
 
 on:
   workflow_call:
@@ -16,6 +26,106 @@ permissions:
   contents: read
 
 jobs:
+  datapack-guard:
+    name: Datapack guard (new datapacks, blocklist, kill switch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Read-only by design: the guard never writes to the repository, it only
+    # reads the diff, the registry and the blocklist.
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Guard the archive (diff, blocklist, registry, kill switch)
+        shell: bash
+        env:
+          # Both are metadata only, never credentials.
+          PR_AUTHOR: ${{ github.event.pull_request.user.login || github.actor }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Fail-closed: an unknown base or label state must not silently pass.
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            base="$(git merge-base "origin/${GITHUB_BASE_REF}" "$PR_SHA" 2>/dev/null || true)"
+            if [ -z "$base" ]; then
+              echo "::error title=Guard base ref::Could not compute a merge base for ${GITHUB_BASE_REF}."
+              exit 1
+            fi
+            args=(--base "$base")
+          else
+            base="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+            args=(--base "$base")
+          fi
+
+          # A present `datapack-approved` label is the only documented override.
+          case ",${PR_LABELS:-}," in
+            *",datapack-approved,"*) export DATAPACK_GUARD_LABEL_PRESENT=1 ;;
+          esac
+
+          python3 scripts/datapack_guard.py "${args[@]}" \
+            --protect --blocklist --pr --check-archive \
+            --login "$PR_AUTHOR" --json --report datapack-guard-report.json | tee guard.json || status=$?
+
+          # Human-readable summary in the job log and on the PR summary.
+          python3 - <<'SUMMARY_EOF'
+          import json, sys
+          try:
+              report = json.load(open("datapack-guard-report.json"))
+          except Exception:
+              report = {"errors": [], "warnings": [], "checked": 0}
+          lines = ["## Datapack guard", "", f"Checked: {report.get('checked', 0)}", ""]
+          if report.get("errors"):
+              lines += ["### Blocked", ""]
+              lines += [f"- **{e['rule']}** `{e['path']}` — {e['message']}" for e in report["errors"]]
+          if report.get("warnings"):
+              lines += ["", "### Warnings", ""]
+              lines += [f"- {w['rule']} `{w['path']}` — {w['message']}" for w in report["warnings"][:25]]
+          if not report.get("errors") and not report.get("warnings"):
+              lines.append("No findings.")
+          print("\n".join(lines))
+          with open("guard-summary.md", "w", encoding="utf-8") as fh:
+              fh.write("\n".join(lines) + "\n")
+          for e in report.get("errors", []):
+              print(f"::error title=Datapack guard::{e['rule']}: {e['path']} - {e['message']}")
+          SUMMARY_EOF
+
+          if [ -f guard-summary.md ]; then
+            cat guard-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "${status:-0}"
+
+      - name: Archive verification (kill switch + registry)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_archive.py --strict
+          python3 scripts/datapacks_disable.py verify
+
+      - name: Upload guard report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: datapack-guard-report
+          path: |
+            datapack-guard-report.json
+            guard-summary.md
+          if-no-files-found: ignore
+          retention-days: 14
+
   verify:
     name: Verify, test and package
     runs-on: ubuntu-latest
@@ -51,14 +161,13 @@ jobs:
             scripts/gui_generator/pyproject.toml
             scripts/gui_generator/requirements.txt
 
+      # Node is still required, but only for the website behaviour test
+      # (scripts/tests/site_behavior.test.mjs). The dpgen and datapack_lint
+      # npm caches that used to live here were archived with the programme.
       - name: Set up Node.js 20
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
-          cache: npm
-          cache-dependency-path: |
-            scripts/dpgen/package-lock.json
-            scripts/datapack_lint/package-lock.json
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
@@ -77,18 +186,26 @@ jobs:
         shell: bash
         # Loom remapping is memory-intensive. Cap worker concurrency so this
         # one daemon stays within the standard hosted runner budget.
-        run: ./gradlew ci -PconfirmZip=yes --console=plain --max-workers=2
+        # `ci` = verifyProject (guard, kill switch, registry, tests) +
+        # packageProject (mod jars + project inventory). Packs are archived,
+        # so -PconfirmZip has no effect any more and is not passed.
+        run: |
+          set -euo pipefail
+          ./gradlew ci --console=plain --max-workers=2
 
       - name: Collect release assets
         shell: bash
+        # Packs are retired. Release assets are Fabric mod jars only.
         run: |
           set -euo pipefail
           shopt -s nullglob
           mkdir -p release-assets
-          files=(build/packs-dist/*.zip build/dist/*.zip)
+          files=(mods/*/build/libs/*.jar)
+          files=("${files[@]/%-sources.jar/}")
+          files=("${files[@]/%-javadoc.jar/}")
 
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error title=No release assets::packageProject produced no pack ZIPs."
+            echo "::error title=No release assets::packageProject produced no mod jars."
             exit 1
           fi
 
@@ -114,7 +231,8 @@ jobs:
             echo "| Java | \`25\` |"
             echo "| Python | \`3.12\` |"
             echo "| Node | \`20\` |"
-            echo "| Release assets | \`$(find release-assets -maxdepth 1 -type f -name '*.zip' | wc -l | tr -d ' ')\` |"
+            echo "| Release assets (mod jars) | \`$(find release-assets -maxdepth 1 -type f -name '*.jar' | wc -l | tr -d ' ')\` |"
+            echo "| Datapacks | retired (archived/archive.json) |"
             echo "| Commit | \`${GITHUB_SHA}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -125,9 +243,7 @@ jobs:
           name: build-outputs
           path: |
             mods/**/build/libs/*.jar
-            examples/**/build/libs/*.jar
-            build/packs-dist/*.zip
-            build/dist/**
+            build/reports/repository/
             build/reports/repository/project-inventory.json
             build/reports/problems/problems-report.html
           if-no-files-found: ignore
@@ -194,7 +310,7 @@ jobs:
 
   gate:
     name: Quality gate
-    needs: [verify, guigenmc-package]
+    needs: [datapack-guard, verify, guigenmc-package]
     if: always()
     runs-on: ubuntu-latest
     outputs:
@@ -208,6 +324,7 @@ jobs:
         id: gate
         shell: bash
         env:
+          GUARD: ${{ needs.datapack-guard.result }}
           VERIFY: ${{ needs.verify.result }}
           PACKAGE: ${{ needs.guigenmc-package.result }}
         run: |
@@ -217,11 +334,12 @@ jobs:
             echo
             echo "| Job | Result |"
             echo "|---|---|"
+            echo "| Datapack guard | \`$GUARD\` |"
             echo "| Verify, test and package | \`$VERIFY\` |"
             echo "| guigenmc package | \`$PACKAGE\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$VERIFY" = success ] && [ "$PACKAGE" = success ]; then
+          if [ "$GUARD" = success ] && [ "$VERIFY" = success ] && [ "$PACKAGE" = success ]; then
             echo "verified=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi

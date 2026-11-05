@@ -14,7 +14,7 @@
 
 pluginManagement {
     repositories {
-        maven { url 'https://maven.fabricmc.net/' }
+        maven { url = 'https://maven.fabricmc.net/' }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -26,6 +26,11 @@ rootProject.name = 'vortaforge-core'
 // Roots to scan for subprojects. Each entry is a top-level directory
 // relative to the repo root; every build.gradle(.kts) found underneath it
 // (at any nesting depth) becomes a Gradle subproject.
+//
+// 'archived/' is deliberately NOT scanned: everything there is disarmed (see
+// archived/archive.json) and must never become a buildable subproject again.
+// 'packs/' stays listed so the discovery summary shows it as empty rather
+// than silently vanishing; datapacks were retired on 2026-11-05.
 // -----------------------------------------------------------------------
 def SCAN_ROOTS = ['mods', 'packs', 'examples']
 
@@ -36,7 +41,9 @@ def SCAN_ROOTS = ['mods', 'packs', 'examples']
 // dig through git blame.
 // -----------------------------------------------------------------------
 def EXCLUDED_PROJECT_DIRS = [
-    'packs/RTWrapper/rtwrapper-fabric'  : 'historical Fabric implementation; intentionally not built',
+    // Intentionally empty: the only entry (packs/RTWrapper/rtwrapper-fabric)
+    // moved to archived/packs/RTWrapper on 2026-11-05, and archived/ is not a
+    // scan root. Keep the map so a future exclusion has an obvious home.
 ]
 
 // Set debugSettings=1 on the command line (-PdebugSettings=1) for verbose

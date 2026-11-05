@@ -1,13 +1,28 @@
 // =============================================================================
 // vortaforge/core - build-logic/project-tasks.gradle
 //
-// Project-level Gradle task graph for this mixed monorepo.  The individual
-// Fabric projects keep ownership of their own toolchains and build files;
-// this script owns only repository-wide checks, packaging and CI entry points.
+// Project-level Gradle task graph for this monorepo. The individual Fabric
+// projects keep ownership of their own toolchains and build files; this
+// script owns only repository-wide checks and CI entry points.
 //
-// Apply this script from the root build.gradle only.  It intentionally keeps
-// the established buildAll, lint, checkPacks, zipPacks and mergeDatapacks
-// tasks intact so local scripts and downstream automation do not break.
+// DATAPACKS ARE DISABLED. The datapack tooling that used to be wired here was
+// archived on 2026-11-05 (see archived/README.md and archived/archive.json):
+//
+//   removed task                    now
+//   ------------------------------  ------------------------------------------
+//   checkProvenance                 archived/build/origin-watermark-helpers.gradle
+//   installDatapackLintDependencies archived/tools/datapack-lint (npm ci)
+//   testDatapackLint                archived/tools/datapack-lint (npm test)
+//   lintDatapacks                   archived/tools/lint_datapacks.sh
+//   testDpgen                       archived/tools/dpgen (npm test)
+//   checkPacks                      archived/build/check-packs.gradle
+//   checkOriginWatermarks           archived/build/origin-watermark-helpers.gradle
+//   zipPacks / mergeDatapacks       archived/build/zip-packs.gradle, merge-datapacks.gradle
+//
+// New here: guardArchives (the datapack_guard pre-merge policy) and
+// checkDatapackSwitch (the kill switch), both fail-closed.
+//
+// Apply this script from the root build.gradle only.
 // =============================================================================
 
 if (project != rootProject) {
@@ -44,15 +59,6 @@ def configureRepositoryInput = { Task task ->
 // Verification tasks
 // -----------------------------------------------------------------------------
 
-tasks.register('checkProvenance', Exec) {
-    group = 'verification'
-    description = 'Verifies generated _vc_origin.mcfunction provenance watermarks without modifying sources.'
-    workingDir repositoryRoot
-    commandLine pythonExecutable, 'scripts/origin_watermarks.py', '--check'
-    configureRepositoryInput(delegate)
-    markSuccess(delegate, marker('provenance'))
-}
-
 tasks.register('testRepository', Exec) {
     group = 'verification'
     description = 'Runs repository-only Python regression tests; does not start Minecraft.'
@@ -71,67 +77,33 @@ tasks.register('testGuiGenerator', Exec) {
     markSuccess(delegate, marker('guigenmc-tests'))
 }
 
-tasks.register('installDpgenDependencies', Exec) {
-    group = 'build setup'
-    description = 'Installs the locked dpgen Node dependencies without lifecycle scripts, audits or funding output.'
-    def dpgenDirectory = new File(repositoryRoot, 'scripts/dpgen')
-    workingDir dpgenDirectory
-    commandLine npmExecutable, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'
-    inputs.files(new File(dpgenDirectory, 'package.json'), new File(dpgenDirectory, 'package-lock.json'))
-            .withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir(new File(dpgenDirectory, 'node_modules'))
-}
-
-tasks.register('testDpgen', Exec) {
+// Fail-closed policy gate: no new datapacks, no revived archived tooling, no
+// blocklisted accounts. In CI the pull request diff is supplied with
+// -PguardBase=<merge-base>; locally the working tree diff against HEAD is used.
+// Never up-to-date: a cache hit must not be able to hide a new pack.
+tasks.register('guardArchives', Exec) {
     group = 'verification'
-    description = 'Runs the dpgen Node test suite after installing its locked dependencies.'
-    def dpgenDirectory = new File(repositoryRoot, 'scripts/dpgen')
-    workingDir dpgenDirectory
-    commandLine npmExecutable, 'test'
-    dependsOn 'installDpgenDependencies'
-    configureRepositoryInput(delegate)
-    markSuccess(delegate, marker('dpgen-tests'))
-}
-
-tasks.register('installDatapackLintDependencies', Exec) {
-    group = 'build setup'
-    description = 'Installs locked Spyglass dependencies without npm lifecycle scripts.'
-    def lintDirectory = new File(repositoryRoot, 'scripts/datapack_lint')
-    workingDir lintDirectory
-    commandLine npmExecutable, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'
-    inputs.files(new File(lintDirectory, 'package.json'), new File(lintDirectory, 'package-lock.json'))
-            .withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir(new File(lintDirectory, 'node_modules'))
-}
-
-tasks.register('testDatapackLint', Exec) {
-    group = 'verification'
-    description = 'Runs the datapack lint policy and dependency-security regression tests.'
-    workingDir new File(repositoryRoot, 'scripts/datapack_lint')
-    commandLine npmExecutable, 'test'
-    dependsOn 'installDatapackLintDependencies'
-    configureRepositoryInput(delegate)
-    markSuccess(delegate, marker('datapack-lint-tests'))
-}
-
-tasks.register('lintDatapacks', Exec) {
-    group = 'verification'
-    description = 'Runs Spyglass and strict JSON validation for datapacks and resource packs.'
+    description = 'Blocks new datapack content, revived archived tooling and blocklisted accounts (scripts/datapack_guard.py).'
     workingDir repositoryRoot
-    commandLine 'bash', 'scripts/lint_datapacks.sh'
-    dependsOn 'installDatapackLintDependencies'
+    def guardBase = providers.gradleProperty('guardBase').getOrElse('')
+    def guardArgs = [pythonExecutable, 'scripts/datapack_guard.py',
+                     '--protect', '--blocklist', '--check-archive']
+    if (guardBase) {
+        guardArgs.addAll(['--base', guardBase])
+    } else {
+        guardArgs.add('--staged')
+    }
+    commandLine guardArgs
     configureRepositoryInput(delegate)
-    // Vanilla language data and advisory mode are external inputs. Never reuse
-    // a stale success marker when those inputs may have changed.
     outputs.upToDateWhen { false }
-    markSuccess(delegate, marker('datapack-lint'))
+    markSuccess(delegate, marker('guard-archives'))
 }
 
 tasks.register('verifyProject') {
     group = 'verification'
-    description = 'Runs repository verification; Spyglass may download vanilla data. Never starts a Minecraft server.'
-    dependsOn 'checkProvenance', 'testRepository', 'testGuiGenerator', 'testDpgen',
-            'testDatapackLint', 'lintDatapacks', 'verifyMod', 'checkPacks', 'checkOriginWatermarks', 'checkArchive'
+    description = 'Runs repository verification: guard, kill switch, archive registry, tests. Never starts a Minecraft server.'
+    dependsOn 'guardArchives', 'checkDatapackSwitch', 'checkArchive',
+            'testRepository', 'testGuiGenerator', 'verifyMod'
 }
 
 // -----------------------------------------------------------------------------
@@ -143,35 +115,25 @@ def repositoryName = rootProject.name
 def projectInventory = rootProject.subprojects.collect { sub ->
     [path: sub.path, directory: rootProject.relativePath(sub.projectDir)]
 }.sort { left, right -> left.path <=> right.path }
-def packMetadata = fileTree(new File(repositoryRoot, 'packs')) {
-    include '**/pack.mcmeta'
-    exclude '**/build/**'
-}.files.toList().sort { left, right -> left.path <=> right.path }.collect { metadata ->
-    [
-        file: metadata,
-        path: repositoryRoot.toPath().relativize(metadata.parentFile.toPath()).toString().replace(File.separator, '/'),
-    ]
-}
 
 tasks.register('writeProjectInventory') {
     group = 'reporting'
-    description = 'Writes a deterministic JSON inventory of discovered Gradle subprojects and pack metadata.'
-    inputs.files(packMetadata.collect { it.file }).withPathSensitivity(PathSensitivity.RELATIVE)
+    description = 'Writes a deterministic JSON inventory of discovered Gradle subprojects and the archived registry.'
+    inputs.files(new File(repositoryRoot, 'archived/archive.json')).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.file(inventoryOutput)
     doLast {
-        def packs = packMetadata.collect { descriptor ->
-            def parsed = new groovy.json.JsonSlurper().parse(descriptor.file)
-            def pack = parsed instanceof Map && parsed.pack instanceof Map ? parsed.pack : [:]
-            [
-                path  : descriptor.path,
-                format: pack.containsKey('min_format') ? pack.min_format : pack.pack_format,
-            ]
-        }
+        def registry = new groovy.json.JsonSlurper().parse(new File(repositoryRoot, 'archived/archive.json'))
+        def archived = (registry instanceof Map && registry.projects instanceof List) ? registry.projects.collect { p ->
+            [id: p.id, kind: p.kind, status: p.status, disarmed: p.disarmed == true, path: p.path]
+        } : []
+        def switchFile = new File(repositoryRoot, 'datapacks.disabled.json')
+        def switchData = switchFile.exists() ? new groovy.json.JsonSlurper().parse(switchFile) : [enabled: false]
         def inventory = [
-            schemaVersion: 1,
-            project      : repositoryName,
-            subprojects  : projectInventory,
-            packs        : packs,
+            schemaVersion   : 2,
+            project         : repositoryName,
+            subprojects     : projectInventory,
+            datapacksEnabled: switchData.enabled == true,
+            archived        : archived,
         ]
         inventoryOutput.parentFile.mkdirs()
         inventoryOutput.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(inventory)) + '\n', 'UTF-8')
@@ -180,15 +142,12 @@ tasks.register('writeProjectInventory') {
 
 tasks.register('packageProject') {
     group = 'distribution'
-    description = 'Builds mod artifacts plus individual and merged datapack release archives (requires -PconfirmZip=yes).'
-    // Root `build` depends on mergeDatapacks and copies its zip into build/dist/.
-    // Keep that lifecycle edge instead of calling mergeDatapacks alone so one
-    // canonical package command produces exactly the release asset locations.
-    dependsOn 'buildAll', 'zipPacks', 'build', 'writeProjectInventory'
+    description = 'Builds mod artifacts and the project inventory (datapack archives were retired; requires -PconfirmZip=yes for the legacy pack step that no longer exists).'
+    dependsOn 'buildAll', 'writeProjectInventory'
 }
 
 tasks.register('ci') {
     group = 'verification'
-    description = 'Canonical CI entry point: offline verification and distributable artifacts (requires -PconfirmZip=yes).'
+    description = 'Canonical CI entry point: offline verification and the mod artifacts.'
     dependsOn 'verifyProject', 'packageProject'
 }

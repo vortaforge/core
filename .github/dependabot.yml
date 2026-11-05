@@ -1,5 +1,7 @@
-# Keeps GitHub Actions, Gradle, Python (pip) and npm dependencies up to date via PRs.
-# Packs under packs/ contain no ecosystem manifests Dependabot would touch.
+# Keeps GitHub Actions, Gradle and Python (pip) dependencies up to date via PRs.
+# 2026-11-05: the npm entries for scripts/dpgen and scripts/datapack_lint were
+# removed because both tools moved to archived/tools/ - Dependabot must not open
+# PRs against archived code (the datapack guard would refuse them anyway).
 #
 # Dependabot *version* updates are enabled weekly below, capped at 9 open PRs
 # per ecosystem. (A previous revision of this comment described a maintenance
@@ -31,16 +33,6 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 9
 
-  # Each npm tool has its own lockfile. Updates still need human review,
-  # including the datapack linter's security override and runtime pins.
-  - package-ecosystem: "npm"
-    directory: "/scripts/dpgen"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 9
-
-  - package-ecosystem: "npm"
-    directory: "/scripts/datapack_lint"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 9
+  # The npm tools (dpgen, datapack lint and their lockfiles) are archived under
+  # archived/tools/. No npm ecosystem entry here on purpose: archived
+  # dependencies are frozen, not updated.

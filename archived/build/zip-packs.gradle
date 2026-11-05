@@ -1,0 +1,283 @@
+// =============================================================================
+// ARCHIVED - Section 4 - zipPacks
+//
+// Extracted verbatim from the root build.gradle of vortaforge/core on
+// 2026-11-05, when the datapack programme was retired (see archived/README.md
+// and archived/archive.json, id "build-{slug}"). This file is NOT applied by
+// the live build: settings.gradle does not scan archived/, and no build.gradle
+// includes it. It is kept because the Gradle logic is the only exact record of
+// how the packs were validated, merged and packaged.
+//
+// Do not delete it. If this logic is ever needed again, it is the starting
+// point - but read archived/README.md first: the programme was retired for
+// reasons (no type safety, no security model, no debugging, no warnings) and
+// re-enabling it is a deliberate, reviewed decision.
+//
+// Original line range in build.gradle: 330-594.
+// =============================================================================
+
+// -----------------------------------------------------------------------
+// 4. zipPacks
+//
+// Finds every folder under packs/ containing a pack.mcmeta (datapack or
+// resource pack, data/ and/or assets/) and zips each one independently into
+// build/packs-dist/<folder-name>.zip.
+//
+// The source tree under packs/ is NEVER modified. Watermarks stay in
+// packs/ permanently as proof of origin.
+//
+// Flow:
+//   1. Provenance guard on packs/ (datapacks only): every pack that isn't a
+//      pure resource pack must already have its watermark, or the build
+//      fails before anything is copied/zipped.
+//   2. Confirmation gate: requires -PconfirmZip=yes, or an interactive
+//      "yes" typed within a bounded timeout.
+//   3. Each pack dir is COPIED to build/packs-remap/<pack-name>/.
+//   4. The watermark is removed ONLY from the build/packs-remap/ copy.
+//   5. The ZIP is built from the cleaned build/packs-remap/ copy, so the
+//      final .zip does NOT contain _vc_origin.mcfunction.
+//   6. packs/ itself is untouched at every step - nothing is ever deleted
+//      from the repository.
+// -----------------------------------------------------------------------
+tasks.register('zipPacks') {
+    group = 'build'
+    description = 'Zips every pack.mcmeta-containing folder under packs/ into build/packs-dist/, stripping watermarks from a build/packs-remap/ copy only (packs/ is never modified).'
+    def packsRoot = rootProject.file('packs')
+    def remapDir = file('build/packs-remap')
+    def outDir = file('build/packs-dist')
+    // Captured at configuration time (task registration body runs during
+    // configuration, not execution). '-P' project properties are fixed for
+    // the whole build invocation before configuration even starts, so
+    // reading it here is equivalent to reading it later - but reading it
+    // later, from inside doFirst, would be a live 'project.hasProperty'/
+    // 'project.property' call during task execution, which Gradle
+    // deprecated and removes in Gradle 10 ("Invocation of Task.project at
+    // execution time"). See also the 'lint'/'buildAll' tasks above, and the
+    // copyDirRecursive/zipDirectory helpers (section 3b) for the same fix
+    // applied to ant.copy/ant.zip below.
+    def confirmZipProp = project.findProperty('confirmZip')
+
+    doFirst {
+        def packDirs = findPackDirs(packsRoot)
+        println "[zipPacks] scanning ${packsRoot} -> found ${packDirs.size()} pack(s) with a pack.mcmeta."
+        if (packDirs.isEmpty()) {
+            return
+        }
+
+        // 1. Provenance guard: datapacks must have watermarks; resource packs (assets/ only) bypass this check.
+        //    Shared with checkOriginWatermarks - see findMissingWatermarks (section 3b).
+        def guard = findMissingWatermarks(packDirs)
+        println "[zipPacks] provenance guard: ${guard.resourcePackCount} resource-pack-only dir(s) exempted, " +
+                "${packDirs.size() - guard.resourcePackCount - guard.missing.size()} datapack(s) have a watermark."
+        if (guard.missing) {
+            def details = guard.missing.collect { "  - ${packsRoot.toPath().relativize(it.toPath())}" }.join('\n')
+            throw new GradleException(
+                "[zipPacks] failed: the following pack(s) are missing a _vc_origin.mcfunction watermark " +
+                "under data/<namespace>/function/, so provenance cannot be verified before packaging:\n${details}\n" +
+                "Add the watermark before zipping."
+            )
+        }
+
+        // 2. Pre-zip warning + confirmation.
+        def watermarks = findOriginWatermarks(packsRoot)
+        println "==================================================================="
+        println "vortaforge/core - Unlicense (public domain)"
+        println "See LICENSE for full license text and NOTICE.md / CONTRIBUTING.md"
+        println "for the project's usage and _vc_origin.mcfunction watermark policy."
+        println "-------------------------------------------------------------------"
+        println "About to package ${packDirs.size()} pack(s) into ZIP archives."
+        println "Watermarks stay untouched in packs/. They will only be stripped from"
+        println "the build/packs-remap/ working copy used to build the ZIPs:"
+        watermarks.sort { it.path }.each { f ->
+            println "  - ${packsRoot.toPath().relativize(f.toPath())}"
+        }
+        println "==================================================================="
+
+        def confirmed = false
+        if (confirmZipProp != null) {
+            confirmed = (confirmZipProp.toString().toLowerCase() == 'yes')
+            println "[zipPacks] -PconfirmZip=${confirmZipProp} supplied on the command line."
+            if (!confirmed) {
+                throw new GradleException(
+                    "[zipPacks] aborted: -PconfirmZip was set but not to 'yes'. Pass -PconfirmZip=yes to proceed."
+                )
+            }
+        } else {
+            // System.console() is null in many interactive-but-not-a-real-TTY
+            // environments (VS Code integrated terminal, Codespaces, some IDE
+            // consoles), which previously made zipPacks abort immediately even
+            // though a person was right there able to answer. Read from
+            // System.in instead (works in both a real console and these
+            // environments), but don't block forever: give it a bounded
+            // timeout and treat a timeout as "not confirmed" so a truly
+            // non-interactive run (CI with no -PconfirmZip) still fails fast
+            // instead of hanging the build.
+            def timeoutSeconds = 15
+            println "Proceed with packaging (watermarks stripped from the remap copy only)?"
+            print "Type 'yes' to continue (auto-cancels in ${timeoutSeconds}s with no input): "
+            System.out.flush()
+
+            def answerHolder = new java.util.concurrent.atomic.AtomicReference<String>(null)
+            def reader = Thread.start {
+                try {
+                    def line = System.in.newReader().readLine()
+                    answerHolder.set(line)
+                } catch (Exception ignored) {
+                    // stdin closed/unavailable - leave answerHolder null, handled below
+                }
+            }
+            reader.join(timeoutSeconds * 1000L)
+
+            if (reader.isAlive()) {
+                // Timed out waiting for input.
+                reader.interrupt()
+                throw new GradleException(
+                    "[zipPacks] aborted: no 'yes' received within ${timeoutSeconds}s (timed out waiting for input). " +
+                    "Re-run and confirm promptly, or pass -PconfirmZip=yes to skip the prompt (e.g. in CI)."
+                )
+            }
+
+            def answer = answerHolder.get()
+            confirmed = (answer?.trim()?.toLowerCase() == 'yes')
+            println "[zipPacks] interactive confirmation received: '${answer ?: '<no input>'}'"
+            if (!confirmed) {
+                throw new GradleException(
+                    "[zipPacks] aborted: confirmation not received (expected 'yes', got: ${answer ?: '<no input>'})."
+                )
+            }
+        }
+    }
+
+    doLast {
+        def packDirs = findPackDirs(packsRoot)
+        if (packDirs.isEmpty()) {
+            println "[zipPacks] no pack.mcmeta files found under packs/."
+            return
+        }
+
+          // 3. Fresh remap workspace every run, so stale copies never linger.
+          if (remapDir.exists()) {
+              println "[zipPacks] clearing stale remap workspace at ${remapDir}"
+              remapDir.deleteDir()
+          }
+          remapDir.mkdirs()
+
+          // 3b. Clear the output directory too. mergeDatapacks already did this
+          //     for its own outDir; zipPacks only called mkdirs(), so a zip left
+          //     over from a pack that has since been renamed or deleted stayed in
+          //     build/packs-dist/ forever. The release workflow globs
+          //     build/packs-dist/*.zip, which means a stale archive was silently
+          //     published as a current release asset.
+          if (outDir.exists()) {
+              def stale = outDir.listFiles()?.findAll { it.name.endsWith('.zip') }?.size() ?: 0
+              if (stale > 0) {
+                  println "[zipPacks] clearing ${stale} stale zip(s) from ${outDir} (only packs that exist right now will be rebuilt)"
+              }
+              outDir.deleteDir()
+          }
+          outDir.mkdirs()
+
+          // 3c. Collision guard. safeName flattens the relative path with '-', so
+          //     two different pack paths can map to the same name (packs/a/b and
+          //     packs/a-b both become 'a-b'). Without this, the second one
+          //     silently overwrites the first and the release ships one archive
+          //     labelled as the other.
+          def nameOwners = [:]
+          def collisions = []
+          packDirs.each { dir ->
+              def relPath = packsRoot.toPath().relativize(dir.toPath()).toString()
+              def safeName = relPath.replace(File.separator, '-').replace('/', '-')
+              if (nameOwners.containsKey(safeName)) {
+                  collisions << "  - '${safeName}.zip' <- ${nameOwners[safeName]} AND ${relPath}"
+              } else {
+                  nameOwners[safeName] = relPath
+              }
+          }
+          if (collisions) {
+              throw new GradleException(
+                  "[zipPacks] failed: these pack paths would produce the same archive name " +
+                  "and overwrite each other:\n${collisions.join('\n')}\n" +
+                  "Rename one of the pack directories so the flattened names are unique."
+              )
+          }
+
+          def zipped = 0
+          packDirs.each { dir ->
+              def relPath = packsRoot.toPath().relativize(dir.toPath()).toString()
+              def safeName = relPath.replace(File.separator, '-').replace('/', '-')
+
+              // Copy source pack -> build/packs-remap/<safeName>/ (packs/ untouched).
+              def remapPackDir = new File(remapDir, safeName)
+              remapPackDir.mkdirs()
+              copyDirRecursive(dir, remapPackDir)
+
+              // 4. Strip the watermark from the remap copy only.
+              def stripped = 0
+              remapPackDir.eachFileRecurse { f ->
+                  if (f.name == '_vc_origin.mcfunction') {
+                      f.delete()
+                      stripped++
+                  }
+              }
+
+              // 5. Zip from the cleaned remap copy.
+              def zipName = "${safeName}.zip"
+              def zipFile = new File(outDir, zipName)
+              println "[zipPacks] zipping ${remapPackDir} -> build/packs-dist/${zipName} (stripped ${stripped} watermark(s) from remap copy)"
+              zipDirectory(remapPackDir, zipFile)
+
+              // 5b. Verify what was actually written. zipDirectory swallows
+              //     nothing, but an unreadable source, a permission problem or an
+              //     empty remap copy would still produce a zip that the release
+              //     workflow happily publishes. Check it here instead.
+              if (!zipFile.exists() || zipFile.length() == 0) {
+                  throw new GradleException("[zipPacks] failed: ${zipName} is missing or empty.")
+              }
+              def entries = 0
+              def hasMeta = false
+              def slurper = new groovy.json.JsonSlurper()
+              new java.util.zip.ZipFile(zipFile).withCloseable { zf ->
+                  entries = zf.size()
+                  zf.entries().each { entry ->
+                      if (entry.name ==~ /(?:build|dist|\.gradle|\.cache|node_modules)\/.+/ ||
+                          entry.name ==~ /data\/[^\/]+\/test\/.+/) {
+                          throw new GradleException("[zipPacks] failed: ${zipName} contains generated or Ward test content: ${entry.name}")
+                      }
+                  }
+                  def meta = zf.getEntry('pack.mcmeta')
+                  if (meta == null) {
+                      throw new GradleException(
+                          "[zipPacks] failed: ${zipName} has no pack.mcmeta at its root, " +
+                          "so it is not a loadable pack.")
+                  }
+                  hasMeta = true
+                  // A pack.mcmeta that does not parse would only surface in game.
+                  try {
+                      zf.getInputStream(meta).withReader('UTF-8') { r -> slurper.parseText(r.text) }
+                  } catch (Exception e) {
+                      throw new GradleException("[zipPacks] failed: pack.mcmeta in ${zipName} is not valid JSON: ${e.message}")
+                  }
+                  (dir.listFiles() ?: []).findAll { f -> f.isFile() && isLicenseNoticeName(f.name) }.each { source ->
+                      def notice = zf.getEntry(source.name)
+                      if (notice == null || !java.util.Arrays.equals(zf.getInputStream(notice).bytes, source.bytes)) {
+                          throw new GradleException("[zipPacks] failed: ${zipName} did not preserve ${source.name} verbatim.")
+                      }
+                  }
+              }
+              if (!hasMeta || entries == 0) {
+                  throw new GradleException("[zipPacks] failed: ${zipName} verification failed (${entries} entries).")
+              }
+              println "[zipPacks] verified ${zipName}: ${entries} entries, ${zipFile.length()} bytes, pack.mcmeta parses"
+              zipped++
+          }
+          println "[zipPacks] done: ${zipped} pack(s) zipped and verified into ${outDir}. packs/ source tree left untouched."
+          if (zipped != packDirs.size()) {
+              throw new GradleException(
+                  "[zipPacks] failed: ${packDirs.size()} pack(s) were found but only ${zipped} were zipped and verified.")
+          }
+      }
+}
+
+// Make zipPacks run as part of the normal build
+tasks.named('buildAll') { dependsOn 'zipPacks' }
+

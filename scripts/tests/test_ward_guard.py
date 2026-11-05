@@ -1,5 +1,10 @@
-"""Offline tests for scripts/ward_guard.py. No Minecraft server is started:
-the "server" is a plain Python process that only opens a TCP socket."""
+"""Offline tests for archived/tools/ward/ward_guard.py.
+
+Ward was archived with the datapack programme on 2026-11-05. The tests stay
+here (they run in the normal repository suite) so the archived harness cannot
+be quietly edited into something unsafe if it is ever restored. No Minecraft
+server is started: the "server" is a plain Python process that only opens a
+TCP socket."""
 import os
 import subprocess
 import sys
@@ -7,7 +12,7 @@ import tempfile
 import time
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "archived", "tools", "ward"))
 import ward_guard  # noqa: E402
 
 LISTENER = (

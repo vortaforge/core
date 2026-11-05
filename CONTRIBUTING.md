@@ -11,7 +11,7 @@ already read it. The [maintainer guide](docs/MAINTAINER_GUIDE.md) contains
 project-wide preservation, credential, review and testing rules; it applies to
 all contributors as well as maintainers.
 
-> **⚠️ Warning - a Minecraft server is started in exactly one place.** `.github/workflows/ward.yml` (via `scripts/ward_ci.sh`) runs datapack tests with mcward on a throw-away Fabric server on a GitHub-hosted runner. It is bound to `127.0.0.1`, whitelist enforced and empty, verified loopback-only by `scripts/ward_guard.py` before and after the tests, and deleted afterwards. Nothing else in this repository starts, connects to or tests against a Minecraft server. Never run that script on a developer machine, a production host or next to a real world.
+> **⚠️ Warning - a Minecraft server was started in exactly one place, and that place is archived.** The Ward (mcward) harness in `archived/tools/ward/` is inert: its workflow is no longer under `.github/workflows/`, so GitHub does not run it, and nothing live starts, connects to or tests against a Minecraft server. Never run `ward_ci.sh` on a developer machine, a production host or next to a real world.
 
 ## Getting started
 
@@ -28,7 +28,7 @@ all contributors as well as maintainers.
    ./gradlew ci -PconfirmZip=yes
    ```
    This runs `verifyProject` (provenance, repository audit, offline tests,
-   dpgen tests, datapack syntax, pack/archive metadata) and `packageProject`
+   guard, kill switch and archive-registry checks) and `packageProject`
    (subprojects plus the individual/merged pack archives). `buildAll` and
    `lint` are still available as narrower, faster compatibility tasks if you
    only touched `mods/` or only want the Checkstyle pass.
@@ -89,7 +89,15 @@ probably two commits. Reference related issues or PRs in the body
 
 ## Security
 
-This project follows a security-first development philosophy, particularly around Minecraft datapack macro injection risks and namespace isolation. If you find a security issue, do **not** open a public issue - use [GitHub's private vulnerability reporting](https://github.com/vortaforge/core/security/advisories/new), and fall back to a detail-free public issue only if that is unavailable to you. The full procedure, including what must not be included in a report, is in [SECURITY.md](SECURITY.md).
+**Datapacks are retired (2026-11-05).** Do not open a PR that adds a datapack,
+a pack, or revives the archived datapack tooling: `scripts/datapack_guard.py`
+refuses it in `pre-commit`, `pre-push` and CI, and `datapack.disabled.json` is
+the switch that says why (`docs/ARCHIVAL.md`). Changes to `archived/` must be a
+registry update, not new functionality.
+
+This project follows a security-first development philosophy. The datapack
+macro-injection and namespace-isolation concerns this note used to describe
+were one of the reasons the programme was retired. If you find a security issue, do **not** open a public issue - use [GitHub's private vulnerability reporting](https://github.com/vortaforge/core/security/advisories/new), and fall back to a detail-free public issue only if that is unavailable to you. The full procedure, including what must not be included in a report, is in [SECURITY.md](SECURITY.md).
 
 ## Provenance watermark (`_vc_origin.mcfunction`)
 

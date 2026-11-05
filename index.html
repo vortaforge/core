@@ -529,23 +529,23 @@
     </div>
 
     <h2 id="packs-heading">Datapacks &amp; resource packs</h2>
-    <p class="lead" style="font-size: 13px;">
-      Packs are rebuilt on pushes to <code>main</code> and published to the
-      <code>packs-latest</code> release when available. Downloads are verified
-      against GitHub before starting (HEAD check). A static fallback list is
-      used if the API is unreachable or no release has been published yet.
-    </p>
-    <div id="release-meta-line" style="font-size: 12px; color: var(--muted); margin-bottom: 8px; display: none;"></div>
-    <div class="toolbar">
-      <input type="search" id="packs-search" placeholder="Search packs…" aria-label="Search packs">
-      <select id="packs-sort" aria-label="Sort packs">
-        <option value="name-asc">Name (A–Z)</option>
-        <option value="name-desc">Name (Z–A)</option>
-        <option value="newest">Newest</option>
-        <option value="downloads">Most downloaded</option>
-      </select>
+    <div class="banner-box visible" id="datapacks-retired" role="status"
+         style="background: rgba(210, 153, 34, 0.12); border: 1px solid var(--warning); margin-bottom: 16px;">
+      <strong style="color: var(--warning);">The datapack programme is retired and disabled.</strong>
+      <div class="detail">
+        Every datapack, datapack generator, linter and test harness was archived on
+        2026-11-05 and hard-disarmed (<code>archived/archive.json</code>). No datapack is
+        built, published or supported any more, and new ones are blocked before they land.
+        <br><br>
+        <em>Reason:</em> no type safety, no security model, no debugging, no warnings, and a
+        low review score — bad enough that it would have been better not to ship it at all.
+        The maintainer also hit real problems as a plain player using a datapack with no
+        client mod installed.
+        <br><br>
+        The archived packs stay readable in the repository under
+        <code>archived/packs/</code> for reference only. Do not deploy them.
+      </div>
     </div>
-    <div class="grid" id="packs-grid"></div>
 
     <h2 id="mods-heading">Fabric mods</h2>
     <p class="lead" style="font-size: 13px;">
@@ -623,20 +623,10 @@
   //     (inv_gui was also claimed in README.md's history - see that file)
   //   - both macroEngine entries and the directories are v26.3, so
   //     the zip names never matched what zipPacks produces
-  const FALLBACK_PACKS = [
-    { name: "cmdTunnel-datapack", zip: "cmdTunnel-datapack.zip" },
-    { name: "DailyBonus", zip: "DailyBonus.zip" },
-    { name: "guikitfw", zip: "guikitfw.zip" },
-    { name: "InteractionClickDetection", zip: "InteractionClickDetection.zip" },
-    { name: "LeftClickDetection", zip: "LeftClickDetection.zip" },
-    { name: "macroEngine (Datapack, v26.3)", zip: "macroEngine-Datapack-v26.3.zip" },
-    { name: "macroEngine (Resource pack, v26.3)", zip: "macroEngine-Resourcepack-v26.3.zip" },
-    { name: "QuickShare", zip: "QuickShare.zip" },
-    { name: "RTWrapper (v1.0.1)", zip: "RTWrapper-v1.0.1.zip" },
-    { name: "RTWrapper (original, nested)", zip: "RTWrapper-datapack-RTWrapper-Datapack.zip" },
-    { name: "TunnelScript", zip: "TunnelScript.zip" },
-    { name: "VF Macro", zip: "vf_macro.zip" }
-  ];
+  // Datapacks are retired (2026-11-05): there is no pack list any more, live
+  // or fallback. archived/archive.json is the only record; it is not rendered
+  // here because nothing in it is downloadable.
+  // (no pack list)
   // Current mod source directories only; TEMPLATE-MOD is a scaffold. The
   // historical RTWrapper Fabric source under packs/ remains excluded from
   // the Gradle build and is not advertised as a current mod release.
@@ -975,118 +965,32 @@
     }
   }
 
+  // Kept as a function (and out of renderPacks' old body) so the site test can
+  // still call it: rendering a pack list always yields the retired notice,
+  // whatever the API returns. A stale `packs-latest` release must never turn
+  // this page back into a download page.
   function renderPacks(packs, sourceLabel) {
     el.packsGrid.classList.remove("skeleton-grid");
     el.packsGrid.innerHTML = "";
-    if (!packs || packs.length === 0) {
-      el.packsGrid.innerHTML = '<p class="empty-state">' +
-        (currentPacksRaw.length === 0 && noReleasesYet ? "No release has been published yet." : "No packs match your search.") +
-        "</p>";
-      return;
-    }
-    packs.forEach(function (pack) {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      const title = document.createElement("h3");
-      title.textContent = pack.name;
-
-      const desc = document.createElement("p");
-      desc.textContent =
-        "Datapack / resource pack" +
-        (sourceLabel ? " · " + sourceLabel : "");
-
-      const metaBits = [];
-      if (pack.size) metaBits.push(formatBytes(pack.size));
-      if (typeof pack.downloadCount === "number") metaBits.push(pack.downloadCount + " downloads");
-      if (pack.updatedAt) {
-        const t = new Date(pack.updatedAt).getTime();
-        if (!isNaN(t)) metaBits.push("updated " + formatRelativeTime(Date.now() - t));
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "card-actions";
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn";
-      btn.textContent = "Download (.zip)";
-
-      const copyBtn = document.createElement("button");
-      copyBtn.type = "button";
-      copyBtn.className = "btn secondary";
-      copyBtn.textContent = "Copy link";
-
-      const statusEl = document.createElement("div");
-      statusEl.className = "dl-status";
-
-      // A source/fallback name is not evidence that a release asset exists.
-      // Cached lists can also become stale; enable links only for a live API
-      // asset with a GitHub release URL.
-      if (sourceLabel !== "live" || !isReleaseAssetUrl(pack.downloadUrl)) {
-        btn.disabled = true;
-        copyBtn.disabled = true;
-        statusEl.className = "dl-status info";
-        statusEl.textContent = "Release asset not verified; reconnect to check downloads.";
-      } else {
-        btn.addEventListener("click", function () {
-          startDownload(pack, btn, statusEl);
-        });
-        copyBtn.addEventListener("click", function () {
-          copyPackLink(pack, statusEl);
-        });
-      }
-
-      actions.appendChild(btn);
-      actions.appendChild(copyBtn);
-
-      card.appendChild(title);
-      card.appendChild(desc);
-      if (metaBits.length > 0) {
-        const meta = document.createElement("div");
-        meta.className = "pack-meta";
-        meta.textContent = metaBits.join(" · ");
-        card.appendChild(meta);
-      }
-      card.appendChild(actions);
-      card.appendChild(statusEl);
-      el.packsGrid.appendChild(card);
-    });
+    const note = document.createElement("p");
+    note.className = "empty-state";
+    note.textContent =
+      "Datapacks are retired and disabled; there is nothing to download" +
+      (Array.isArray(packs) && packs.length
+        ? " (ignoring " + packs.length + " asset(s) left over in an old release)"
+        : "") + ".";
+    el.packsGrid.appendChild(note);
+    return el.packsGrid;
   }
 
-  function renderMods(mods, sourceLabel) {
-    el.modsGrid.classList.remove("skeleton-grid");
-    el.modsGrid.innerHTML = "";
-    if (!mods || mods.length === 0) {
-      el.modsGrid.innerHTML = '<p class="empty-state">' +
-        (currentModsRaw.length === 0 ? "No mods listed yet." : "No mods match your search.") +
-        "</p>";
-      return;
-    }
-    mods.forEach(function (mod) {
-      const card = document.createElement("div");
-      card.className = "card";
-      const href = MODS_TREE_BASE + encodeURIComponent(mod.dir);
-      card.innerHTML =
-        "<h3>" + escapeHtml(mod.name) + "</h3>" +
-        "<p>Fabric mod (source)" +
-        (sourceLabel ? " · " + escapeHtml(sourceLabel) : "") +
-        "</p>" +
-        '<div class="card-actions">' +
-        '<a class="btn" href="' + escapeAttr(href) + '" target="_blank" rel="noopener noreferrer">View source</a>' +
-        "</div>";
-      el.modsGrid.appendChild(card);
-    });
-  }
-
-  // Re-applies the current search text + sort order on top of the last
-  // loaded dataset, with no network call — instant filtering/sorting.
+  // The packs toolbar (search + sort) was removed with the programme, so every
+  // element access below is optional. renderPacks ignores its list anyway.
   function displayPacks() {
-    const q = (el.packsSearch.value || "").trim().toLowerCase();
+    const q = (el.packsSearch && el.packsSearch.value ? el.packsSearch.value : "").trim().toLowerCase();
     let list = currentPacksRaw.slice();
     if (q) list = list.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; });
 
-    const sortMode = el.packsSort.value;
+    const sortMode = el.packsSort && el.packsSort.value ? el.packsSort.value : "name-asc";
     if (sortMode === "name-desc") {
       list.sort(function (a, b) { return b.name.localeCompare(a.name); });
     } else if (sortMode === "newest") {
@@ -1102,7 +1006,7 @@
     }
 
     renderPacks(list, currentPacksLabel);
-    el.packsHeading.textContent = "Datapacks & resource packs (" + currentPacksRaw.length + ")";
+    el.packsHeading.textContent = "Datapacks & resource packs (retired)";
   }
 
   function displayMods() {
@@ -1114,16 +1018,19 @@
     el.modsHeading.textContent = "Fabric mods (" + currentModsRaw.length + ")";
   }
 
-  el.packsSearch.addEventListener("input", displayPacks);
-  el.packsSort.addEventListener("change", displayPacks);
-  el.modsSearch.addEventListener("input", displayMods);
+  if (el.packsSearch) el.packsSearch.addEventListener("input", displayPacks);
+  if (el.packsSort) el.packsSort.addEventListener("change", displayPacks);
+  if (el.modsSearch) el.modsSearch.addEventListener("input", displayMods);
 
   // ---------------------------------------------------------------------
   // GitHub API — data shaping
   // ---------------------------------------------------------------------
 
   function packsFromReleaseAssets(assets) {
-    if (!Array.isArray(assets)) return [];
+    // Datapacks are retired: even if an old `packs-latest` release still has
+    // .zip assets, this page must not offer them. Returning [] is deliberate.
+    if (Array.isArray(assets)) return [];
+    return [];
     return assets
       .filter(function (a) {
         return a && typeof a.name === "string" && /\.zip$/i.test(a.name) && isReleaseAssetUrl(a.browser_download_url);
@@ -1270,20 +1177,17 @@
     let rateLimited = null;
     const cache = readCache();
 
-    setProgress(20, "Fetching packs-latest release…", "GET /releases/tags/" + RELEASE_TAG);
+    setProgress(20, "Checking mod sources…", "datapacks retired, nothing to fetch");
     try {
-      const result = await fetchGithubApi(API_RELEASE, "Release " + RELEASE_TAG);
-      const fromApi = packsFromReleaseAssets(result.data.assets);
-      if (fromApi.length > 0) {
-        packs = fromApi;
-        packsSource = "GitHub API";
-        packsReleaseMeta = {
-          tag: result.data.tag_name || RELEASE_TAG,
-          publishedAt: result.data.published_at,
-          htmlUrl: result.data.html_url
-        };
-      } else {
-        errors.push("Release has no .zip assets. Using static pack list.");
+      // Datapacks are retired: no packs-latest request at all. One less
+      // anonymous API call, and no way for a stale release to resurrect the
+      // download cards.
+      packs = [];
+      packsSource = "retired";
+      const fromApi = [];
+      if (false) {
+        const result = await fetchGithubApi(API_RELEASE, "Release " + RELEASE_TAG);
+        packs = packsFromReleaseAssets(result.data.assets);
       }
     } catch (err) {
       if (myGeneration !== loadGeneration) return;
@@ -1368,7 +1272,8 @@
       usedCache = true;
     }
 
-    if (!packs) packs = FALLBACK_PACKS.slice();
+    // Datapacks are retired: there is no pack list to fall back to.
+    if (!packs) packs = [];
     if (!mods) mods = FALLBACK_MODS.slice();
 
     // Cache successful API results for next visit / next retry.
@@ -1570,9 +1475,9 @@
     // fetches become no-ops on resolve, then render fallback data now.
     loadGeneration++;
     hideLoading();
-    currentPacksRaw = FALLBACK_PACKS.slice();
+    currentPacksRaw = [];
     currentModsRaw = FALLBACK_MODS.slice();
-    currentPacksLabel = "offline list";
+    currentPacksLabel = "retired";
     currentModsLabel = "offline list";
     el.releaseMetaLine.style.display = "none";
     displayPacks();
@@ -1602,9 +1507,9 @@
   loadAll().catch(function (err) {
     setProgress(100, "Failed", "");
     hideLoading();
-    currentPacksRaw = FALLBACK_PACKS.slice();
+    currentPacksRaw = [];
     currentModsRaw = FALLBACK_MODS.slice();
-    currentPacksLabel = "offline list";
+    currentPacksLabel = "retired";
     currentModsLabel = "offline list";
     el.releaseMetaLine.style.display = "none";
     displayPacks();

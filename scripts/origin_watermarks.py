@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Generate, verify and report the provenance watermarks (_vc_origin.mcfunction).
 
-Every datapack under packs/ carries data/<namespace>/function/_vc_origin.mcfunction.
+ARCHIVED (2026-11-05): the datapacks this tool was written for were retired and
+moved to archived/packs/. This file is kept because the watermarks are still
+there and a restore would need it. Nothing in the build calls it any more.
+The default root is archived/packs/ now, so `--check` still verifies the
+archived copies instead of exiting "repository root not found".
+
+Every datapack under packs/ (now archived/packs/) carries
+data/<namespace>/function/_vc_origin.mcfunction.
 build.gradle (checkOriginWatermarks / zipPacks) only proves such a file EXISTS in
 the right folder. This tool owns the CONTENT:
 
@@ -74,15 +81,37 @@ def repo_root():
     here = os.path.abspath(os.path.dirname(__file__))
     cur = here
     while True:
-        if os.path.isdir(os.path.join(cur, "packs")) and os.path.exists(os.path.join(cur, "build.gradle")):
+        if (os.path.isdir(os.path.join(cur, "packs"))
+                or os.path.isdir(os.path.join(cur, "archived", "packs"))) \
+                and os.path.exists(os.path.join(cur, "build.gradle")):
             return cur
         parent = os.path.dirname(cur)
         if parent == cur:
-            sys.exit("origin_watermarks: cannot find the repository root (packs/ + build.gradle)")
+            sys.exit("origin_watermarks: cannot find the repository root (packs/ or archived/packs/ + build.gradle)")
         cur = parent
 
 
 ROOT = repo_root()
+
+#: Where the packs live. Set to "packs" by --live after a deliberate restore;
+#: the default follows the 2026-11-05 retirement into archived/packs/.
+def _default_packs_subdir():
+    live = os.path.join(ROOT, "packs")
+    archived = os.path.join(ROOT, "archived", "packs")
+    # A restored programme is signalled by actual pack content in packs/ (a
+    # directory or a pack.mcmeta), never by its explaining README.md - that
+    # file is deliberately kept there and used to make this function report
+    # "0 datapacks" while returning success.
+    if os.path.isdir(live) and any(
+            os.path.isdir(os.path.join(live, name)) or name == "pack.mcmeta"
+            for name in os.listdir(live)):
+        return "packs"
+    if os.path.isdir(archived):
+        return os.path.join("archived", "packs")
+    return "packs"
+
+
+PACKS_SUBDIR = _default_packs_subdir()
 
 
 def read_text(path):
@@ -94,10 +123,26 @@ def rel(path):
     return os.path.relpath(path, ROOT).replace(os.sep, "/")
 
 
+def watermark_source(pack_dir):
+    """The pack path a watermark records.
+
+    2026-11-05: the packs were moved to archived/packs/. Their watermarks were
+    deliberately NOT rewritten - they are the provenance record of where each
+    pack lived, and rewriting 15 comment headers would change history for
+    cosmetics. So the expected 'source' value is the historical live path
+    (packs/<name>), even though the file now sits under archived/packs/.
+    """
+    relative = rel(pack_dir)
+    prefix = "archived/packs/"
+    if relative.startswith(prefix):
+        return "packs/" + relative[len(prefix):]
+    return relative
+
+
 def find_pack_dirs():
-    """Directories holding a pack.mcmeta under packs/, like build.gradle's findPackDirs."""
+    """Directories holding a pack.mcmeta under the pack tree (archived/packs/ by default)."""
     found = []
-    for base, dirs, files in os.walk(os.path.join(ROOT, "packs")):
+    for base, dirs, files in os.walk(os.path.join(ROOT, PACKS_SUBDIR)):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         if "pack.mcmeta" in files:
             found.append(base)
@@ -151,7 +196,7 @@ def render(pack_dir, namespace):
         version=WATERMARK_VERSION,
         pack=os.path.basename(pack_dir),
         namespace=namespace,
-        source=rel(pack_dir),
+        source=watermark_source(pack_dir),
     )
 
 
@@ -170,7 +215,7 @@ def check_file(pack_dir, ns, path):
         problems.append(f"{rel(path)}: 'namespace' field is missing or does not match the folder ({ns})")
     if f"# pack:      {os.path.basename(pack_dir)}\n" not in text:
         problems.append(f"{rel(path)}: 'pack' field is missing or does not match the pack folder")
-    if f"# source:    {rel(pack_dir)}\n" not in text:
+    if f"# source:    {watermark_source(pack_dir)}\n" not in text:
         problems.append(f"{rel(path)}: 'source' field is missing or does not match the pack path")
     if not problems and text != render(pack_dir, ns):
         problems.append(f"{rel(path)}: differs from the generated watermark (hand-edited or outdated template); run --write")
@@ -183,7 +228,7 @@ def collect():
         resource = is_resource_pack(pack_dir)
         packs.append({
             "pack": os.path.basename(pack_dir),
-            "source": rel(pack_dir),
+            "source": watermark_source(pack_dir),
             "resource_pack": resource,
             "watermarks": [] if resource else watermarks_of(pack_dir),
             "dir": pack_dir,
@@ -256,7 +301,12 @@ def main():
     g.add_argument("--write", action="store_true", help="generate or update watermarks")
     g.add_argument("--report", action="store_true", help="print a table of packs and watermarks")
     g.add_argument("--json", action="store_true", help="print the report as JSON")
+    ap.add_argument("--live", action="store_true",
+                    help="operate on packs/ instead of archived/packs/ (after a deliberate restore)")
     a = ap.parse_args()
+    if a.live:
+        global PACKS_SUBDIR
+        PACKS_SUBDIR = "packs"
 
     packs = collect()
     if a.write:

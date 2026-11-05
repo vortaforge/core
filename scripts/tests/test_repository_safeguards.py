@@ -2,6 +2,11 @@
 
 These tests replace selected local high-severity audit checks, not the old
 GitHub/org audit. They never start or contact a Minecraft server.
+
+2026-11-05: the datapack programme was archived (archived/archive.json). The
+live-tree checks that used to scan packs/ now scan archived/packs/ as well, so
+the archived packs stay statically honest, and new tests assert that the live
+tree stays datapack-free.
 """
 from __future__ import annotations
 
@@ -208,24 +213,55 @@ def secret_labels(text):
 
 
 class LiveTreeSafeguards(unittest.TestCase):
+    """The archived packs are still parsed, so a regression there is caught.
+
+    `archived/packs/` is reference-only, but it is the largest body of
+    mcfunction in the repository and a future restore would start from it.
+    """
+
+    PACKS = ROOT / "archived" / "packs"
+
     def test_pack_metadata_layout_and_tag_shapes(self):
-        self.assertEqual(validate_layout(ROOT / "packs"), [])
+        self.assertEqual(validate_layout(self.PACKS), [])
 
     def test_required_function_tag_values_resolve_somewhere_in_tree(self):
-        self.assertEqual(required_tag_reference_problems(pack_roots(ROOT / "packs")), [])
+        self.assertEqual(required_tag_reference_problems(pack_roots(self.PACKS)), [])
 
-    def test_merged_pack_static_function_references_and_manifest(self):
-        self.assertEqual(merged_function_reference_problems(ROOT / "packs"), [])
+    def test_archived_merge_manifest_is_internally_consistent(self):
+        # The manifest is archived next to the packs it used to merge; its
+        # "include" entries must still name real archived packs (or be empty).
+        manifest = ROOT / "archived" / "merge-manifest.json"
+        self.assertTrue(manifest.is_file(), "archived/merge-manifest.json is missing")
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        include = data.get("include", [])
+        self.assertIsInstance(include, list)
+        for entry in include:
+            path = (self.PACKS / entry).resolve()
+            self.assertIn(str(self.PACKS.resolve()), str(path), f"include escapes archived/packs: {entry}")
+
+    def test_live_packs_tree_is_empty(self):
+        packs = ROOT / "packs"
+        allowed = {"README.md", ".gitkeep"}
+        leftovers = sorted(p.name for p in packs.iterdir()
+                           if p.name not in allowed) if packs.is_dir() else []
+        self.assertEqual(leftovers, [], "packs/ must stay empty: new datapacks are blocked")
+
+    def test_no_live_datapack_tooling(self):
+        for live in ("scripts/dpgen", "scripts/datapack_lint", "scripts/lint_datapacks.sh",
+                     "scripts/ward_ci.sh", "scripts/ward_guard.py", "mods/datapack-blocker",
+                     "examples/template-datapack", ".github/workflows/ward.yml"):
+            with self.subTest(live=live):
+                self.assertFalse((ROOT / live).exists(), f"{live} must stay archived")
 
     def test_invalid_nbt_filter_after_index_is_absent(self):
         problems = []
-        for file in walk_files(ROOT / "packs"):
+        for file in walk_files(self.PACKS):
             if file.suffix == ".mcfunction":
                 problems.extend(f"{file.relative_to(ROOT)}:{line}" for line in invalid_nbt_path_lines(file.read_text(encoding="utf-8")))
         self.assertEqual(problems, [])
 
     def test_dpgen_license_metadata_matches_its_existing_license(self):
-        dpgen = ROOT / "scripts" / "dpgen"
+        dpgen = ROOT / "archived" / "tools" / "dpgen"
         package = json.loads((dpgen / "package.json").read_text(encoding="utf-8"))
         lock = json.loads((dpgen / "package-lock.json").read_text(encoding="utf-8"))
         self.assertEqual(package["license"], "Unlicense")
@@ -233,7 +269,7 @@ class LiveTreeSafeguards(unittest.TestCase):
         self.assertIn("free and unencumbered software", (dpgen / "LICENSE").read_text(encoding="utf-8"))
 
     def test_linter_license_and_dependency_notices_are_present(self):
-        lint = ROOT / "scripts" / "datapack_lint"
+        lint = ROOT / "archived" / "tools" / "datapack-lint"
         package = json.loads((lint / "package.json").read_text(encoding="utf-8"))
         lock = json.loads((lint / "package-lock.json").read_text(encoding="utf-8"))
         self.assertEqual(package["license"], "Unlicense")
@@ -244,7 +280,7 @@ class LiveTreeSafeguards(unittest.TestCase):
             self.assertIn(text, notices)
 
     def test_macroengine_mit_notice_is_present(self):
-        pack = ROOT / "packs" / "macroEngine-Datapack-v26.3"
+        pack = ROOT / "archived" / "packs" / "macroEngine-Datapack-v26.3"
         notice = (pack / "THIRD_PARTY_LICENSES.md").read_text(encoding="utf-8")
         self.assertIn("MIT License", notice)
         self.assertIn("Copyright (c) 2022 Michael Weatherby", notice)

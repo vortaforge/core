@@ -6,11 +6,16 @@ instruction files, without requiring an automated AI agent.
 
 ## Project and provenance
 
-This monorepo contains Minecraft Java Edition datapacks, resource packs, Fabric
-mods, tooling, examples and historical reference material. It is independent
-of Mojang and Microsoft. The repository uses the Unlicense (`LICENSE`);
-third-party code retains its own licences, including
-`packs/macroEngine-Datapack-v26.3/THIRD_PARTY_LICENSES.md`.
+**Datapacks are retired (2026-11-05).** This monorepo now ships Fabric mods
+only; every datapack, datapack generator, linter and test harness is archived
+and disarmed in `archived/archive.json` and blocked by
+`scripts/datapack_guard.py`. See `docs/ARCHIVAL.md`. The historical
+`archived/packs/macroEngine-Datapack-v26.3/THIRD_PARTY_LICENSES.md` is kept
+intact for reference.
+
+It also contains historical reference material and example Fabric mods. It is
+independent of Mojang and Microsoft. The repository uses the Unlicense
+(`LICENSE`); third-party code retains its own licences.
 
 The documented publishing history is `runtoolkit` -> `vortacraftmc` ->
 `vortaforge`; keep the provenance and older locations intact. Prior project
@@ -49,26 +54,34 @@ current deployment: verify each pack's metadata and deployment separately.
    `#vortacraftmc.*`, `com.vortacraftmc` or other public identifiers without an
    explicit world/API migration plan.
 9. **Preserve notices and provenance.** Keep `LICENSE`, `NOTICE.md`, the
-   `_vc_origin.mcfunction` watermarks, historical records, `CREDITS.md` and
-   third-party licence notices intact. Pin third-party Actions by commit SHA
-   and give workflows the minimum required permissions.
+   `_vc_origin.mcfunction` watermarks (now under `archived/`), historical
+   records, `CREDITS.md` and third-party licence notices intact. Pin
+   third-party Actions by commit SHA and give workflows the minimum required
+   permissions.
+10. **Do not re-arm the datapacks.** `datapacks.disabled.json` must stay
+    `"enabled": false`; `archived/archive.json` entries must stay
+    `"disarmed": true`; the guard and the `datapack-guard` CI job must not be
+    weakened or bypassed. Re-enabling is a deliberate, reviewed decision with a
+    written reason (see `docs/ARCHIVAL.md`), never a side effect of a cleanup.
 
-> **⚠️ Warning - a Minecraft server is started in exactly one place.**
-> `.github/workflows/ward.yml` (via `scripts/ward_ci.sh`) runs Ward datapack
-> tests on a throw-away Fabric server on a GitHub-hosted runner. It is bound to
-> `127.0.0.1`, whitelist-enforced and empty, verified loopback-only by
-> `scripts/ward_guard.py` before and after the tests, and deleted afterwards.
-> Never run that script on a developer machine, production host or real world.
+> **⚠️ Warning - a Minecraft server used to be started in exactly one place,
+> and that place is archived.** The Ward harness and its workflow now live in
+> `archived/tools/ward/` and are inert (no workflow file under
+> `.github/workflows/`). Never run `ward_ci.sh` on a developer machine, a
+> production host or a real world. Nothing live starts a Minecraft server.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
 | `mods/` | Fabric mods, each with its own Gradle subproject and version pins. |
-| `packs/` | Datapacks and resource packs; `merge-manifest.json` drives the merged datapack. |
+| `packs/` | **Empty.** Datapacks were retired on 2026-11-05; the guard refuses new content here. |
+| `blocklist/` | Account blocklist enforced by the guard (mirrored by `vortaforge/.github`). |
+| `.githooks/` | `pre-commit` / `pre-push` guard hooks (`git config core.hooksPath .githooks`). |
+| `datapacks.disabled.json` | The datapack kill switch (`"enabled": false`). |
 | `scripts/` | Lint, provenance, audit, backup and self-contained developer tools. |
 | `examples/` | Example mods and packs. |
-| `archived/` | Historical registry and reference-only material; do not deploy without review. |
+| `archived/` | Every retired project and the extracted datapack Gradle logic; do not deploy without review. |
 | `index.html`, `.nojekyll`, `robots.txt`, `sitemap.xml`, `banner.png` | Static site source and related metadata. Pages enablement is a GitHub setting; verify it before calling the site live. |
 
 ## Validation map
@@ -77,24 +90,28 @@ The canonical checks and their prerequisites are documented in `README.md`.
 In brief:
 
 ```bash
-./gradlew verifyProject
-./gradlew packageProject -PconfirmZip=yes
-./gradlew ci -PconfirmZip=yes
+./gradlew verifyProject                  # guard + kill switch + archive registry + tests
+./gradlew checkDatapackSwitch checkArchive
+./gradlew packageProject
+./gradlew ci
 ./gradlew buildAll
 ./gradlew lint
-scripts/lint_datapacks.sh
-python3 scripts/origin_watermarks.py --check
-python3 -m pytest scripts/gui_generator/tests scripts/tests
-# inside scripts/dpgen: npm test
+python3 scripts/datapacks_disable.py verify
+python3 scripts/datapack_guard.py --staged --protect --blocklist
+python3 -m unittest discover -s scripts/tests -v
+python3 -m pytest scripts/gui_generator/tests
+# Archived (nothing invokes these): archived/tools/lint_datapacks.sh,
+# archived/tools/ward/ward_ci.sh, archived/tools/build-release/build_release.py,
+# scripts/origin_watermarks.py --check (still present, no longer wired)
 ```
 
-`verifyProject` is the canonical repository-validation graph and needs its
-Python/Node tools; Spyglass may download vanilla data. `packageProject`
-prepares individual and merged pack artifacts. Spyglass and strict JSON are
-static checks, with exclusions and version limits in
-`scripts/datapack_lint/README.md`; the retired audit's coverage gaps are in
-`scripts/README.md`. None proves an in-game result. `scripts/ward_ci.sh`
-starts a Minecraft server and must never be run by hand.
+`verifyProject` is the canonical repository-validation graph: the datapack
+guard, the kill switch, the archive registry, the mod checks and the Python/Node
+suites. `packageProject` builds the Fabric modules and the inventory. Nothing
+in the live graph touches a datapack. The archived Spyglass/JSON linter
+(`archived/tools/datapack-lint/README.md`) and the archived Ward harness are
+reference only; the Ward harness **starts a Minecraft server and must never be
+run by hand**.
 
 Workflow enablement is a GitHub setting, not a Git file. On 2026-10-29, the
 GitHub API showed CI (`build.yml`), CodeQL, Reusable Quality, Organization

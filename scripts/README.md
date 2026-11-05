@@ -8,10 +8,11 @@ avoid running quality tooling with privileged credentials.
 
 | Script or test | Role when explicitly run |
 |---|---|
-| [`lint_datapacks.sh`](lint_datapacks.sh) and [`datapack_lint/`](datapack_lint/README.md) | Spyglass 0.4.70 static diagnostics plus a separate strict JSON parser, with per-file coverage enforcement and explicit Ward/permission exceptions. Uses Node 20+ and a pinned lock; may download vanilla data. No Minecraft server. |
-| [`tests/`](tests/) | Python regression tests, including focused repository safeguards, workflow-action pinning, pack/merge invariants, credential patterns, release packaging and offline Ward-guard tests. |
-| [`check_archive.py`](check_archive.py) | Validates `archived/archive.json` against its schema and that registered archives are not still under `packs/` or in the merge manifest; stdlib only. |
-| [`origin_watermarks.py`](origin_watermarks.py) | Checks or generates the no-op provenance watermarks. `--check` does not modify sources. |
+| [`datapack_guard.py`](datapack_guard.py) | **The gate.** Fail-closed policy: no new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent. Runs in `pre-commit`, `pre-push`, CI (job `datapack-guard`) and Gradle (`guardArchives`). |
+| [`datapacks_disable.py`](datapacks_disable.py) | The kill-switch CLI: `status`, `disable`, `enable --token ... --reason ...`, `verify`. |
+| [`check_archive.py`](check_archive.py) | Validates `archived/archive.json` (schema v2): shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/`. Stdlib only. |
+| [`tests/`](tests/) | Python regression tests: guard/blocklist/switch behaviour, archive invariants, workflow-action pinning, credential patterns, credential-shape scan, the static site's retirement notices, plus offline tests for the archived Ward guard and release builder. |
+| [`origin_watermarks.py`](origin_watermarks.py) | Checks or generates the no-op provenance watermarks. `--check` does not modify sources. Kept for the archived packs; no build step invokes it any more. |
 | [`fix_text_components.py`](fix_text_components.py) | Rewrites selected text components; it can change files, so review it and the diff before use. |
 | [`backup-org.sh`](backup-org.sh) | Historical organization-backup tool. **Do not assume even `--dry-run` is non-destructive:** its current paths can remove or overwrite files. It handles privileged organization data and needs a separate safety review before any use. It was not run as part of this cleanup. |
 
@@ -64,14 +65,18 @@ independently of the repository tooling above.
 
 | Directory | What it is | Manifest |
 |---|---|---|
-| [`dpgen/`](dpgen/) | Generates a datapack from a YAML description. | `package.json` |
 | [`gui_generator/`](gui_generator/) | `guigenmc` — generates a GUI datapack from a menu spec; ships a browser UI and tests. | `pyproject.toml`, `requirements.txt` |
 
-Dependabot configuration watches `scripts/gui_generator`, `scripts/dpgen`
-and `scripts/datapack_lint`. Dependency proposals require human review; the
-linter's runtime version pin and decompressor override need coordinated
-updates. The configured quality workflow tests guigenmc on Python 3.12 only;
-its declared Python 3.9 minimum is not covered by that job.
+`guigenmc` emits datapack output, so it is a generator: its output cannot be
+checked into `packs/` (the guard blocks it), and using it is a deliberate,
+local act, not a repository contribution. `archived/tools/dpgen` was retired
+with the programme.
+
+Dependabot configuration used to watch `scripts/dpgen` and
+`scripts/datapack_lint`; those paths are archived, so their entries were
+removed. `scripts/gui_generator` is still watched. Dependency proposals require
+human review. The configured quality workflow tests guigenmc on Python 3.12
+only; its declared Python 3.9 minimum is not covered by that job.
 
 ## Removed from here
 
@@ -82,19 +87,19 @@ committed; `check_lock.py` implemented a lock that nothing invoked, against a
 workflow that never existed. `dp-depman/` and the two audit scripts were
 retired in the 2026-10-30 cleanup. Git history preserves their provenance.
 
-## Ward test server (CI only)
+## Ward test server (archived)
 
-> **Warning: this path starts a Minecraft server.** `.github/workflows/ward.yml`
-> (via `scripts/ward_ci.sh`) defines datapack tests using mcward on a
-> throw-away Fabric server on a GitHub-hosted runner, with loopback binding,
-> an empty whitelist, guard checks and cleanup. It was manually disabled at
-> the 2026-10-29 audit; its configuration is not evidence of a run. Never run
-> that script on a developer machine, a production host or next to a real
-> world.
+> **Warning: this path used to start a Minecraft server.** The Ward harness
+> (`ward_ci.sh`, `ward_guard.py` and `.github/workflows/ward.yml`) was archived
+> on 2026-11-05 into `archived/tools/ward/`. The workflow file is no longer
+> under `.github/workflows/`, so GitHub does not run it, and nothing in the live
+> repository starts, connects to or tests against a Minecraft server. Never run
+> the archived script on a developer machine, a production host or next to a
+> real world.
 
-- `ward_ci.sh` orchestrates install, lockdown, tests and cleanup; it refuses
-  to run outside GitHub Actions.
-- `ward_guard.py` seeds locked `server.properties`, checks listeners and
-  discovers packs with Ward tests.
-- `tests/` contains offline guard tests; the "server" there is a plain Python
-  socket, not Minecraft.
+- `archived/tools/ward/ward_ci.sh` orchestrated install, lockdown, tests and
+  cleanup; it refused to run outside GitHub Actions.
+- `archived/tools/ward/ward_guard.py` seeded locked `server.properties`,
+  checked listeners and discovered packs with Ward tests.
+- `tests/test_ward_guard.py` still runs in the normal suite against the
+  archived module, so the isolation rules stay asserted if it is ever restored.
