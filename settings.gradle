@@ -5,11 +5,6 @@
 //   1. Plugin repositories (pluginManagement).
 //   2. Auto-discovering every buildable subproject under mods/, packs/,
 //      examples/ and wiring it into the multi-project build.
-//
-// Nothing in this file should need editing when a new mod/pack subproject is
-// added - drop a build.gradle(.kts) anywhere under those three roots and it
-// is picked up automatically. Edit EXCLUDED_PROJECT_DIRS below only when a
-// subproject must be deliberately kept out of the Gradle build.
 // =============================================================================
 
 pluginManagement {
@@ -22,70 +17,59 @@ pluginManagement {
 
 rootProject.name = 'vortaforge-core'
 
-// -----------------------------------------------------------------------
-// Roots to scan for subprojects. Each entry is a top-level directory
-// relative to the repo root; every build.gradle(.kts) found underneath it
-// (at any nesting depth) becomes a Gradle subproject.
-//
-// 'archived/' is deliberately NOT scanned: everything there is disarmed (see
-// archived/archive.json) and must never become a buildable subproject again.
-// 'packs/' stays listed so the discovery summary shows it as empty rather
-// than silently vanishing; datapacks were retired on 2026-11-05.
-// -----------------------------------------------------------------------
 def SCAN_ROOTS = ['mods', 'packs', 'examples']
+def EXCLUDED_PROJECT_DIRS = []
 
-// -----------------------------------------------------------------------
-// Subprojects to skip entirely (kept as files on disk, not wired into the
-// Gradle build). Paths are relative to the repo root. A reason is required
-// for every entry so future edits know why it's here instead of having to
-// dig through git blame.
-// -----------------------------------------------------------------------
-def EXCLUDED_PROJECT_DIRS = [
-    // Intentionally empty: the only entry (packs/RTWrapper/rtwrapper-fabric)
-    // moved to archived/packs/RTWrapper on 2026-11-05, and archived/ is not a
-    // scan root. Keep the map so a future exclusion has an obvious home.
-]
-
-// Set debugSettings=1 on the command line (-PdebugSettings=1) for verbose
-// per-directory discovery logging. Off by default to keep normal `gradle
-// tasks` / `gradle build` output readable.
 def DEBUG = startParameter.projectProperties.get('debugSettings') == '1'
-def debugLog = { String msg -> if (DEBUG) println "[settings:debug] ${msg}" }
 
-println "[settings] vortaforge-core: discovering subprojects under ${SCAN_ROOTS.join(', ')}"
+// --- ANSI Renk Kodları ---
+def RESET   = "\u001B[0m"
+def BLACK   = "\u001B[30m"
+def RED     = "\u001B[31m"
+def GREEN   = "\u001B[32m"
+def YELLOW  = "\u001B[33m"
+def BLUE    = "\u001B[34m"
+def PURPLE  = "\u001B[35m"
+def CYAN    = "\u001B[36m"
+def WHITE   = "\u001B[37m"
+def BOLD    = "\u001B[1m"
 
-// -----------------------------------------------------------------------
-// Recursively finds every build.gradle / build.gradle.kts under `base`
-// and includes it as a Gradle subproject at path ":<base>:<relative-dir>".
-// Skips:
-//   - anything inside a build/ or .gradle/ directory (build output, never
-//     a real subproject definition)
-//   - anything listed in EXCLUDED_PROJECT_DIRS (with a logged reason)
-// Returns the number of subprojects it included, for the summary below.
-// -----------------------------------------------------------------------
+// Dinamik ve renkli loglama fonksiyonları
+def debugLog  = { String msg -> if (DEBUG) println "${CYAN}[settings:debug]${RESET} ${msg}" }
+def successLog= { String msg -> if (DEBUG) println "${GREEN}[settings:success]${RESET} ${BOLD}${msg}${RESET}" }
+def warnLog   = { String msg -> println "${YELLOW}[settings:warn]${RESET} ${msg}" }
+def skipLog   = { String msg -> if (DEBUG) println "${PURPLE}[settings:skip]${RESET} ${msg}" }
+
+println "${BLUE}[settings]${RESET} vortaforge-core: discovering subprojects under ${SCAN_ROOTS.join(', ')}"
+debugLog("Root directory (rootDir): ${rootDir}")
+debugLog("Active SCAN_ROOTS: ${SCAN_ROOTS}")
+debugLog("Debug mode (DEBUG) is enabled (-PdebugSettings=1)")
+
 def includeIfGradle = { String base ->
+    debugLog("--- Starting scan for root: '${base}' ---")
     File baseDir = file(base)
     if (!baseDir.exists() || !baseDir.isDirectory()) {
-        println "[settings] WARNING: scan root '${base}' does not exist - skipping (0 subprojects)."
+        warnLog("Scan root '${base}' does not exist - skipping (0 subprojects).")
         return 0
     }
+    debugLog("Scan root '${base}' absolute path: ${baseDir.absolutePath}")
 
     int includedCount = 0
-    // eachFileRecurse yields files in filesystem order, which differs between
-    // OSes/filesystems. Collect first and sort by path so the include order
-    // (and therefore `gradle projects` / CI log output) is deterministic.
     List<File> buildFiles = []
+    
     baseDir.eachFileRecurse { File f ->
         if (f.name == 'build.gradle' || f.name == 'build.gradle.kts') {
             buildFiles << f
         }
     }
-    buildFiles.sort { it.path }.each { File f ->
+    debugLog("Total candidate build files found under '${base}': ${buildFiles.size()}")
 
+    buildFiles.sort { it.path }.each { File f ->
         File dir = f.parentFile
+
         if (dir.path.contains(File.separator + 'build' + File.separator) ||
             dir.path.contains(File.separator + '.gradle' + File.separator)) {
-            debugLog("ignoring ${f} (inside a build/.gradle output directory)")
+            skipLog("Ignored ${f.name} (inside build/.gradle output directory)")
             return
         }
 
@@ -93,36 +77,35 @@ def includeIfGradle = { String base ->
         def exclusionReason = EXCLUDED_PROJECT_DIRS.find { excludedPath, reason ->
             relToRoot == excludedPath || relToRoot.startsWith(excludedPath + '/')
         }?.value
+
         if (exclusionReason != null) {
-            println "[settings] excluding ${relToRoot} (${exclusionReason})"
+            warnLog("Excluding ${relToRoot} -> Reason: ${exclusionReason}")
             return
         }
 
         String rel = baseDir.toPath().relativize(dir.toPath()).toString().replace(File.separator, ':')
-        def path = ":${base}:${rel}"
+        def path = rel.isEmpty() ? ":${base}" : ":${base}:${rel}"
+
         if (findProject(path)) {
-            debugLog("skipping ${path} - already included")
+            skipLog("Skipped ${path} - already included")
             return
         }
 
         include(path)
         project(path).projectDir = dir
         includedCount++
-        debugLog("included ${path} -> ${dir}")
+        successLog("Included project: ${path} -> ${dir}")
     }
+
+    debugLog("--- Finished scan for root: '${base}'. Total included: ${includedCount} ---")
     return includedCount
 }
 
-// -----------------------------------------------------------------------
-// Run discovery for every scan root and print a one-line-per-root summary
-// so `gradle projects` output and CI logs make it obvious, at a glance,
-// how many subprojects were found where - without needing -PdebugSettings.
-// -----------------------------------------------------------------------
 def discoverySummary = SCAN_ROOTS.collectEntries { root -> [(root): includeIfGradle(root)] }
 
-println "[settings] subproject discovery summary:"
+println "${BLUE}[settings]${RESET} subproject discovery summary:"
 discoverySummary.each { root, count ->
-    println "[settings]   ${root}/ -> ${count} subproject(s)"
+    println "  ${GREEN}•${RESET} ${root}/ -> ${BOLD}${count}${RESET} subproject(s)"
 }
-println "[settings]   total: ${discoverySummary.values().sum()} subproject(s), " +
+println "${BLUE}[settings]${RESET} total: ${BOLD}${discoverySummary.values().sum()}${RESET} subproject(s), " +
         "${EXCLUDED_PROJECT_DIRS.size()} excluded"
