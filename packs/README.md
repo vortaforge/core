@@ -17,7 +17,7 @@ maintainer also hit real problems as a plain player using a datapack with no
 client mod installed, and the same class of problems kept coming back in pull
 requests.
 
-`scripts/datapack_guard.py` refuses new datapack content here in
+`scripts/repo/datapack_guard.py` refuses new datapack content here in
 `pre-commit`, `pre-push` and CI. This README is the only file this directory
 is allowed to contain.
 

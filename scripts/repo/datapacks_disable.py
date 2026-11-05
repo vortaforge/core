@@ -3,7 +3,7 @@
 
 The switch itself is the repository-root file `datapacks.disabled.json`
 (`"enabled": false`). Everything that could produce, ship or run a datapack
-reads it: scripts/datapack_guard.py, the Gradle tasks (checkDatapackSwitch,
+reads it: scripts/repo/datapack_guard.py, the Gradle tasks (checkDatapackSwitch,
 checkArchive, zipPacks, mergeDatapacks) and CI. A missing switch file counts as
 **disabled** - fail-closed.
 
@@ -32,7 +32,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 SWITCH = ROOT / "datapacks.disabled.json"
 MARKER = ROOT / "archived" / "datapacks.disabled"
 REGISTRY = ROOT / "archived" / "archive.json"
@@ -59,7 +59,7 @@ policy, the reason and the list of everything that was archived.
 Re-enabling is deliberate and needs the token recorded in
 datapacks.disabled.json:
 
-    python3 scripts/datapacks_disable.py enable --token <token> --reason "..."
+    python3 scripts/repo/datapacks_disable.py enable --token <token> --reason "..."
 """
 
 
@@ -173,7 +173,7 @@ def cmd_verify(_args: argparse.Namespace) -> int:
     if check.is_file():
         proc = subprocess.run([sys.executable, str(check)], cwd=ROOT, capture_output=True, text=True, check=False)
         if proc.returncode != 0:
-            problems.append("scripts/check_archive.py failed:\n" + (proc.stdout + proc.stderr).strip())
+            problems.append("scripts/repo/check_archive.py failed:\n" + (proc.stdout + proc.stderr).strip())
 
     for problem in problems:
         print(f"[datapacks_disable] ERROR {problem}")

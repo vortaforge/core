@@ -13,7 +13,7 @@ import tempfile
 import unittest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SCRIPT = os.path.join(ROOT, "scripts", "origin_watermarks.py")
+SCRIPT = os.path.join(ROOT, "scripts", "repo", "origin_watermarks.py")
 
 
 def run_watermarks(script, *args):
@@ -47,8 +47,8 @@ class WatermarkCheckerBehaviour(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="wm-test-")
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
-        os.makedirs(os.path.join(self.tmp, "scripts"))
-        shutil.copy(SCRIPT, os.path.join(self.tmp, "scripts", "origin_watermarks.py"))
+        os.makedirs(os.path.join(self.tmp, "scripts", "repo"))
+        shutil.copy(SCRIPT, os.path.join(self.tmp, "scripts", "repo", "origin_watermarks.py"))
         open(os.path.join(self.tmp, "build.gradle"), "w").close()
         fn = os.path.join(self.tmp, "packs", "demo", "data", "demo", "function")
         os.makedirs(fn)
@@ -56,7 +56,7 @@ class WatermarkCheckerBehaviour(unittest.TestCase):
             fh.write('{"pack": {"description": "x", "min_format": 1, "max_format": 1}}')
         with open(os.path.join(fn, "a.mcfunction"), "w") as fh:
             fh.write("say hi\n")
-        self.script = os.path.join(self.tmp, "scripts", "origin_watermarks.py")
+        self.script = os.path.join(self.tmp, "scripts", "repo", "origin_watermarks.py")
         self.mark = os.path.join(fn, "_vc_origin.mcfunction")
 
     def test_missing_watermark_fails_then_write_fixes_it(self):

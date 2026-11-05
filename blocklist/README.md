@@ -6,9 +6,9 @@
 Account-level blocklist for the retired datapack programme.
 
 - `blocklist.json` — the list itself (schema: the file's own `$comment`s and
-  the table below). Read by `scripts/datapack_guard.py` and mirrored
+  the table below). Read by `scripts/repo/datapack_guard.py` and mirrored
   organisation-wide by `vortaforge/.github`.
-- Enforcement points: `.githooks/pre-commit`, `.githooks/pre-push`, the
+- Enforcement points: `scripts/git/hooks/pre-commit`, `scripts/git/hooks/pre-push`, the
   `datapack-guard` job in `.github/workflows/quality.yml`, and the
   `Datapack blocklist sync` workflow in `vortaforge/.github`.
 
@@ -38,7 +38,7 @@ gh api users/<login> --jq '.id'
 
 # 2. Add an entry and validate it
 $EDITOR blocklist/blocklist.json
-python3 scripts/datapack_guard.py --audit-refs --blocklist
+python3 scripts/repo/datapack_guard.py --audit-refs --blocklist
 
 # 3. Mirror it org-wide (from the vortaforge/.github repository)
 python3 scripts/blocklist_sync.py --check

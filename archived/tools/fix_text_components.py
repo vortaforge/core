@@ -34,9 +34,9 @@ Idempotent, and reports every component it changes.
 
 Usage
 -----
-    python3 scripts/fix_text_components.py                 # report only
-    python3 scripts/fix_text_components.py --fix           # rewrite in place
-    python3 scripts/fix_text_components.py --root packs/X  # limit the scan
+    python3 archived/tools/fix_text_components.py                 # report only
+    python3 archived/tools/fix_text_components.py --fix           # rewrite in place
+    python3 archived/tools/fix_text_components.py --root packs/X  # limit the scan
 """
 
 from __future__ import annotations

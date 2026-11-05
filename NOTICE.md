@@ -17,7 +17,7 @@ next to it:
   shared dependency bump or API change can silently break a sibling mod.
 - `packs/` — **Empty. Datapacks are retired (2026-11-05).** Every pack, its
   generator, linter and test harness is archived and disarmed in
-  `archived/archive.json`. `scripts/datapack_guard.py` refuses new datapack
+  `archived/archive.json`. `scripts/repo/datapack_guard.py` refuses new datapack
   content here, in `pre-commit`, `pre-push` and CI. See `docs/ARCHIVAL.md`.
 - `scripts/` — Helper tooling, lower trust by default. Review before
   running locally.
@@ -25,7 +25,7 @@ next to it:
   same security posture as `mods/`. The datapack template was archived.
 - `archived/` — Frozen, reference only, hard-disarmed.
 - `blocklist/` — Account blocklist enforced by the guard.
-- `.githooks/` — `pre-commit` / `pre-push` guard hooks.
+- `scripts/git/hooks/` — `pre-commit` / `pre-push` guard hooks.
 
 If your change spans both a mod and a datapack, it will be refused: the
 datapack half cannot land. Say so in the PR description instead, so the
@@ -53,7 +53,7 @@ datapack part can be redirected to an issue.
 
 ## Datapacks specifics
 
-- **Datapacks are retired.** Do not submit one. `scripts/datapack_guard.py`
+- **Datapacks are retired.** Do not submit one. `scripts/repo/datapack_guard.py`
   refuses new packs, new `.mcfunction` files and revived archived tooling in
   `pre-commit`, `pre-push` and CI (`datapack-guard` job), and
   `datapacks.disabled.json` is the switch that records the decision.
@@ -93,7 +93,7 @@ or clearly malicious cases, the contributor being blocked from the repo.
 
 > **⚠️ Warning:** the Ward CI job that used to start an isolated, loopback-only Minecraft test server is archived (`archived/tools/ward/`) and inert. Do not start a server yourself for a PR check, and never run `archived/tools/ward/ward_ci.sh` anywhere.
 
-- [ ] `git config core.hooksPath .githooks` is set, so the guard runs locally
+- [ ] `git config core.hooksPath scripts/git/hooks` is set, so the guard runs locally
 - [ ] `./gradlew ci` passes (it runs the guard and the archive checks)
 - [ ] The PR does not add datapack content or revive archived tooling
 - [ ] PR description explains **what** changed and **why**

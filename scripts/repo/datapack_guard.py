@@ -16,7 +16,7 @@ Modes (combine freely; at least one source of changes is required)
                            "STATUS<TAB>path" pairs (STATUS in A/M/D/R/C/T)
   --audit-refs             check every local branch/tag name against the
                            blocklist's ref_patterns (used by the sync job)
-  --check-archive          run scripts/check_archive.py and treat its errors
+  --check-archive          run scripts/repo/check_archive.py and treat its errors
                            as this script's errors (default in CI mode)
 
 Policy flags
@@ -262,7 +262,7 @@ def rule_for_change(status: str, path: str) -> tuple[str, str, str] | None:
         pack_dir = "packs/" + (segments[1] if len(segments) > 1 else "")
         return ("warn", "live-packs-removal",
                 f"removing live datapack content from {pack_dir}: confirm archived/archive.json "
-                f"has a disarmed entry and run scripts/check_archive.py")
+                f"has a disarmed entry and run scripts/repo/check_archive.py")
 
     # 3. Resurrection of retired tooling.
     for retired in RETIRED_LIVE_PATHS:
@@ -445,9 +445,9 @@ def check_refs(report: Report, blocklist: Blocklist, root: Path) -> None:
 # Archive registry delegation
 # ---------------------------------------------------------------------------
 def check_archive(report: Report, root: Path) -> bool:
-    script = root / "scripts" / "check_archive.py"
+    script = root / "scripts" / "repo" / "check_archive.py"
     if not script.is_file():
-        report.add("error", "archive-check", "scripts/check_archive.py",
+        report.add("error", "archive-check", "scripts/repo/check_archive.py",
                    "archive validator is missing; the kill switch cannot be verified")
         return False
     proc = subprocess.run([sys.executable, str(script)], cwd=root, capture_output=True,
@@ -459,7 +459,7 @@ def check_archive(report: Report, root: Path) -> bool:
         elif line.startswith("[check_archive] warn:"):
             report.add("warn", "archive-registry", "archived/archive.json", line.split("warn:", 1)[1].strip())
     if proc.returncode != 0 and not any(f.rule == "archive-registry" for f in report.findings):
-        report.add("error", "archive-check", "scripts/check_archive.py",
+        report.add("error", "archive-check", "scripts/repo/check_archive.py",
                    f"check_archive exited {proc.returncode}")
     return proc.returncode == 0
 
@@ -532,7 +532,7 @@ def main(argv: list[str]) -> int:
         opts = parse_args(argv)
     except SystemExit as exc:
         return int(exc.code or 0)
-    root = Path(opts["repo_root"]).resolve() if opts["repo_root"] else Path(__file__).resolve().parent.parent
+    root = Path(opts["repo_root"]).resolve() if opts["repo_root"] else Path(__file__).resolve().parents[2]
 
     modes = []
     if opts["pr"]:

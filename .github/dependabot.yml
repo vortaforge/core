@@ -25,10 +25,10 @@ updates:
     open-pull-requests-limit: 9
 
   # Pip (Python) dependency updates. The only requirements.txt /
-  # pyproject.toml in the tree live in scripts/gui_generator, so "/" never
+  # pyproject.toml in the tree live in archived/tools/gui-generator, so "/" never
   # matched anything.
   - package-ecosystem: "pip"
-    directory: "/scripts/gui_generator"
+    directory: "/archived/tools/gui-generator"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 9

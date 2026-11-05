@@ -18,7 +18,7 @@ opening a public issue.
 Do not include working exploit code or live payloads in public issues or pull requests (see "Prohibited content and practices" below).
 
 Please include:
-- Affected project/path (e.g. `mods/afk-manager`, `scripts/datapack_guard.py`)
+- Affected project/path (e.g. `mods/afk-manager`, `scripts/repo/datapack_guard.py`)
 - Steps to reproduce, or a minimal example
 - Impact (what an attacker could actually do)
 - Minecraft/Fabric/Loom version, if relevant
@@ -35,11 +35,11 @@ This repo consolidates multiple projects with different security postures:
 | Area | Status |
 |---|---|
 | `mods/` | Fabric mods. Compiled, type-safe. |
-| `packs/` | **Empty since 2026-11-05.** The datapack programme was retired; every pack is audited, disarmed and frozen under `archived/packs/` (`archived/archive.json`). New datapack content is refused by `scripts/datapack_guard.py`. |
+| `packs/` | **Empty since 2026-11-05.** The datapack programme was retired; every pack is audited, disarmed and frozen under `archived/packs/` (`archived/archive.json`). New datapack content is refused by `scripts/repo/datapack_guard.py`. |
 | `scripts/` | Helper tooling. Treat as lower trust; review before running. |
 | `examples/` | Templates and sample code. Not intended for production use. |
 | `archived/` | **Every** retired project, kept for reference only — never deploy without review. Tracked in `archived/archive.json` (schema v2, every entry `"disarmed": true`); see `archived/README.md` and `docs/ARCHIVAL.md`. Nothing here is built, linted, tested or executed. |
-| `blocklist/`, `scripts/datapack_guard.py`, `datapacks.disabled.json` | The retirement's enforcement: account blocklist, fail-closed guard and kill switch. Weakening them is a security-relevant change. |
+| `blocklist/`, `scripts/repo/datapack_guard.py`, `datapacks.disabled.json` | The retirement's enforcement: account blocklist, fail-closed guard and kill switch. Weakening them is a security-relevant change. |
 
 Datapacks and Fabric mods carry different security postures by nature; where
 practical, security-sensitive logic belongs in a Fabric mod (compiled and
@@ -57,9 +57,9 @@ actually runs, and what each tool does and does not prove:
 
 | Tool | Invoked by | Checks | Does **not** check |
 |---|---|---|---|
-| `scripts/datapack_guard.py` | `pre-commit`, `pre-push`, and the `datapack-guard` job in `quality.yml`; `guardArchives` in `verifyProject` | No new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent | Whether a rule should have an exception; whether an account is a datapack developer beyond the public-profile rule |
-| `scripts/check_archive.py` | `./gradlew checkArchive`, `scripts/datapacks_disable.py verify`, the `datapack-guard` CI job | registry shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/` | Historical accuracy of a `reason` field |
-| `python3 scripts/datapacks_disable.py verify` | `datapack-guard` CI job, manual | switch + marker + registry agree, no live datapack tooling | Nothing runtime; it is a repository-state check |
+| `scripts/repo/datapack_guard.py` | `pre-commit`, `pre-push`, and the `datapack-guard` job in `quality.yml`; `guardArchives` in `verifyProject` | No new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent | Whether a rule should have an exception; whether an account is a datapack developer beyond the public-profile rule |
+| `scripts/repo/check_archive.py` | `./gradlew checkArchive`, `scripts/repo/datapacks_disable.py verify`, the `datapack-guard` CI job | registry shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/` | Historical accuracy of a `reason` field |
+| `python3 scripts/repo/datapacks_disable.py verify` | `datapack-guard` CI job, manual | switch + marker + registry agree, no live datapack tooling | Nothing runtime; it is a repository-state check |
 | `python3 -m unittest discover -s scripts/tests` | `verifyProject` / the CI graph **when run** | guard/blocklist/switch behaviour, archive invariants, action pinning, common credential shapes, the static site's retirement notices | GitHub org settings, all secret types, runtime behaviour; see `scripts/README.md` for gaps |
 | **Archived:** Spyglass + strict JSON (`archived/tools/datapack-lint/`), `checkPacks`, `checkOriginWatermarks`, `mergeDatapacks`, `build_release.py --check`, Ward (`archived/tools/ward/`) | nothing - archived 2026-11-05 | were the static/runtime datapack checks | not run any more; kept as reference for a future restore |
 | `./gradlew buildAll` | `quality.yml` via `packageProject` in the `ci` graph | the **Gradle** subprojects (mods and other discovered Gradle projects) | Anything non-Gradle |

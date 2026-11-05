@@ -11,7 +11,7 @@ by the Gradle build or by CI. `settings.gradle` does not scan this directory.
 `packs/` is empty, `archived/archive.json` lists every retired project with
 `"disarmed": true`, and `datapacks.disabled.json` is the switch that keeps it
 that way. New datapack content is refused in pre-commit, pre-push and CI by
-`scripts/datapack_guard.py`.
+`scripts/repo/datapack_guard.py`.
 
 ## Why
 
@@ -40,7 +40,7 @@ kept showing up in pull requests.
 | Path | Contents | Registry ids |
 |---|---|---|
 | `archived/packs/` | The 12 retired packs (11 datapacks + 1 resource pack), moved verbatim with their git history. | `dailybonus` … `vf-macro` |
-| `archived/tools/` | Datapack generators, linters and test harnesses: `dpgen/`, `datapack-lint/`, `build-release/`, `ward/` (with its workflow), `datapack-blocker/` (Fabric mod). | `dpgen`, `datapack-lint`, `build-release`, `ward`, `datapack-blocker-mod` |
+| `archived/tools/` | Datapack generators, linters and test harnesses: `dpgen/`, `gui-generator/` (`guigenmc`), `datapack-lint/`, `build-release/`, `ward/` (with its workflow), `datapack-blocker/` (Fabric mod), plus the spent one-shots `fix_text_components.py` and `remove_handover.py`. | `dpgen`, `gui-generator`, `datapack-lint`, `build-release`, `ward`, `datapack-blocker-mod`, `fix-text-components`, `remove-handover` |
 | `archived/build/` | The datapack Gradle logic that used to live in the root `build.gradle`, extracted **verbatim, as separate files** (see `probe.lock` for the exact source line ranges). | `build-*` |
 | `archived/examples/` | `template-datapack/` — the example pack template. | `template-datapack` |
 | `archived/docs/` | `dynamic-command-gate.md`, `static-analysis-findings-2026-10-30.md`. | `dynamic-command-gate-doc`, `static-analysis-findings` |
@@ -70,10 +70,10 @@ guards, Ward-test exclusions, dry-run safety) against these files.
 ## Validation
 
 ```bash
-python3 scripts/check_archive.py            # authoritative registry check
+python3 scripts/repo/check_archive.py            # authoritative registry check
 ./gradlew checkArchive                      # same, through Gradle
 ./gradlew checkDatapackSwitch               # kill switch engaged?
-python3 scripts/datapacks_disable.py verify # switch + marker + registry + empty packs/
+python3 scripts/repo/datapacks_disable.py verify # switch + marker + registry + empty packs/
 ./gradlew printArchiveList                  # human-readable list
 ```
 
@@ -104,13 +104,13 @@ successor) into failures.
 | Switch | `datapacks.disabled.json` | `"enabled": false`. Missing or unreadable counts as disabled. |
 | Marker | `archived/datapacks.disabled` | Human-readable explanation. |
 | Token | `datapacks.disabled.json#reenable_token` | Required to re-enable. |
-| CLI | `scripts/datapacks_disable.py` | `status`, `disable`, `enable`, `verify`. |
-| Guard | `scripts/datapack_guard.py` | Blocks new datapack content anywhere live. |
+| CLI | `scripts/repo/datapacks_disable.py` | `status`, `disable`, `enable`, `verify`. |
+| Guard | `scripts/repo/datapack_guard.py` | Blocks new datapack content anywhere live. |
 
 Re-enabling is deliberate:
 
 ```bash
-python3 scripts/datapacks_disable.py enable \
+python3 scripts/repo/datapacks_disable.py enable \
     --token VORTAFORGE-DATAPACKS-2026-11-05-DISARMED \
     --reason "why this is being re-enabled, in one sentence"
 ```

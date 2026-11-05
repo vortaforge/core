@@ -37,4 +37,4 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 node_modules/
-/scripts/gui_generator/dist/
+/archived/tools/gui-generator/dist/

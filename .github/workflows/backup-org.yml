@@ -1,6 +1,6 @@
 # .github/workflows/backup-org.yml
 #
-# Runs scripts/backup-org.sh on a GitHub-hosted runner and uploads the
+# Runs scripts/ops/backup-org.sh on a GitHub-hosted runner and uploads the
 # resulting archive as a workflow artifact. Entirely non-interactive - the
 # script is the same one used locally, driven here through environment
 # variables instead of prompts (see ARCHIVE_PASSWORD below).
@@ -116,12 +116,12 @@ jobs:
       # itself aborted on a fresh BACKUP_DIR, so this step would not have
       # been meaningful before.)
       - name: Dry run
-        run: bash scripts/backup-org.sh --dry-run --no-source
+        run: bash scripts/ops/backup-org.sh --dry-run --no-source
         env:
           GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
 
       - name: Run backup
-        run: bash scripts/backup-org.sh
+        run: bash scripts/ops/backup-org.sh
         env:
           GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
           ARCHIVE_PASSWORD: ${{ secrets.BACKUP_ARCHIVE_PASSWORD }}

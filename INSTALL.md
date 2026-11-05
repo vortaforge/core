@@ -56,16 +56,16 @@ in `core`; never hand-edit the mirror.
 
 ```bash
 cd core
-git config core.hooksPath .githooks
+git config core.hooksPath scripts/git/hooks
 ```
 
 ## 4. Verify
 
 ```bash
-python3 scripts/check_archive.py --strict          # 28 entries, 0 errors
-python3 scripts/datapacks_disable.py verify        # 0 problems
-python3 scripts/origin_watermarks.py --check       # 15 watermarks, 11 datapacks
-python3 -m unittest discover -s scripts/tests      # 84 tests
+python3 scripts/repo/check_archive.py --strict          # 31 entries, 0 errors
+python3 scripts/repo/datapacks_disable.py verify        # 0 problems
+python3 scripts/repo/origin_watermarks.py --check       # 15 watermarks, 11 datapacks
+python3 -m unittest discover -s scripts/tests      # 90 tests
 node scripts/tests/site_behavior.test.mjs
 ./gradlew checkDatapackSwitch checkArchive verifyProject
 ```
@@ -81,15 +81,15 @@ Expected end state:
 ## 5. Day-to-day use
 
 ```bash
-python3 scripts/datapacks_disable.py status                       # is it off?
+python3 scripts/repo/datapacks_disable.py status                       # is it off?
 ./gradlew printArchiveList                                        # what was archived, and why
-python3 scripts/datapack_guard.py --staged --protect --blocklist  # manual check
+python3 scripts/repo/datapack_guard.py --staged --protect --blocklist  # manual check
 ```
 
 ## 6. Re-enabling (deliberate)
 
 ```bash
-python3 scripts/datapacks_disable.py enable \
+python3 scripts/repo/datapacks_disable.py enable \
     --token VORTAFORGE-DATAPACKS-2026-11-05-DISARMED \
     --reason "one sentence explaining why this is being re-enabled"
 ```
@@ -105,10 +105,10 @@ complete reversal procedure is in [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md).
 
 - The patch does **not** rewrite the `_vc_origin.mcfunction` watermarks of the
   archived packs. Those are provenance records that name the historical
-  `packs/<name>` source path, and `scripts/origin_watermarks.py` understands the
+  `packs/<name>` source path, and `scripts/repo/origin_watermarks.py` understands the
   moved tree.
 - **Verified:** `check_archive --strict`, `datapacks_disable verify`,
-  `origin_watermarks --check`, 84 Python tests, the Node site test, Groovy
+  `origin_watermarks --check`, 90 Python tests, the Node site test, Groovy
   parsing, and Gradle 9.8.2 (JDK 21) with `guardArchives checkDatapackSwitch
   checkArchive verifyMod testRepository writeProjectInventory` plus
   `printArchiveList`.

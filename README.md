@@ -56,12 +56,12 @@ the project name, so the description said nothing about what is in here.
 >
 > **Blocked automatically:** new datapack content, new packs, revival of the
 > archived tooling and blocklisted datapack developers are refused by
-> `scripts/datapack_guard.py` in `pre-commit`, `pre-push` and CI
+> `scripts/repo/datapack_guard.py` in `pre-commit`, `pre-push` and CI
 > (`.github/workflows/quality.yml`, job `datapack-guard`).
 >
 > Read [`archived/README.md`](archived/README.md) for the policy and
-> [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) for the whole system in Turkish and
-> English, including how to install and how to re-enable it deliberately.
+> [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) for the whole system, including how to
+> install it and how to re-enable it deliberately.
 
 ## Why datapacks are not accepted any more
 
@@ -70,7 +70,7 @@ the project name, so the description said nothing about what is in here.
 > permanent policy decision, not a temporary pause: pull requests that add
 > `.mcfunction` files, a `data/<namespace>/` tree, a `pack.mcmeta`, a datapack
 > generator or a datapack test harness are closed automatically by
-> `scripts/datapack_guard.py`. If a feature cannot be built as a Fabric mod, it
+> `scripts/repo/datapack_guard.py`. If a feature cannot be built as a Fabric mod, it
 > is not built here.
 
 The retirement list below is why. It is written from the maintainer's own
@@ -188,11 +188,15 @@ time.
 
 - `mods/`        — Fabric mods (Gradle subprojects, auto-discovered by `settings.gradle`)
 - `packs/`       — **Empty.** Datapacks were retired on 2026-11-05; the guard refuses new content here.
-- `archived/`    — Every retired project, frozen and disarmed: `archived/packs/`, `archived/tools/`, `archived/build/` (the datapack Gradle logic extracted from the root `build.gradle`), `archived/docs/`, `archived/examples/`. Registry: `archived/archive.json` (schema v2), validate with `scripts/check_archive.py`.
+- `archived/`    — Every retired project, frozen and disarmed: `archived/packs/`, `archived/tools/` (includes the archived `guigenmc` GUI-datapack generator), `archived/build/` (the datapack Gradle logic extracted from the root `build.gradle`), `archived/docs/`, `archived/examples/`. Registry: `archived/archive.json` (schema v2), validate with `scripts/repo/check_archive.py`.
 - `blocklist/`   — Account blocklist (`blocklist.json`) enforced by the guard and mirrored org-wide by `vortaforge/.github`.
-- `.githooks/`   — Versioned `pre-commit` / `pre-push` hooks (`git config core.hooksPath .githooks`).
-- `scripts/`     — Helper scripts and tools (guard, switch, archive validator, gui generator)
-- `docs/`        — Maintainer notes, including [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md)
+- `scripts/`     — Maintainer tooling, grouped by what it owns:
+  - `scripts/repo/` — repository policy checks: the guard, the kill switch, the archive validator and the watermark checker.
+  - `scripts/git/`  — versioned `pre-commit` / `pre-push` hooks (`git config core.hooksPath scripts/git/hooks`).
+  - `scripts/ops/`  — operational helpers that a workflow calls, e.g. `backup-org.sh` (run by `backup-org.yml`).
+  - `scripts/site/` — the PHP data-snapshot builder for the landing page.
+  - `scripts/tests/`— offline regression tests for everything above.
+- `docs/`        — Maintainer notes: [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) explains the retirement, [`docs/MAINTAINER_GUIDE.md`](docs/MAINTAINER_GUIDE.md) the rules, and [`docs/SCORECARD.md`](docs/SCORECARD.md) scores every part of the repository.
 - `examples/`    — Example Fabric mods (the datapack template was archived)
 - `build-logic/` — Shared Gradle script (`shared-fabric-mod.gradle`) applied by the mod subprojects
 - `datapacks.disabled.json` — The kill switch (`"enabled": false`)
@@ -212,7 +216,7 @@ This repo uses Gradle to build all Fabric mod subprojects.
 ### Requirements
 
 - JDK 25
-- Node.js 20 (only for the offline website behaviour test) and Python 3 with pytest and an editable guigenmc install
+- Node.js 20 (only for the offline website behaviour test) and Python 3 with pytest
 - Gradle Wrapper (included, no separate Gradle install needed)
 - Network access for initial dependency downloads
 
@@ -236,8 +240,8 @@ per-module Gradle tasks:
 ./gradlew checkDatapackSwitch     # is the kill switch engaged?
 ./gradlew checkArchive            # is archived/archive.json valid and disarmed?
 ./gradlew printArchiveList        # what is archived, and why
-python3 scripts/datapacks_disable.py status
-python3 scripts/datapack_guard.py --staged --protect --blocklist
+python3 scripts/repo/datapacks_disable.py status
+python3 scripts/repo/datapack_guard.py --staged --protect --blocklist
 ```
 
 The datapack tasks (`zipPacks`, `mergeDatapacks`, `checkPacks`,
@@ -262,10 +266,9 @@ When enabled in GitHub, pushes, pull requests and manual dispatches can trigger
 `build.yml`, named **CI**. The workflow was manually disabled at the
 2026-10-29 status check; historical successful runs do not prove new runs are
 occurring. Its read-only `quality` job calls `quality.yml`, the reusable workflow
-that runs the canonical `./gradlew ci -PconfirmZip=yes` graph on Python 3.12
-and a guigenmc source/wheel package check. guigenmc declares Python 3.9+
-support, but there is currently no Python 3.9 CI job, so the minimum version
-is declared rather than CI-tested. Every job behind the reusable workflow's
+that runs the canonical `./gradlew ci -PconfirmZip=yes` graph on Python 3.12.
+The separate guigenmc build job was removed on 2026-11-05 with the package it
+packaged. Every job behind the reusable workflow's
 explicit quality gate must pass before its `verified` output is true; whether
 GitHub *requires* that gate for a merge is a repository-ruleset setting, not
 something this file can prove.

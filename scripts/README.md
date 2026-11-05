@@ -7,29 +7,46 @@ Helper tooling for this monorepo. `NOTICE.md` treats everything here as
 **lower trust by default**: inspect code and dependencies before use, and
 avoid running quality tooling with privileged credentials.
 
+## Layout
+
+Grouped by what each script owns, so a reader can tell policy from plumbing:
+
+| Directory | Holds |
+|---|---|
+| [`repo/`](repo/) | Repository policy checks: the guard, the kill switch, the archive validator, the watermark checker. |
+| [`git/hooks/`](git/hooks/) | Versioned `pre-commit` / `pre-push` hooks (`git config core.hooksPath scripts/git/hooks`). |
+| [`ops/`](ops/) | Operational helpers a workflow invokes, e.g. `backup-org.sh` (run by `.github/workflows/backup-org.yml`). |
+| [`site/`](site/) | `build_site_data.php`, the data-snapshot builder for the landing page. |
+| [`tests/`](tests/) | Offline regression tests for everything above. No network, no Minecraft. |
+
 ## Repository tooling
 
 | Script or test | Role when explicitly run |
 |---|---|
-| [`datapack_guard.py`](datapack_guard.py) | **The gate.** Fail-closed policy: no new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent. Runs in `pre-commit`, `pre-push`, CI (job `datapack-guard`) and Gradle (`guardArchives`). |
-| [`datapacks_disable.py`](datapacks_disable.py) | The kill-switch CLI: `status`, `disable`, `enable --token ... --reason ...`, `verify`. |
-| [`check_archive.py`](check_archive.py) | Validates `archived/archive.json` (schema v2): shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/`. Stdlib only. |
-| [`tests/`](tests/) | Python regression tests: guard/blocklist/switch behaviour, archive invariants, workflow-action pinning, credential patterns, credential-shape scan, the static site's retirement notices, plus offline tests for the archived Ward guard and release builder. |
-| [`origin_watermarks.py`](origin_watermarks.py) | Checks or generates the no-op provenance watermarks. `--check` does not modify sources. Kept for the archived packs; no build step invokes it any more. |
-| [`fix_text_components.py`](fix_text_components.py) | Rewrites selected text components; it can change files, so review it and the diff before use. |
-| [`backup-org.sh`](backup-org.sh) | Historical organization-backup tool. **Do not assume even `--dry-run` is non-destructive:** its current paths can remove or overwrite files. It handles privileged organization data and needs a separate safety review before any use. It was not run as part of this cleanup. |
+| [`repo/datapack_guard.py`](repo/datapack_guard.py) | **The gate.** Fail-closed policy: no new datapack content, no revived archived tooling, no blocklisted accounts, kill switch engaged, registry consistent. Runs in `pre-commit`, `pre-push`, CI (job `datapack-guard`) and Gradle (`guardArchives`). |
+| [`repo/datapacks_disable.py`](repo/datapacks_disable.py) | The kill-switch CLI: `status`, `disable`, `enable --token ... --reason ...`, `verify`. |
+| [`repo/check_archive.py`](repo/check_archive.py) | Validates `archived/archive.json` (schema v2): shape, hard-disable flags, path bijection, no workflows under `archived/`, empty `packs/`. Stdlib only. |
+| [`tests/`](tests/) | Python regression tests: guard/blocklist/switch behaviour, archive invariants, repository layout, workflow-action pinning, credential patterns, credential-shape scan, the static site's retirement notices, plus offline tests for the archived Ward guard and release builder. |
+| [`repo/origin_watermarks.py`](repo/origin_watermarks.py) | Checks or generates the no-op provenance watermarks. `--check` does not modify sources. Kept for the archived packs; no build step invokes it any more. |
+| [`ops/backup-org.sh`](ops/backup-org.sh) | Organization-backup tool driven by `.github/workflows/backup-org.yml` (manual dispatch only). It handles privileged organization data: read it before running it, and prefer the workflow, which passes its arguments through environment variables instead of prompts. |
 
-`verifyProject` wires the static linter and regression suites into the Gradle
-graph, along with provenance, mod, pack and archive checks. The workflow
-configuration describes that graph; it does not itself mean GitHub workflows
-are enabled or have run. Publishing remains paused pending human validation.
-See [`datapack_lint/README.md`](datapack_lint/README.md) for setup, network,
-cache, security override, exclusions, version coverage and warning semantics.
-Ward test files remain in source but are excluded from runtime pack ZIPs.
-Generated pack-root build output is also omitted; nested datapack function
-paths named `build` are retained. Normal Gradle packaging clears and recreates its generated `build/` output
-locations; keep personal files elsewhere. The merge dry-run now returns before
-clearing or creating its output directory.
+`verifyProject` wires the offline regression suites and the policy checks into
+the Gradle graph. The workflow configuration describes that graph; it does not
+itself mean GitHub workflows are enabled or have run. Publishing remains
+paused pending human validation.
+
+### Archived with the datapack programme
+
+`repo/` contains no datapack tooling: the guard blocks `scripts/gui_generator`
+and the other retired paths from coming back. Everything that emitted or
+rewrote datapack output is under [`archived/tools/`](../archived/tools/) and
+registered in `archived/archive.json`:
+
+| Archived tool | What it did | Why it is there |
+|---|---|---|
+| `gui-generator/` (`guigenmc`) | Turned a JSON menu spec into a GUI datapack (`.mcfunction` + `data/` + a zip). | Its output is a datapack. |
+| `fix_text_components.py` | Rewrote legacy text-component JSON inside pack function files. | Only had datapack files as input. |
+| `remove_handover.py` | Deleted `HANDOVER*.md` and stripped one README block during the retirement. | Spent one-shot; nothing it targets exists. |
 
 ## Audit retirement and coverage gaps
 
@@ -63,23 +80,20 @@ These are **not a full replacement** for the old audits. In particular:
 
 ## Self-contained tools
 
-Each has its own README, licence and dependency manifest, and is versioned
-independently of the repository tooling above.
+None live here any more. Each self-contained tool had its own README, licence
+and dependency manifest and was versioned independently of the repository
+tooling above; the last one, `guigenmc`, was archived on 2026-11-05 because it
+emits datapack output.
 
-| Directory | What it is | Manifest |
-|---|---|---|
-| [`gui_generator/`](gui_generator/) | `guigenmc` — generates a GUI datapack from a menu spec; ships a browser UI and tests. | `pyproject.toml`, `requirements.txt` |
+`guigenmc` emitted datapack output, so it was a generator all along: its output
+could never be checked into `packs/` (the guard blocks it). It now lives in
+[`archived/tools/gui-generator/`](../archived/tools/gui-generator/) with the
+programme it served, registered in `archived/archive.json`. `archived/tools/dpgen`
+was retired earlier for the same reason.
 
-`guigenmc` emits datapack output, so it is a generator: its output cannot be
-checked into `packs/` (the guard blocks it), and using it is a deliberate,
-local act, not a repository contribution. `archived/tools/dpgen` was retired
-with the programme.
-
-Dependabot configuration used to watch `scripts/dpgen` and
-`scripts/datapack_lint`; those paths are archived, so their entries were
-removed. `scripts/gui_generator` is still watched. Dependency proposals require
-human review. The configured quality workflow tests guigenmc on Python 3.12
-only; its declared Python 3.9 minimum is not covered by that job.
+Dependabot watches `archived/tools/gui-generator` for pip updates so the
+archived package does not rot into a vulnerable state while it sits unbuilt;
+dependency proposals require human review. Nothing builds or installs it.
 
 ## Removed from here
 

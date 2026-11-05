@@ -47,9 +47,9 @@ Exit code 1 on any error. Warnings never fail unless --strict is passed.
 
 Usage
 -----
-    python3 scripts/check_archive.py            # human output
-    python3 scripts/check_archive.py --json     # machine output
-    python3 scripts/check_archive.py --strict   # warnings become failures
+    python3 scripts/repo/check_archive.py            # human output
+    python3 scripts/repo/check_archive.py --json     # machine output
+    python3 scripts/repo/check_archive.py --strict   # warnings become failures
 """
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 REG = ROOT / "archived" / "archive.json"
 SCHEMA_VERSION = 2
 
@@ -80,6 +80,7 @@ LIVE_ROOTS = ("packs", "mods", "scripts", "examples", "build-logic", ".github")
 # Paths that must not exist as live datapack tooling any more.
 LIVE_DATAPACK_PATHS = (
     "scripts/dpgen",
+    "scripts/gui_generator",
     "scripts/datapack_lint",
     "scripts/lint_datapacks.sh",
     "scripts/ward_ci.sh",

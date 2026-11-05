@@ -18,12 +18,12 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-GUARD = ROOT / "scripts" / "datapack_guard.py"
-SWITCH_TOOL = ROOT / "scripts" / "datapacks_disable.py"
-CHECK_ARCHIVE = ROOT / "scripts" / "check_archive.py"
+GUARD = ROOT / "scripts" / "repo" / "datapack_guard.py"
+SWITCH_TOOL = ROOT / "scripts" / "repo" / "datapacks_disable.py"
+CHECK_ARCHIVE = ROOT / "scripts" / "repo" / "check_archive.py"
 BLOCKLIST = ROOT / "blocklist" / "blocklist.json"
 
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "scripts" / "repo"))
 import datapack_guard  # noqa: E402
 
 
@@ -254,8 +254,8 @@ class Wiring(unittest.TestCase):
     def test_git_hooks_exist_and_call_the_guard(self):
         for hook, flag in (("pre-commit", "--staged"), ("pre-push", "--base")):
             with self.subTest(hook=hook):
-                text = self.read(".githooks", hook)
-                self.assertIn("scripts/datapack_guard.py", text)
+                text = self.read("scripts/git/hooks", hook)
+                self.assertIn("scripts/repo/datapack_guard.py", text)
                 self.assertIn(flag, text)
                 self.assertIn("exit 1", text)  # fail-closed when the guard is missing
 
@@ -346,21 +346,24 @@ class Wiring(unittest.TestCase):
     def test_ci_runs_the_guard_before_verification(self):
         quality = self.read(".github", "workflows", "quality.yml")
         self.assertIn("datapack-guard:", quality)
-        self.assertIn("scripts/datapack_guard.py", quality)
-        self.assertIn("needs: [datapack-guard, verify, guigenmc-package]", quality)
+        self.assertIn("scripts/repo/datapack_guard.py", quality)
+        self.assertIn("needs: [datapack-guard, verify]", quality)
+        # guigenmc was archived with the datapack programme; it must not come back.
+        self.assertNotIn("guigenmc-package", quality)
+        self.assertNotIn("gui_generator", quality)
         # The guard job must appear before the verify job in the file, so a
         # reader sees it first and the gate wiring is obvious.
         self.assertLess(quality.index("datapack-guard:"), quality.index("\n  verify:"))
-        self.assertIn("scripts/datapacks_disable.py verify", quality)
+        self.assertIn("scripts/repo/datapacks_disable.py verify", quality)
 
     def test_gradle_wires_guard_and_switch(self):
         tasks = self.read("build-logic", "project-tasks.gradle")
         self.assertIn("tasks.register('guardArchives'", tasks)
-        self.assertIn("scripts/datapack_guard.py", tasks)
+        self.assertIn("scripts/repo/datapack_guard.py", tasks)
         self.assertIn("dependsOn 'guardArchives', 'checkDatapackSwitch', 'checkArchive'", tasks)
         root = self.read("build.gradle")
         self.assertIn("tasks.register('checkDatapackSwitch')", root)
-        self.assertIn("scripts/check_archive.py", root)
+        self.assertIn("scripts/repo/check_archive.py", root)
 
     def test_default_gradle_graph_has_no_pack_tasks(self):
         root = self.read("build.gradle")

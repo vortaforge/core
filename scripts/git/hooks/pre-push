@@ -1,8 +1,8 @@
 #!/bin/sh
-# .githooks/pre-push - refuse a push that creates datapack content, revives
+# scripts/git/hooks/pre-push - refuse a push that creates datapack content, revives
 # archived tooling, or carries commits by blocklisted accounts.
 #
-# Install once with:  git config core.hooksPath .githooks
+# Install once with:  git config core.hooksPath scripts/git/hooks
 #
 # stdin (from git) is "<local ref> <local sha> <remote ref> <remote sha>" per
 # ref being pushed. remote sha of all zeros means "new branch"; a non-zero
@@ -11,8 +11,8 @@ set -eu
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-if [ ! -f scripts/datapack_guard.py ]; then
-    echo "pre-push: scripts/datapack_guard.py is missing - refusing to push (fail-closed)." >&2
+if [ ! -f scripts/repo/datapack_guard.py ]; then
+    echo "pre-push: scripts/repo/datapack_guard.py is missing - refusing to push (fail-closed)." >&2
     exit 1
 fi
 
@@ -42,7 +42,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     fi
 
     if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ]; then
-        python3 scripts/datapack_guard.py --base "$base" --push --protect --blocklist \
+        python3 scripts/repo/datapack_guard.py --base "$base" --push --protect --blocklist \
             --check-archive || status=1
     else
         echo "pre-push: could not determine a base commit for $local_ref; failing closed." >&2

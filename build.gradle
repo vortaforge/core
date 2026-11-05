@@ -219,7 +219,7 @@ task verifyMod {
 // when the programme has been deliberately re-armed. The marker file and the
 // registry are cross-checked too: the three must never disagree.
 //
-// python3 scripts/datapacks_disable.py verify    is the same check outside
+// python3 scripts/repo/datapacks_disable.py verify    is the same check outside
 // Gradle, and CI runs both.
 // -----------------------------------------------------------------------
 tasks.register('checkDatapackSwitch') {
@@ -279,7 +279,7 @@ tasks.register('checkDatapackSwitch') {
 //     (shape, enums, unique ids, dates, path existence, hard-disable flags,
 //     bijection between archived/packs|tools and registry entries, no live
 //     datapack tooling, no workflow file under archived/) through
-//     scripts/check_archive.py. Read-only: never writes, never runs anything.
+//     scripts/repo/check_archive.py. Read-only: never writes, never runs anything.
 //     -PcheckArchiveStrict=true also fails on warnings.
 //   - printArchiveList: prints the registry (read-only, lenient).
 // Wiring: 'check' depends on checkArchive and checkDatapackSwitch.
@@ -288,7 +288,7 @@ tasks.register('checkDatapackSwitch') {
 // -----------------------------------------------------------------------
 tasks.register('checkArchive') {
     group = 'verification'
-    description = 'Validates archived/archive.json (schema v2, disarmed entries) via scripts/check_archive.py. Read-only. -PcheckArchiveStrict=true also fails on warnings.'
+    description = 'Validates archived/archive.json (schema v2, disarmed entries) via scripts/repo/check_archive.py. Read-only. -PcheckArchiveStrict=true also fails on warnings.'
     def registryFile = rootProject.file('archived/archive.json')
     def pythonExec = providers.gradleProperty('pythonExecutable').getOrElse('python3')
     def repoDir = rootProject.projectDir
@@ -297,7 +297,7 @@ tasks.register('checkArchive') {
         if (!registryFile.exists()) {
             throw new GradleException("[checkArchive] failed: archived/archive.json is missing.")
         }
-        def command = [pythonExec, 'scripts/check_archive.py']
+        def command = [pythonExec, 'scripts/repo/check_archive.py']
         if (strictProp.toString().equalsIgnoreCase('true')) {
             command << '--strict'
         }
@@ -308,7 +308,7 @@ tasks.register('checkArchive') {
         process.inputStream.eachLine { line -> println line }
         def exit = process.waitFor()
         if (exit != 0) {
-            throw new GradleException("[checkArchive] failed: scripts/check_archive.py exited ${exit}.")
+            throw new GradleException("[checkArchive] failed: scripts/repo/check_archive.py exited ${exit}.")
         }
     }
 }

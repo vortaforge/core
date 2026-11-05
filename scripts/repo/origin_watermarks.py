@@ -19,10 +19,10 @@ the right folder. This tool owns the CONTENT:
     nothing executable can be hidden in a file that reviewers are told to skip
 
 Usage (from anywhere inside the repo):
-  python3 scripts/origin_watermarks.py            check (default), exit 1 on problems
-  python3 scripts/origin_watermarks.py --report   table of every pack and watermark
-  python3 scripts/origin_watermarks.py --json     same report as JSON
-  python3 scripts/origin_watermarks.py --write    (re)generate watermarks; creates one
+  python3 scripts/repo/origin_watermarks.py            check (default), exit 1 on problems
+  python3 scripts/repo/origin_watermarks.py --report   table of every pack and watermark
+  python3 scripts/repo/origin_watermarks.py --json     same report as JSON
+  python3 scripts/repo/origin_watermarks.py --write    (re)generate watermarks; creates one
                                                   for a pack that has none
 
 Maintainers run --write; contributors do not hand-edit these files (CONTRIBUTING.md).

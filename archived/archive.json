@@ -741,6 +741,78 @@
       "known_issues": [
         "Apply after the core patch; the mirror reads core's blocklist/blocklist.json."
       ]
+    },
+    {
+      "id": "gui-generator",
+      "name": "guigenmc (GUI datapack generator)",
+      "kind": "script",
+      "status": "archived",
+      "archived_on": "2026-11-05",
+      "reason": "Retired with the datapack programme on 2026-11-05. A datapack has no type safety: every value crossing a function call, a storage read, a scoreboard comparison or a macro expansion is an untyped string, checked by nothing at load time or run time. It has no enforced security model, no debugging or inspection tooling, no warning surface and no error surfacing. Anything that emits .mcfunction/data/ output feeds exactly that surface, so it is archived with the programme it served rather than kept half-alive.",
+      "last_version": "0.0.0",
+      "license": "Unlicense (package LICENSE)",
+      "deploy": "not_recommended",
+      "path": "archived/tools/gui-generator",
+      "original_path": "scripts/gui_generator",
+      "source_url": "https://github.com/vortaforge/core",
+      "successor": null,
+      "disarmed": true,
+      "is_datapack": false,
+      "description": "Python (guigenmc) generator that turns a JSON menu spec into a Minecraft GUI datapack: emits .mcfunction files, a data/ tree and a {menu_id}_datapack.zip, plus a browser UI. Archived because its output is a datapack.",
+      "last_commit": "2026-11-05",
+      "known_issues": [
+        "Emits datapack output (.mcfunction + data/ + {menu_id}_datapack.zip), i.e. exactly the format the programme retired.",
+        "Generated files inherit every datapack weakness: no type safety, no security model, no debugging, no warnings.",
+        "The generator validates the menu spec but not the emitted Minecraft semantics; a wrong expansion is only visible in game.",
+        "The browser UI and the CLI are two front ends over the same emitter; keeping only one would still ship the emitter.",
+        "Still had a dedicated CI job building a wheel plus an editable install; both were removed with this move."
+      ]
+    },
+    {
+      "id": "fix-text-components",
+      "name": "fix_text_components.py",
+      "kind": "script",
+      "status": "archived",
+      "archived_on": "2026-11-05",
+      "reason": "Retired with the datapack programme on 2026-11-05. A datapack has no type safety: every value crossing a function call, a storage read, a scoreboard comparison or a macro expansion is an untyped string, checked by nothing at load time or run time. It has no enforced security model, no debugging or inspection tooling, no warning surface and no error surfacing. Anything that emits .mcfunction/data/ output feeds exactly that surface, so it is archived with the programme it served rather than kept half-alive.",
+      "last_version": "n/a",
+      "license": "Unlicense (repository LICENSE)",
+      "deploy": "not_recommended",
+      "path": "archived/tools/fix_text_components.py",
+      "original_path": "scripts/fix_text_components.py",
+      "source_url": "https://github.com/vortaforge/core",
+      "successor": null,
+      "disarmed": true,
+      "is_datapack": false,
+      "description": "One-shot rewriter that converted legacy tellraw/title text-component JSON to the modern format inside datapack function files.",
+      "last_commit": "2026-11-05",
+      "known_issues": [
+        "Only operates on datapack function files; with no live packs it has no input.",
+        "Rewrites JSON heuristically and cannot report what it changed; a silent wrong rewrite corrupts a function."
+      ]
+    },
+    {
+      "id": "remove-handover",
+      "name": "remove_handover.py",
+      "kind": "script",
+      "status": "archived",
+      "archived_on": "2026-11-05",
+      "reason": "A spent one-shot migration script: it deleted HANDOVER*.md files and stripped one README section during the datapack retirement. Its only reference was itself; the files it targeted no longer exist, so every future run is a no-op or a bug.",
+      "last_version": "n/a",
+      "license": "Unlicense (repository LICENSE)",
+      "deploy": "not_recommended",
+      "path": "archived/tools/remove_handover.py",
+      "original_path": null,
+      "source_url": "https://github.com/vortaforge/core",
+      "successor": null,
+      "disarmed": true,
+      "is_datapack": false,
+      "description": "One-shot cleanup for the datapack retirement: removes HANDOVER*.md and strips a named README block.",
+      "last_commit": "2026-11-05",
+      "known_issues": [
+        "Spent migration script; the files it targets are gone, so it is permanently a no-op.",
+        "Deletes files by pattern with no dry-run mode."
+      ]
     }
   ]
 }

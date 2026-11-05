@@ -275,7 +275,7 @@ class EnglishOnly(unittest.TestCase):
                     "datapacks.disabled.json"):
             with self.subTest(path=rel):
                 self.assertNotIn("reason_tr", (ROOT / rel).read_text(encoding="utf-8"))
-        cli = (ROOT / "scripts" / "datapacks_disable.py").read_text(encoding="utf-8")
+        cli = (ROOT / "scripts" / "repo" / "datapacks_disable.py").read_text(encoding="utf-8")
         self.assertNotIn("reason_tr", cli)
         self.assertNotIn("sebep (tr)", cli)
 
@@ -413,6 +413,94 @@ class NegativeControls(unittest.TestCase):
         sample = "gh" + "p_" + "A" * 36
         self.assertIn("GitHub token", secret_labels(sample))
         self.assertNotIn(sample, secret_labels(sample))
+
+
+
+class RepositoryLayout(unittest.TestCase):
+    """The 2026-11-05 reorg must stay done: no half-moved tools, no dangling paths."""
+
+    def test_no_live_datapack_generator(self):
+        # Everything that emits datapack output lives under archived/ and is
+        # registered there. A live generator would silently re-arm the programme.
+        for live in ("scripts/gui_generator", "scripts/dpgen", "scripts/ward_guard.py"):
+            self.assertFalse((ROOT / live).exists(), f"{live} is live again")
+
+    def test_moved_scripts_sit_under_scripts_subdirectories(self):
+        # scripts/ holds only grouping directories plus its README - repo checks
+        # and git hooks each get one home instead of being scattered at the top.
+        allowed_dirs = {"git", "ops", "repo", "site", "tests"}
+        allowed_files = {"README.md"}
+        for entry in (ROOT / "scripts").iterdir():
+            if entry.name in ("__pycache__", ".pytest_cache"):
+                continue
+            if entry.is_dir():
+                self.assertIn(entry.name, allowed_dirs, f"unexpected scripts/ dir {entry.name}")
+            else:
+                self.assertIn(entry.name, allowed_files, f"unexpected scripts/ file {entry.name}")
+
+    def test_archived_tools_are_all_registered(self):
+        registry = json.loads((ROOT / "archived" / "archive.json").read_text(encoding="utf-8"))
+        registered = {p["path"].rstrip("/") for p in registry["projects"] if p.get("path")}
+        for child in (ROOT / "archived" / "tools").iterdir():
+            self.assertIn(f"archived/tools/{child.name}", registered, f"{child.name} is unregistered")
+
+    def test_reorg_left_no_dangling_references(self):
+        stale = ("scripts/gui_generator", "scripts/check_archive.py", ".githooks",
+                 "scripts/datapack_guard.py", "scripts/datapacks_disable.py",
+                 "scripts/origin_watermarks.py", "remove_handover.py")
+        for name in stale:
+            hits = []
+            for path in ROOT.rglob("*"):
+                rel = path.relative_to(ROOT).as_posix()
+                if (not path.is_file() or rel.startswith(("archived/packs/", "archived/tools/"))
+                        or "__pycache__" in rel or ".git/" in rel or "dist/" in rel):
+                    continue
+                if not rel.endswith((".md", ".py", ".gradle", ".yml", ".mjs", ".php", ".sh")):
+                    continue
+                # Files allowed to name a retired path because naming it is
+                # the point: the guard denies it, this test asserts it, the
+                # docs say where it went, and the watermark tool carries the
+                # provenance wording that is embedded verbatim in the 15
+                # archived (frozen) watermark files.
+                if rel in (
+                    "scripts/repo/check_archive.py",
+                    "scripts/repo/origin_watermarks.py",
+                    "scripts/tests/test_repository_safeguards.py",
+                    "scripts/README.md",
+                    "README.md",
+                    "archived/README.md",
+                ):
+                    continue
+                # Historical record, not live reference. CREDITS.md is a
+                # date-stamped changelog ("Verified with scripts/x.py" describes
+                # what ran on that day) and archived/ holds frozen artefacts -
+                # including a patch series whose whole point is to reproduce an
+                # older tree. Rewriting their paths would falsify the record.
+                if rel in ("CREDITS.md",) or rel.startswith("archived/"):
+                    continue
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                if "LIVE_DATAPACK_PATHS" in text:
+                    continue
+                for line in text.splitlines():
+                    if name in line and "archived/tools/" not in line:
+                        hits.append(f"{rel}: {line.strip()[:90]}")
+            self.assertEqual(hits, [], f"stale reference to {name}: {hits}")
+
+    def test_scorecard_documents_the_real_layout(self):
+        # The scorecard names every grouped directory; if one is renamed the
+        # document becomes a lie, so make that a test failure.
+        scorecard = (ROOT / "docs" / "SCORECARD.md").read_text(encoding="utf-8")
+        for area in ("scripts/repo/", "scripts/git/", "scripts/ops/",
+                     "scripts/site/", "scripts/tests/", "archived/tools/"):
+            self.assertIn(area, scorecard, f"scorecard does not describe {area}")
+            self.assertTrue((ROOT / area).is_dir(), f"{area} named but missing")
+
+    def test_hooks_path_points_at_the_moved_hooks(self):
+        for doc in ("README.md", "INSTALL.md", "NOTICE.md", "docs/ARCHIVAL.md",
+                    "docs/MAINTAINER_GUIDE.md", "scripts/git/hooks/README.md"):
+            text = (ROOT / doc).read_text(encoding="utf-8")
+            self.assertNotIn("core.hooksPath .githooks", text, f"{doc} uses the old hooks path")
+        self.assertTrue((ROOT / "scripts" / "git" / "hooks" / "pre-push").is_file())
 
 
 if __name__ == "__main__":

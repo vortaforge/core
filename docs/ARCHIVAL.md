@@ -5,7 +5,7 @@
 
 > [!NOTE]
 > **Patches:** `archived/patches/` (core) and `archived/patches-gh/`
-> (`vortaforge/.github`). Validated with 28 registry entries, 84 Python tests
+> (`vortaforge/.github`). Validated with 31 registry entries, 90 Python tests
 > and Gradle 9.8.2. Installation steps: [`INSTALL.md`](../INSTALL.md).
 
 This document is the operator manual for the 2026-11-05 datapack retirement in
@@ -16,12 +16,12 @@ retired at all is in [`README.md`](../README.md#why-datapacks-are-not-accepted-a
 | Piece | Where | What it does |
 |---|---|---|
 | Kill switch | `datapacks.disabled.json`, `archived/datapacks.disabled` | `"enabled": false`. Missing/unreadable counts as disabled. |
-| Switch CLI | `scripts/datapacks_disable.py` | `status`, `disable`, `enable`, `verify` |
-| Guard | `scripts/datapack_guard.py` | blocks new datapacks, revived archived tooling, blocklisted accounts |
+| Switch CLI | `scripts/repo/datapacks_disable.py` | `status`, `disable`, `enable`, `verify` |
+| Guard | `scripts/repo/datapack_guard.py` | blocks new datapacks, revived archived tooling, blocklisted accounts |
 | Archive registry | `archived/archive.json` (schema v2), `archived/archive.schema.json` | every retired project, `"disarmed": true` |
-| Registry validator | `scripts/check_archive.py` | fail-closed validation incl. disarmed/bijection/no-workflow rules |
+| Registry validator | `scripts/repo/check_archive.py` | fail-closed validation incl. disarmed/bijection/no-workflow rules |
 | Account blocklist | `blocklist/blocklist.json` | logins, bot/AI rules, public-profile scan policy |
-| Hooks | `.githooks/pre-commit`, `.githooks/pre-push` | run the guard before a commit/push |
+| Hooks | `scripts/git/hooks/pre-commit`, `scripts/git/hooks/pre-push` | run the guard before a commit/push |
 | CI | `.github/workflows/quality.yml`, job `datapack-guard` | runs the guard + registry + switch; blocks the quality gate |
 | Org-wide mirror | `vortaforge/.github` | `blocklist/`, `scripts/blocklist_sync.py`, `workflows/datapack-blocklist-sync.yml` |
 | Extracted Gradle | `archived/build/*.gradle` | the datapack logic that was in the root `build.gradle` |
@@ -64,8 +64,8 @@ run; do not hand-edit the generated one.
 ### 3. Install the hooks (pre-push blocking)
 
 ```bash
-git config core.hooksPath .githooks
-python3 scripts/datapack_guard.py --staged --protect --blocklist   # try it
+git config core.hooksPath scripts/git/hooks
+python3 scripts/repo/datapack_guard.py --staged --protect --blocklist   # try it
 ```
 
 `pre-commit` runs on every commit, `pre-push` on every push. `--no-verify`
@@ -75,25 +75,25 @@ bypasses them, which is exactly why the same checks run in CI (job
 ### 4. Verify
 
 ```bash
-python3 scripts/datapacks_disable.py status
-python3 scripts/datapacks_disable.py verify
-python3 scripts/check_archive.py --strict
-python3 scripts/origin_watermarks.py --check
+python3 scripts/repo/datapacks_disable.py status
+python3 scripts/repo/datapacks_disable.py verify
+python3 scripts/repo/check_archive.py --strict
+python3 scripts/repo/origin_watermarks.py --check
 ./gradlew checkDatapackSwitch checkArchive verifyProject
 python3 -m unittest discover -s scripts/tests -v
 node scripts/tests/site_behavior.test.mjs
 ```
 
-Expected: switch `enabled=false`, `verify` 0 problems, registry 28 entries /
-0 errors, 84 Python tests OK, website test passes.
+Expected: switch `enabled=false`, `verify` 0 problems, registry 31 entries /
+0 errors, 90 Python tests OK, website test passes.
 
 ### 5. Day-to-day use
 
 ```bash
-python3 scripts/datapacks_disable.py status                       # is it off?
+python3 scripts/repo/datapacks_disable.py status                       # is it off?
 ./gradlew printArchiveList                                        # what was archived, and why
-python3 scripts/datapack_guard.py --staged --protect --blocklist  # manual check
-python3 scripts/datapack_guard.py --audit-refs --blocklist        # branch/tag names
+python3 scripts/repo/datapack_guard.py --staged --protect --blocklist  # manual check
+python3 scripts/repo/datapack_guard.py --audit-refs --blocklist        # branch/tag names
 ```
 
 ### 6. What blocks what
@@ -116,7 +116,7 @@ python3 scripts/datapack_guard.py --audit-refs --blocklist        # branch/tag n
    `added_on`, `added_by`, `scope`, `enforcement`. Exact logins only; use
    `ref_patterns` for branch/tag names. Prefer adding the numeric `user_ids`
    too: `gh api users/<login> --jq .id`.
-2. Validate: `python3 scripts/datapack_guard.py --audit-refs --blocklist`.
+2. Validate: `python3 scripts/repo/datapack_guard.py --audit-refs --blocklist`.
 3. Mirror org-wide: the sync workflow runs on the next `core` push, or locally
    `python3 scripts/blocklist_sync.py --check --write` inside `.github`.
 4. For a datapack developer discovered by **profile scan** (bio/company contains
@@ -127,7 +127,7 @@ python3 scripts/datapack_guard.py --audit-refs --blocklist        # branch/tag n
 ### 8. Re-enabling (deliberate and expensive)
 
 ```bash
-python3 scripts/datapacks_disable.py enable \
+python3 scripts/repo/datapacks_disable.py enable \
     --token VORTAFORGE-DATAPACKS-2026-11-05-DISARMED \
     --reason "why, in a sentence"
 ```

@@ -68,25 +68,16 @@ tasks.register('testRepository', Exec) {
     markSuccess(delegate, marker('repository-tests'))
 }
 
-tasks.register('testGuiGenerator', Exec) {
-    group = 'verification'
-    description = 'Runs the guigenmc pytest suite (requires pytest and an editable guigenmc install).'
-    workingDir repositoryRoot
-    commandLine pythonExecutable, '-m', 'pytest', '-q', 'scripts/gui_generator/tests'
-    configureRepositoryInput(delegate)
-    markSuccess(delegate, marker('guigenmc-tests'))
-}
-
 // Fail-closed policy gate: no new datapacks, no revived archived tooling, no
 // blocklisted accounts. In CI the pull request diff is supplied with
 // -PguardBase=<merge-base>; locally the working tree diff against HEAD is used.
 // Never up-to-date: a cache hit must not be able to hide a new pack.
 tasks.register('guardArchives', Exec) {
     group = 'verification'
-    description = 'Blocks new datapack content, revived archived tooling and blocklisted accounts (scripts/datapack_guard.py).'
+    description = 'Blocks new datapack content, revived archived tooling and blocklisted accounts (scripts/repo/datapack_guard.py).'
     workingDir repositoryRoot
     def guardBase = providers.gradleProperty('guardBase').getOrElse('')
-    def guardArgs = [pythonExecutable, 'scripts/datapack_guard.py',
+    def guardArgs = [pythonExecutable, 'scripts/repo/datapack_guard.py',
                      '--protect', '--blocklist', '--check-archive']
     if (guardBase) {
         guardArgs.addAll(['--base', guardBase])
@@ -103,7 +94,7 @@ tasks.register('verifyProject') {
     group = 'verification'
     description = 'Runs repository verification: guard, kill switch, archive registry, tests. Never starts a Minecraft server.'
     dependsOn 'guardArchives', 'checkDatapackSwitch', 'checkArchive',
-            'testRepository', 'testGuiGenerator', 'verifyMod'
+            'testRepository', 'verifyMod'
 }
 
 // -----------------------------------------------------------------------------

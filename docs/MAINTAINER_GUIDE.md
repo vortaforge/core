@@ -1,7 +1,7 @@
 # Maintainer guide
 
 > [!TIP]
-> **Before adding a rule, decide where it belongs.** A rule about repository state goes in `scripts/check_archive.py`, a rule about a diff goes in `scripts/datapack_guard.py`, and a rule about an account goes in `blocklist/blocklist.json`.
+> **Before adding a rule, decide where it belongs.** A rule about repository state goes in `scripts/repo/check_archive.py`, a rule about a diff goes in `scripts/repo/datapack_guard.py`, and a rule about an account goes in `blocklist/blocklist.json`.
 
 This is the human-facing project guidance for `vortaforge/core`. It preserves
 project rules and technical context previously kept in the AI-specific
@@ -12,7 +12,7 @@ instruction files, without requiring an automated AI agent.
 **Datapacks are retired (2026-11-05).** This monorepo now ships Fabric mods
 only; every datapack, datapack generator, linter and test harness is archived
 and disarmed in `archived/archive.json` and blocked by
-`scripts/datapack_guard.py`. See `docs/ARCHIVAL.md`. The historical
+`scripts/repo/datapack_guard.py`. See `docs/ARCHIVAL.md`. The historical
 `archived/packs/macroEngine-Datapack-v26.3/THIRD_PARTY_LICENSES.md` is kept
 intact for reference.
 
@@ -82,7 +82,7 @@ current deployment: verify each pack's metadata and deployment separately.
 | `mods/` | Fabric mods, each with its own Gradle subproject and version pins. |
 | `packs/` | **Empty.** Datapacks were retired on 2026-11-05; the guard refuses new content here. |
 | `blocklist/` | Account blocklist enforced by the guard (mirrored by `vortaforge/.github`). |
-| `.githooks/` | `pre-commit` / `pre-push` guard hooks (`git config core.hooksPath .githooks`). |
+| `scripts/git/hooks/` | `pre-commit` / `pre-push` guard hooks (`git config core.hooksPath scripts/git/hooks`). |
 | `datapacks.disabled.json` | The datapack kill switch (`"enabled": false`). |
 | `scripts/` | Lint, provenance, audit, backup and self-contained developer tools. |
 | `examples/` | Example mods and packs. |
@@ -101,13 +101,14 @@ In brief:
 ./gradlew ci
 ./gradlew buildAll
 ./gradlew lint
-python3 scripts/datapacks_disable.py verify
-python3 scripts/datapack_guard.py --staged --protect --blocklist
+python3 scripts/repo/datapacks_disable.py verify
+python3 scripts/repo/datapack_guard.py --staged --protect --blocklist
 python3 -m unittest discover -s scripts/tests -v
-python3 -m pytest scripts/gui_generator/tests
+# guigenmc's suite is archived with it and is not run by CI.
+python3 -m pytest archived/tools/gui-generator/tests   # optional, manual
 # Archived (nothing invokes these): archived/tools/lint_datapacks.sh,
 # archived/tools/ward/ward_ci.sh, archived/tools/build-release/build_release.py,
-# scripts/origin_watermarks.py --check (still present, no longer wired)
+# scripts/repo/origin_watermarks.py --check (still present, no longer wired)
 ```
 
 `verifyProject` is the canonical repository-validation graph: the datapack

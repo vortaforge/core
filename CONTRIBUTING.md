@@ -93,7 +93,7 @@ probably two commits. Reference related issues or PRs in the body
 ## Security
 
 **Datapacks are retired (2026-11-05).** Do not open a PR that adds a datapack,
-a pack, or revives the archived datapack tooling: `scripts/datapack_guard.py`
+a pack, or revives the archived datapack tooling: `scripts/repo/datapack_guard.py`
 refuses it in `pre-commit`, `pre-push` and CI, and `datapack.disabled.json` is
 the switch that says why (`docs/ARCHIVAL.md`). Changes to `archived/` must be a
 registry update, not new functionality.
@@ -112,7 +112,7 @@ removed, renamed, or hand-edited in `packs/` by a contributor's PR —
 maintainers ask that it stay untouched in the source tree. Only `build.gradle`
 itself (via its `build/packs-remap/` working copy, never `packs/`) and
 maintainers acting through the project's own tooling are expected to
-touch these files. That tooling is `scripts/origin_watermarks.py`:
+touch these files. That tooling is `scripts/repo/origin_watermarks.py`:
 `--write` regenerates every watermark from one template, `--check` (run in CI)
 rejects hand edits and any executable line, `--report` lists packs and namespaces. This is a contribution-conduct expectation, not a
 license restriction — the Unlicense in `LICENSE` continues to govern
