@@ -93,12 +93,21 @@ jobs:
           for name in ("index.html", "banner.png", "robots.txt", "sitemap.xml", ".nojekyll", "data/site-data.json"):
               if not (site / name).is_file():
                   sys.exit(f"missing from site: {name}")
-          data = json.loads((site / "data/site-data.json").read_text(encoding="utf-8"))
+          raw = (site / "data/site-data.json").read_text(encoding="utf-8")
+          data = json.loads(raw)
           if data.get("schemaVersion") != 1 or not data.get("mods"):
               sys.exit("site-data.json failed validation")
+          # Datapacks are retired: the published snapshot must not reintroduce
+          # pack download data that the page itself no longer offers.
+          if data.get("packs") or data.get("release") or "releases/download" in raw:
+              sys.exit("site-data.json still carries datapack download data")
+          leaked = [p.name for p in site.rglob("*")
+                    if p.is_file() and p.suffix == ".zip"]
+          if leaked:
+              sys.exit(f"site artifact contains pack zips: {leaked}")
           if "<?php" in (site / "index.html").read_text(encoding="utf-8"):
               sys.exit("index.html contains PHP, which GitHub Pages would serve as text")
-          print(f"ok: {len(data['packs'])} packs, {len(data['mods'])} mods, generated {data['generatedAt']}")
+          print(f"ok: {len(data['mods'])} mods, generated {data['generatedAt']}, no pack data")
           PY
 
       - name: Configure Pages

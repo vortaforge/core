@@ -14,7 +14,7 @@ assert.notEqual(startup, -1, 'could not isolate the network startup');
 // Execute the actual page script and its DOM listeners, suppressing only the
 // initial API request. Expose its real functions for offline assertions.
 const script = match[1].slice(0, startup) + `\n  globalThis.subject = {
-  FALLBACK_MODS, packsFromReleaseAssets, modsFromContents,
+  FALLBACK_MODS, modsFromContents,
   renderPacks, startDownload, el
 };\n})();`;
 
@@ -55,12 +55,17 @@ assert.ok(!('FALLBACK_PACKS' in s), 'the static pack list must be gone');
 // Even a stale packs-latest release with real .zip assets renders no download
 // cards: renderPacks always produces the retired notice.
 const base = 'https://github.com/vortaforge/core/releases/download/packs-latest/';
-const assets = s.packsFromReleaseAssets([
-  {name: 'DailyBonus.zip', browser_download_url: base + 'DailyBonus.zip'},
-  {name: 'guikitfw.zip', browser_download_url: base + 'guikitfw.zip'},
-  {name: 'evil.zip', browser_download_url: 'https://example.com/evil.zip'},
-]);
-assert.equal(assets.length, 0, 'pack assets must be ignored, not rendered');
+
+// The pack-asset shaper is gone, not merely neutered. A function that still
+// accepts release assets is a function that can be re-enabled by deleting one
+// `if (false)`; the page must have no such path at all.
+assert.ok(!('packsFromReleaseAssets' in s), 'packsFromReleaseAssets must be removed');
+assert.ok(!html.includes('packsFromReleaseAssets'), 'no pack-asset shaper in the page');
+assert.ok(!/api\.github\.com\/repos\/[^\"'`]*\/releases\/tags\//.test(html),
+  'the page must not build a packs-latest release URL');
+// Even the retired tag name may only appear in prose, never in a URL or fetch.
+assert.ok(!/fetch[A-Za-z]*\([^)]*RELEASE_TAG/.test(html),
+  'RELEASE_TAG must never be fetched');
 
 for (const list of [[], [{name: 'DailyBonus', zip: 'DailyBonus.zip', downloadUrl: base + 'DailyBonus.zip'}]]) {
   s.renderPacks(list, 'live');

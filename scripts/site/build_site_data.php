@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  * GitHub Pages only serves static files, so PHP cannot run when a visitor opens
  * the page. Instead this script runs inside .github/workflows/pages.yml, asks
- * the GitHub API for the packs-latest release and the mods/ directory using the
+ * the GitHub API for the mods/ directory using the
  * workflow's GITHUB_TOKEN, and writes the result to data/site-data.json. The
  * page reads that file first (same origin, no rate limit) and only falls back
  * to calling the GitHub API from the browser if the file is missing or stale.
@@ -17,7 +17,7 @@ declare(strict_types=1);
  * Exit:    0 on success, 1 on any API/IO failure (so a bad snapshot is never
  *          deployed over a good one).
  *
- * The filtering rules mirror packsFromReleaseAssets() and modsFromContents() in
+ * The filtering rules mirror modsFromContents() in
  * index.html and must be kept in sync with them.
  *
  * AI involvement: written with Claude (Anthropic) at the request of the
@@ -29,9 +29,7 @@ if (PHP_SAPI !== 'cli') {
     exit(1);
 }
 
-const RELEASE_TAG = 'packs-latest';
 const EXCLUDED_MODS = ['TEMPLATE-MOD', 'datapack-fixer', 'rtwrapper-mod'];
-const HISTORICAL_PACK_ASSETS = ['guikit-datapack.zip'];
 
 function fail(string $message): never
 {
@@ -94,41 +92,7 @@ function github_get(string $url, ?string $token): array
     fail("GET {$url} failed after 3 attempts: {$lastError}");
 }
 
-function pretty_name(string $zip): string
-{
-    return str_replace('-', ' ', preg_replace('/\.zip$/i', '', $zip) ?? $zip);
-}
 
-/** @param mixed $assets */
-function packs_from_assets($assets, string $assetPrefix): array
-{
-    if (!is_array($assets)) {
-        return [];
-    }
-    $packs = [];
-    foreach ($assets as $asset) {
-        if (!is_array($asset)) {
-            continue;
-        }
-        $name = $asset['name'] ?? null;
-        $url = $asset['browser_download_url'] ?? null;
-        if (!is_string($name) || !is_string($url)
-            || !preg_match('/\.zip$/i', $name)
-            || strncmp($url, $assetPrefix, strlen($assetPrefix)) !== 0) {
-            continue;
-        }
-        $packs[] = [
-            'name' => pretty_name($name) . (in_array($name, HISTORICAL_PACK_ASSETS, true) ? ' (historical asset)' : ''),
-            'zip' => $name,
-            'downloadUrl' => $url,
-            'size' => is_int($asset['size'] ?? null) ? $asset['size'] : null,
-            'downloadCount' => is_int($asset['download_count'] ?? null) ? $asset['download_count'] : null,
-            'updatedAt' => is_string($asset['updated_at'] ?? null) ? $asset['updated_at'] : null,
-        ];
-    }
-    usort($packs, static fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
-    return $packs;
-}
 
 /** @param mixed $items */
 function mods_from_contents($items): array
@@ -166,28 +130,12 @@ if (!preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repository)) {
 }
 $token = getenv('GITHUB_TOKEN') ?: null;
 $api = "https://api.github.com/repos/{$repository}";
-$assetPrefix = "https://github.com/{$repository}/releases/download/";
 
-// Release assets: packs-latest first, newest release as fallback (same order as the page).
-$release = null;
-$packs = [];
-[$status, $data] = github_get($api . '/releases/tags/' . RELEASE_TAG, $token);
-if ($status === 404) {
-    [, $list] = github_get($api . '/releases?per_page=5', $token);
-    if (is_array($list) && count($list) > 0 && is_array($list[0])) {
-        $data = $list[0];
-    } else {
-        $data = null;
-    }
-}
-if (is_array($data)) {
-    $packs = packs_from_assets($data['assets'] ?? null, $assetPrefix);
-    $release = [
-        'tag' => is_string($data['tag_name'] ?? null) ? $data['tag_name'] : RELEASE_TAG,
-        'publishedAt' => is_string($data['published_at'] ?? null) ? $data['published_at'] : null,
-        'htmlUrl' => is_string($data['html_url'] ?? null) ? $data['html_url'] : null,
-    ];
-}
+// Datapacks are retired (2026-11-05). The page no longer requests any release,
+// so the snapshot must not query one either: doing so published pack download
+// URLs into _site/data/, which is exactly the data the retirement removed from
+// the page. The retired packs remain readable in archived/packs and registered
+// in archived/archive.json.
 
 [$status, $contents] = github_get($api . '/contents/mods', $token);
 if ($status === 404) {
@@ -202,9 +150,7 @@ $snapshot = [
     'schemaVersion' => 1,
     'generatedAt' => gmdate('c'),
     'repository' => $repository,
-    'noRelease' => $release === null,
-    'release' => $release,
-    'packs' => $packs,
+    'datapacksRetired' => true,
     'mods' => $mods,
 ];
 
@@ -220,9 +166,7 @@ if (file_put_contents($tmp, $json . "\n") === false || !rename($tmp, $out)) {
 }
 
 fwrite(STDOUT, sprintf(
-    "build_site_data: wrote %s (%d packs, %d mods, release %s)\n",
+    "build_site_data: wrote %s (%d mods; datapacks retired, no pack data emitted)\n",
     $out,
-    count($packs),
-    count($mods),
-    $release['tag'] ?? 'none'
+    count($mods)
 ));

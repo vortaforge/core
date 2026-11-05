@@ -583,11 +583,8 @@
 
   const OWNER = "vortaforge";
   const REPO = "core";
-  const RELEASE_TAG = "packs-latest";
   const MODS_TREE_BASE =
     "https://github.com/" + OWNER + "/" + REPO + "/tree/main/mods/";
-  const API_RELEASE =
-    "https://api.github.com/repos/" + OWNER + "/" + REPO + "/releases/tags/" + RELEASE_TAG;
   const API_RELEASES_LIST =
     "https://api.github.com/repos/" + OWNER + "/" + REPO + "/releases?per_page=5";
   const API_CONTENTS_MODS =
@@ -637,7 +634,6 @@
   ];
   // Old assets can still exist in a GitHub release. Preserve and label them
   // as historical instead of presenting them as current source projects.
-  const HISTORICAL_PACK_ASSETS = new Set(["guikit-datapack.zip"]);
 
   const el = {
     overlay: document.getElementById("loading-overlay"),
@@ -750,16 +746,6 @@
         clearTimeout(timer);
         throw err;
       });
-  }
-
-  function prettyNameFromZip(filename) {
-    return filename.replace(/\.zip$/i, "").replace(/-/g, " ");
-  }
-
-  function isReleaseAssetUrl(url) {
-    return typeof url === "string" && url.startsWith(
-      "https://github.com/" + OWNER + "/" + REPO + "/releases/download/"
-    );
   }
 
   function escapeHtml(s) {
@@ -1026,30 +1012,6 @@
   // GitHub API — data shaping
   // ---------------------------------------------------------------------
 
-  function packsFromReleaseAssets(assets) {
-    // Datapacks are retired: even if an old `packs-latest` release still has
-    // .zip assets, this page must not offer them. Returning [] is deliberate.
-    if (Array.isArray(assets)) return [];
-    return [];
-    return assets
-      .filter(function (a) {
-        return a && typeof a.name === "string" && /\.zip$/i.test(a.name) && isReleaseAssetUrl(a.browser_download_url);
-      })
-      .map(function (a) {
-        return {
-          name: prettyNameFromZip(a.name) + (HISTORICAL_PACK_ASSETS.has(a.name) ? " (historical asset)" : ""),
-          zip: a.name,
-          downloadUrl: a.browser_download_url,
-          size: typeof a.size === "number" ? a.size : null,
-          downloadCount: typeof a.download_count === "number" ? a.download_count : null,
-          updatedAt: a.updated_at || null
-        };
-      })
-      .sort(function (a, b) {
-        return a.name.localeCompare(b.name);
-      });
-  }
-
   function modsFromContents(items) {
     if (!Array.isArray(items)) return [];
     // The scaffold is not a shipped mod. Retired directories are filtered as
@@ -1178,56 +1140,15 @@
     const cache = readCache();
 
     setProgress(20, "Checking mod sources…", "datapacks retired, nothing to fetch");
-    try {
-      // Datapacks are retired: no packs-latest request at all. One less
-      // anonymous API call, and no way for a stale release to resurrect the
-      // download cards.
-      packs = [];
-      packsSource = "retired";
-      const fromApi = [];
-      if (false) {
-        const result = await fetchGithubApi(API_RELEASE, "Release " + RELEASE_TAG);
-        packs = packsFromReleaseAssets(result.data.assets);
-      }
-    } catch (err) {
-      if (myGeneration !== loadGeneration) return;
-      if (err.kind === "ratelimit") {
-        rateLimited = err.rateLimit || rateLimited;
-        errors.push(err.message + " Using static pack list.");
-      } else if (err.kind === "notfound") {
-        // The packs-latest tag doesn't exist. Check whether the repo has
-        // ANY release at all before giving up — if it does, use the
-        // newest one instead of a stale static list.
-        try {
-          const listResult = await fetchGithubApi(API_RELEASES_LIST, "Releases list");
-          const releaseList = Array.isArray(listResult.data) ? listResult.data : [];
-          if (releaseList.length === 0) {
-            noReleasesYet = true;
-            errors.push("No release has been published yet. Using static pack list.");
-          } else {
-            const latest = releaseList[0];
-            const fromApi = packsFromReleaseAssets(latest.assets);
-            if (fromApi.length > 0) {
-              packs = fromApi;
-              packsSource = "GitHub API";
-              packsReleaseMeta = {
-                tag: latest.tag_name,
-                publishedAt: latest.published_at,
-                htmlUrl: latest.html_url
-              };
-              errors.push('Tag "' + RELEASE_TAG + '" not found — showing the latest release ("' + latest.tag_name + '") instead.');
-            } else {
-              errors.push('Latest release ("' + latest.tag_name + '") has no .zip assets. Using static pack list.');
-            }
-          }
-        } catch (err2) {
-          errors.push('Release "' + RELEASE_TAG + '" not found (404), and the releases list could not be checked. Using static pack list.');
-        }
-      } else {
-        const msg = err.name === "AbortError" ? "timed out" : (err.message || String(err));
-        errors.push("Release API failed (" + msg + "). Using static pack list.");
-      }
-    }
+    // Datapacks are retired (2026-11-05). There is no release to fetch and no
+    // pack list to populate: the cards are gone from the page, `packs` stays
+    // empty, and `noReleasesYet` stays false so the status line reports
+    // "datapacks retired" rather than blaming a missing release. The
+    // packs-latest fetch, its 404 fallback to the newest release, and the
+    // dead `if (false)` wrapper around them were all removed with it - a
+    // disabled fetch is still a fetch waiting to be re-enabled by accident.
+    packs = [];
+    packsSource = "retired";
 
     if (myGeneration !== loadGeneration) return;
     setProgress(55, "Fetching mods directory…", "GET /contents/mods");
@@ -1330,7 +1251,7 @@
       showBanner(
         el.noreleaseBanner,
         el.noreleaseDetail,
-        "No GitHub Release (tagged <code>" + escapeHtml(RELEASE_TAG) + "</code> or otherwise) has been published for this repo yet. " +
+        "No GitHub Release has been published for this repo yet. " +
         "The list below is a source inventory only; downloads are disabled until live release assets can be verified. " +
         "This page checks automatically and will switch to live data as soon as a release is published."
       );

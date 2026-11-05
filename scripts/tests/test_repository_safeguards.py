@@ -416,6 +416,48 @@ class NegativeControls(unittest.TestCase):
 
 
 
+
+class SiteDataSnapshot(unittest.TestCase):
+    """The published snapshot must agree with the page it feeds.
+
+    Regression (2026-11-05 audit): `index.html` was rewritten to never request
+    the `packs-latest` release, but `build_site_data.php` still queried it and
+    wrote pack download URLs into `_site/data/site-data.json`. The file was
+    also referenced by nothing, so it was published dead weight that
+    reintroduced exactly the datapack links the retirement removed.
+    """
+
+    def setUp(self):
+        self.php = (ROOT / "scripts" / "site" / "build_site_data.php").read_text(encoding="utf-8")
+        self.html = (ROOT / "index.html").read_text(encoding="utf-8")
+
+    def test_builder_does_not_query_the_retired_release(self):
+        self.assertNotIn("packs-latest", self.php)
+        self.assertNotIn("RELEASE_TAG", self.php)
+        self.assertNotIn("/releases/tags/", self.php)
+
+    def test_builder_emits_no_pack_fields(self):
+        for legacy in ("'packs' =>", "'release' =>", "'noRelease' =>", "downloadUrl"):
+            self.assertNotIn(legacy, self.php, f"{legacy} is datapack-era output")
+        self.assertIn("'datapacksRetired' => true", self.php)
+
+    def test_builder_has_no_dead_pack_helpers(self):
+        for gone in ("packs_from_assets", "pretty_name", "HISTORICAL_PACK_ASSETS",
+                     "assetPrefix"):
+            self.assertNotIn(gone, self.php, f"{gone} is dead since the retirement")
+
+    def test_page_does_not_fetch_the_retired_release(self):
+        # The page and the snapshot must agree: neither may ask for packs.
+        self.assertNotIn("releases/tags/", self.html)
+
+    def test_pages_workflow_rejects_pack_data(self):
+        workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        self.assertIn('data.get("packs")', workflow)
+        self.assertIn("releases/download", workflow)
+        # The old validator read data['packs'], which no longer exists.
+        self.assertNotIn("len(data['packs'])", workflow)
+
+
 class RepositoryLayout(unittest.TestCase):
     """The 2026-11-05 reorg must stay done: no half-moved tools, no dangling paths."""
 

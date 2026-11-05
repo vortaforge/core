@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -380,6 +381,137 @@ class Wiring(unittest.TestCase):
     def test_readme_and_docs_point_at_the_switch(self):
         self.assertIn("datapacks.disabled.json", self.read("README.md"))
         self.assertTrue((ROOT / "docs" / "ARCHIVAL.md").is_file())
+
+
+
+class ScopeAndEnforcement(unittest.TestCase):
+    """`scope` and `enforcement` are declared in blocklist.json; they must be read.
+
+    Regression (2026-11-05 audit): both fields were documented and both were
+    ignored. A rule written for pull requests was therefore enforced on pushes
+    too, and `enforcement: "review"` behaved exactly like `"block"`.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="bl-test-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def _load(self, entries):
+        path = Path(self.tmp) / "blocklist.json"
+        path.write_text(json.dumps({
+            "schema_version": 1,
+            "managed": {"owners": ["tickwarden"], "accounts": []},
+            "policy": {},
+            "blocked": entries,
+        }), encoding="utf-8")
+        return datapack_guard.Blocklist.load(path)
+
+    def _run(self, blocklist, logins, scope, allow_review=False):
+        report = datapack_guard.Report("test")
+        datapack_guard.check_blocklist(report, blocklist, logins,
+                                       scope=scope, allow_review=allow_review)
+        return len(report.errors), len(report.findings) - len(report.errors)
+
+    def test_scope_limits_a_rule_to_the_declared_actions(self):
+        bl = self._load([{"id": "pr-only", "logins": ["Someone"],
+                          "enforcement": "block", "scope": ["pull_request"],
+                          "reason": "r"}])
+        self.assertIsNotNone(bl.matches("Someone", scope="pull_request"))
+        self.assertIsNone(bl.matches("Someone", scope="push"))
+
+    def test_an_entry_without_scope_applies_everywhere(self):
+        bl = self._load([{"id": "all", "logins": ["Someone"],
+                          "enforcement": "block", "reason": "r"}])
+        for scope in ("pull_request", "push", "org_membership", None):
+            self.assertIsNotNone(bl.matches("Someone", scope=scope), scope)
+
+    def test_unknown_scope_is_rejected_at_load(self):
+        with self.assertRaises(datapack_guard.BlocklistError):
+            self._load([{"id": "x", "logins": ["a"], "scope": ["telepathy"]}])
+
+    def test_empty_scope_is_rejected_at_load(self):
+        with self.assertRaises(datapack_guard.BlocklistError):
+            self._load([{"id": "x", "logins": ["a"], "scope": []}])
+
+    def test_unknown_enforcement_is_rejected_at_load(self):
+        with self.assertRaises(datapack_guard.BlocklistError):
+            self._load([{"id": "x", "logins": ["a"], "enforcement": "maybe"}])
+
+    def test_review_entry_blocks_without_the_label(self):
+        bl = self._load([{"id": "rev", "logins": ["Someone"],
+                          "enforcement": "review", "reason": "r"}])
+        errors, _ = self._run(bl, ["Someone"], "pull_request", allow_review=False)
+        self.assertEqual(errors, 1)
+
+    def test_review_entry_is_a_warning_with_the_label(self):
+        bl = self._load([{"id": "rev", "logins": ["Someone"],
+                          "enforcement": "review", "reason": "r"}])
+        errors, warns = self._run(bl, ["Someone"], "pull_request", allow_review=True)
+        self.assertEqual(errors, 0)
+        self.assertEqual(warns, 1)
+
+    def test_block_entry_ignores_the_label(self):
+        # Documented: "that label does not override the account block itself."
+        bl = self._load([{"id": "hard", "logins": ["Someone"],
+                          "enforcement": "block", "reason": "r"}])
+        errors, _ = self._run(bl, ["Someone"], "pull_request", allow_review=True)
+        self.assertEqual(errors, 1, "the label must not clear an enforcement:block entry")
+
+    def test_the_real_blocklist_survives_the_new_validation(self):
+        bl = datapack_guard.Blocklist.load(ROOT / "blocklist" / "blocklist.json")
+        self.assertTrue(bl.entries)
+        for entry in bl.entries:
+            self.assertIn(entry.get("enforcement", "block"),
+                          datapack_guard.ENFORCEMENT_VALUES)
+
+
+
+class NumericUserIdEnforcement(unittest.TestCase):
+    """`user_ids` claims to be rename-proof; `--login-id` is what makes it so.
+
+    Regression (2026-11-05 audit): the ids were in the data file but no code
+    path ever passed one to the matcher, so a blocked account that renamed
+    itself was checked only by its new login and slipped through.
+    """
+
+    def test_a_renamed_account_is_caught_by_its_id(self):
+        result = run(GUARD, "--pr", "--login", "totally-new-name",
+                     "--login-id", "17352009", "--no-remote")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("blocklist-user-id", result.stdout)
+
+    def test_an_unrelated_id_is_not_blocked(self):
+        result = run(GUARD, "--pr", "--login", "octocat",
+                     "--login-id", "1", "--no-remote")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_a_non_numeric_id_is_rejected(self):
+        result = run(GUARD, "--pr", "--login", "octocat",
+                     "--login-id", "not-a-number", "--no-remote")
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+
+    def test_ci_supplies_the_id(self):
+        quality = (ROOT / ".github" / "workflows" / "quality.yml").read_text(encoding="utf-8")
+        self.assertIn("PR_AUTHOR_ID", quality)
+        self.assertIn("--login-id", quality)
+
+
+class LabelCannotBypassContentChecks(unittest.TestCase):
+    """The override label must not touch anything but review-scoped accounts."""
+
+    def test_a_new_pack_is_blocked_even_with_the_label(self):
+        tmp = tempfile.mkdtemp(prefix="label-test-")
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        pack = Path(tmp) / "packs" / "Sneaky"
+        (pack / "data" / "sneaky" / "function").mkdir(parents=True)
+        (pack / "pack.mcmeta").write_text('{"pack":{"pack_format":121}}', encoding="utf-8")
+        # 'A' = added; an added pack must be refused regardless of any label.
+        report = datapack_guard.Report("test")
+        datapack_guard.check_changes(report, [
+            ("A", "packs/Sneaky/pack.mcmeta"),
+            ("A", "packs/Sneaky/data/sneaky/function/a.mcfunction"),
+        ])
+        self.assertTrue(report.errors, "a new pack must be blocked before any label logic")
 
 
 if __name__ == "__main__":

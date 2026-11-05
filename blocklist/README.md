@@ -12,16 +12,27 @@ Account-level blocklist for the retired datapack programme.
   `datapack-guard` job in `.github/workflows/quality.yml`, and the
   `Datapack blocklist sync` workflow in `vortaforge/.github`.
 
+## The override label
+
+`datapack-approved` is the only override, and it is deliberately narrow:
+
+- It clears entries whose `enforcement` is `review`. It becomes a warning, not
+  a pass, so the override is still visible in the guard report.
+- It does **not** clear `enforcement: block` entries, and it does not touch
+  content rules: a new datapack under `packs/` is refused with or without the
+  label.
+- It does not disable the archive-registry or kill-switch checks.
+
 ## What an entry means
 
 | Field | Meaning |
 |---|---|
 | `id` | Stable id, `[a-z0-9-]+`. Referenced by copies in `.github/blocklist/`. |
 | `reason` | Required. A block without a written reason is a bug; `check_archive`-style review will reject it. |
-| `enforcement` | `block` (refuse PRs/pushes), `review` (allow only with the `datapack-approved` label), `org_membership` (do not invite). |
-| `scope` | Where it applies: `pull_request`, `push`, `org_membership`, `profile`. |
+| `enforcement` | `block` (refuse outright) or `review` (refuse, but a maintainer may clear it with the `datapack-approved` label). Only these two are accepted; anything else fails the blocklist load. |
+| `scope` | Where it applies: `pull_request`, `push`, `org_membership`. Omit it to apply everywhere. An unknown or empty value fails the blocklist load rather than being silently ignored. |
 | `logins` | Exact GitHub logins, lower-case. **No wildcards** in this file — a pattern like `misode*` would also match unrelated accounts. |
-| `user_ids` | Optional immutable numeric ids; survive a login rename. Get them with `gh api users/<login> --jq .id`. |
+| `user_ids` | Optional immutable numeric ids; survive a login rename. Get them with `gh api users/<login> --jq .id`. Enforced by `--login-id`, which `quality.yml` feeds from the pull request payload; the login check on its own cannot see a rename, so an entry with ids is only rename-proof when the caller supplies the id. |
 | `ref_patterns` | Branch/tag *name* globs (e.g. `*/misode*`) used by `--audit-refs` / the sync job. |
 | `match_bot_suffix` | Match any login ending in `[bot]`, `-bot`, `_bot`, `.bot`. |
 | `match_ai_accounts` | Match AI-agent-looking logins (see the entry's `notes`). |

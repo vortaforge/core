@@ -58,8 +58,11 @@ jobs:
       - name: Guard the archive (diff, blocklist, registry, kill switch)
         shell: bash
         env:
-          # Both are metadata only, never credentials.
+          # Metadata only, never credentials. The numeric id is the
+          # rename-proof identifier: a blocked account that changes its login
+          # still matches its `user_ids` entry.
           PR_AUTHOR: ${{ github.event.pull_request.user.login || github.actor }}
+          PR_AUTHOR_ID: ${{ github.event.pull_request.user.id || github.event.sender.id }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -82,9 +85,18 @@ jobs:
             *",datapack-approved,"*) export DATAPACK_GUARD_LABEL_PRESENT=1 ;;
           esac
 
+          # The id is optional: when the event does not carry one the login
+          # check still runs. Never *invent* an id - a wrong id would match the
+          # wrong account.
+          id_args=()
+          if [ -n "${PR_AUTHOR_ID:-}" ]; then
+            id_args=(--login-id "$PR_AUTHOR_ID")
+          fi
+
           python3 scripts/repo/datapack_guard.py "${args[@]}" \
             --protect --blocklist --pr --check-archive \
-            --login "$PR_AUTHOR" --json --report datapack-guard-report.json | tee guard.json || status=$?
+            --login "$PR_AUTHOR" "${id_args[@]}" \
+            --json --report datapack-guard-report.json | tee guard.json || status=$?
 
           # Human-readable summary in the job log and on the PR summary.
           python3 - <<'SUMMARY_EOF'

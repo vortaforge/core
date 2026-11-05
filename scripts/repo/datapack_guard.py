@@ -324,7 +324,26 @@ DEFAULT_BLOCKLIST = Path("blocklist") / "blocklist.json"
 # Accounts that are never enforced against, even if a broad pattern matches:
 # the maintainer's own managed accounts are declared in the blocklist file
 # ("managed"), and GitHub's automation actors are ignored here.
+# Every action the blocklist can be enforced against. A `scope` may only name
+# one of these; an entry with no scope applies to all of them (the historical
+# behaviour, kept so an old entry does not silently stop being enforced).
+SCOPES = frozenset({"pull_request", "push", "org_membership"})
+ENFORCEMENT_VALUES = frozenset({"block", "review"})
+
 SYSTEM_LOGINS = {"github-actions", "dependabot", "renovate", "vortaforge-maintenance"}
+
+
+def _in_scope(entry: dict, scope: str | None) -> bool:
+    """Does `entry` apply to the action `scope`?
+
+    No declared scope means "every action". An undeclared scope on the caller
+    side also means "every action", so a caller that does not know which action
+    it is checking cannot be used to weaken a scoped rule.
+    """
+    declared = entry.get("scope")
+    if not declared or scope is None:
+        return True
+    return str(scope) in {str(s) for s in declared}
 
 
 class BlocklistError(RuntimeError):
@@ -355,17 +374,46 @@ class Blocklist:
                 raise BlocklistError(f"{path}: blocked[{i}] must be an object with an id")
             if not isinstance(entry.get("logins", []), list):
                 raise BlocklistError(f"{path}: blocked[{i}].logins must be an array")
+            # Declared values are validated here rather than silently ignored:
+            # a `scope` or `enforcement` that the matcher never reads is a lie
+            # in the data file, and the whole point of this file is that a
+            # reader can trust it. Unknown values fail closed.
+            enforcement = entry.get("enforcement", "block")
+            if enforcement not in ENFORCEMENT_VALUES:
+                raise BlocklistError(
+                    f"{path}: blocked[{i}].enforcement must be one of "
+                    f"{sorted(ENFORCEMENT_VALUES)}, not {enforcement!r}")
+            scope = entry.get("scope")
+            if scope is not None:
+                if not isinstance(scope, list) or not scope:
+                    raise BlocklistError(f"{path}: blocked[{i}].scope must be a non-empty array")
+                unknown = sorted(set(map(str, scope)) - SCOPES)
+                if unknown:
+                    raise BlocklistError(
+                        f"{path}: blocked[{i}].scope has unknown value(s) {unknown}; "
+                        f"known scopes are {sorted(SCOPES)}")
         managed = {str(x).lower() for x in (data.get("managed") or {}).get("owners", [])}
         managed |= {str(x).lower() for x in (data.get("managed") or {}).get("accounts", [])}
         return cls(entries=entries, managed=managed, config=data.get("policy") or {})
 
-    def matches(self, login: str | None, user_id: int | None = None) -> dict | None:
+    def matches(self, login: str | None, user_id: int | None = None,
+                scope: str | None = None) -> dict | None:
+        """Return the entry denying `login`, or None.
+
+        `scope` is the action being checked. An entry declaring a `scope` list
+        only applies to those actions; an entry without one applies to every
+        action. Before this existed the field was declared in the data file and
+        never read, so a rule written for pull requests was also enforced on
+        pushes - the opposite of what the file said.
+        """
         if not login:
             return None
         lowered = login.lower()
         if lowered in SYSTEM_LOGINS or lowered in self.managed:
             return None
         for entry in self.entries:
+            if not _in_scope(entry, scope):
+                continue
             for blocked in entry.get("logins", []):
                 pattern = str(blocked).lower()
                 if fnmatch.fnmatch(lowered, pattern) or lowered == pattern:
@@ -384,6 +432,10 @@ class Blocklist:
                 if re.search(r"(^|[-_.])(ai|agent|automation|autobot|devlop)([-_.]|$)", lowered):
                     return entry
         return None
+
+    def enforcement_of(self, entry: dict) -> str:
+        """`block` (refuse) or `review` (allow only with the override label)."""
+        return str(entry.get("enforcement", "block"))
 
     def ref_patterns(self) -> list[tuple[str, dict]]:
         pairs: list[tuple[str, dict]] = []
@@ -408,24 +460,45 @@ def identity_of(root: Path) -> list[tuple[str, str]]:
 
 def check_blocklist(report: Report, blocklist: Blocklist, logins: list[str],
                     identities: list[tuple[str, str]] | None = None,
-                    committers: bool = True) -> None:
+                    committers: bool = True,
+                    scope: str | None = None,
+                    allow_review: bool = False) -> None:
+    """Record an error for every login or commit identity the blocklist denies.
+
+    `scope` is the action being checked ("pull_request", "push" or
+    "org_membership"). Rules scoped to other actions are left alone.
+
+    `allow_review` is the maintainer override (the `datapack-approved` label).
+    It only softens entries declaring `enforcement: review`. An entry declaring
+    `enforcement: block` stays an error no matter what the label says - that is
+    the documented behaviour ("the label does not override the account block
+    itself"), and it is enforced here rather than left to a comment.
+    """
     seen: set[str] = set()
+
+    def record(rule: str, where: str, hit: dict, what: str) -> None:
+        enforcement = blocklist.enforcement_of(hit)
+        overridable = enforcement == "review" and allow_review
+        report.add("warn" if overridable else "error", rule, where,
+                   what + ("" if overridable
+                           else f": {hit.get('reason', 'blocked')}"))
+
     for login in logins:
         if not login or login in seen:
             continue
         seen.add(login)
-        hit = blocklist.matches(login)
+        hit = blocklist.matches(login, scope=scope)
         if hit:
-            report.add("error", "blocklist-account", login,
-                       f"account is on the datapack blocklist: {hit.get('reason', 'blocked')}")
+            record("blocklist-account", login, hit,
+                   "account is on the datapack blocklist")
     for email, name in identities or []:
         if not email:
             continue
-        hit = blocklist.matches(email) or blocklist.matches(name)
+        hit = blocklist.matches(email, scope=scope) or blocklist.matches(name, scope=scope)
         if hit and email not in seen:
             seen.add(email)
-            report.add("error", "blocklist-identity", f"{name} <{email}>",
-                       f"commit identity is on the datapack blocklist: {hit.get('reason', 'blocked')}")
+            record("blocklist-identity", f"{name} <{email}>", hit,
+                   "commit identity is on the datapack blocklist")
 
 
 def check_refs(report: Report, blocklist: Blocklist, root: Path) -> None:
@@ -475,7 +548,8 @@ def parse_args(argv: list[str]) -> dict:
         "staged": False, "base": None, "files_from": None, "audit_refs": False,
         "check_archive": False, "protect": False, "blocklist": False, "pr": False,
         "push": False, "warn_only": False, "json": False, "report": None,
-        "override": False, "repo_root": None, "logins": [], "no_remote": False,
+        "override": False, "repo_root": None, "logins": [], "login_ids": [],
+        "no_remote": False,
     }
     i = 0
     while i < len(argv):
@@ -515,6 +589,18 @@ def parse_args(argv: list[str]) -> dict:
         elif arg == "--repo-root":
             i += 1
             opts["repo_root"] = argv[i]
+        elif arg == "--login-id":
+            i += 1
+            if i >= len(argv):
+                print("[datapack_guard] ERROR --login-id needs a numeric GitHub user id",
+                      file=sys.stderr)
+                raise SystemExit(EXIT_USAGE)
+            try:
+                opts.setdefault("login_ids", []).append(int(argv[i]))
+            except ValueError:
+                print(f"[datapack_guard] ERROR --login-id must be numeric, got {argv[i]!r}",
+                      file=sys.stderr)
+                raise SystemExit(EXIT_USAGE) from None
         elif arg == "--login":
             i += 1
             opts["logins"].append(argv[i])
@@ -587,8 +673,24 @@ def main(argv: list[str]) -> int:
 
         # --- pull-request specifics --------------------------------------
         if opts["pr"] and blocklist is not None and opts["logins"]:
-            check_blocklist(report, blocklist, opts["logins"])
-            if report.errors and not (opts["override"] or os.environ.get("DATAPACK_GUARD_LABEL_PRESENT") == "1"):
+            # Numeric ids cannot be spoofed by renaming an account. When the
+            # caller supplies one (CI reads it from the pull request payload),
+            # it is checked separately from the login, so a renamed account
+            # still matches its `user_ids` entry.
+            for user_id in opts["login_ids"]:
+                hit = blocklist.matches(f"id:{user_id}", user_id=user_id,
+                                        scope="pull_request")
+                if hit:
+                    report.add("error", "blocklist-user-id", f"user id {user_id}",
+                               f"account id is on the datapack blocklist: "
+                               f"{hit.get('reason', 'blocked')}")
+            overridden = bool(opts["override"]
+                              or os.environ.get("DATAPACK_GUARD_LABEL_PRESENT") == "1")
+            check_blocklist(report, blocklist, opts["logins"],
+                            scope="pull_request", allow_review=overridden)
+            blocked_accounts = [f for f in report.errors
+                                if f.rule == "blocklist-account"]
+            if blocked_accounts and not overridden:
                 report.add("error", "pr-blocked",
                            ", ".join(opts["logins"]),
                            "pull request is blocked; the `datapack-approved` label is "
@@ -597,7 +699,8 @@ def main(argv: list[str]) -> int:
         # --- push specifics ----------------------------------------------
         if opts["push"] and blocklist is not None:
             identities = identity_of(root) if is_git_checkout() else []
-            check_blocklist(report, blocklist, opts["logins"], identities=identities)
+            check_blocklist(report, blocklist, opts["logins"], identities=identities,
+                            scope="push")
             # Force-push detection on protected branches (pre-push passes the
             # remote ref through the environment; absent means "unknown",
             # which fails closed only when --push was requested explicitly).
