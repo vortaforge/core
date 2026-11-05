@@ -206,9 +206,17 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           mkdir -p release-assets
-          files=(mods/*/build/libs/*.jar)
-          files=("${files[@]/%-sources.jar/}")
-          files=("${files[@]/%-javadoc.jar/}")
+          # Bash pattern substitution anchors at the END of the string, so
+          # "${f/%-sources.jar/}" strips any trailing ".jar" - including the one
+          # on a normal jar - and produced extension-less names that cp could
+          # not find. Filter the suffixes explicitly instead.
+          files=()
+          for candidate in mods/*/build/libs/*.jar; do
+            case "$candidate" in
+              *-sources.jar|*-javadoc.jar) continue ;;
+            esac
+            files+=("$candidate")
+          done
 
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error title=No release assets::packageProject produced no mod jars."

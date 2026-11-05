@@ -122,6 +122,13 @@ class ReusableQualityWorkflowInvariants(unittest.TestCase):
         self.assertNotIn("sha256sum -- *.zip", quality)
         self.assertIn("release-assets/*.jar", quality)
         self.assertNotIn("release-assets/*.zip", quality)
+
+        # Regression: bash pattern substitution anchors at the end of a word, so
+        # "${files[@]/%-sources.jar/}" strips every trailing ".jar" and leaves
+        # extension-less paths that `cp` cannot find. That cost a red CI run.
+        # The suffix filter must be an explicit case statement.
+        self.assertNotIn('${files[@]/%-', quality)
+        self.assertIn("*-sources.jar|*-javadoc.jar) continue", quality)
         self.assertNotIn("softprops/action-gh-release", quality)
 
         self.assertIn("uses: ./.github/workflows/quality.yml", build)
