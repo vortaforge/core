@@ -32,10 +32,16 @@ jobs:
     timeout-minutes: 10
 
     # Read-only by design: the guard never writes to the repository, it only
-    # reads the diff, the registry and the blocklist.
+    # reads the diff, the registry and the blocklist through `git` and the
+    # event payload.
+    #
+    # Do NOT add `pull-requests:` here. A called (reusable) workflow may only
+    # narrow the permissions granted by its caller, never widen them: build.yml
+    # grants `contents: read` and requesting more made the whole CI run fail
+    # with an unexplained `startup_failure`. PR metadata arrives through the
+    # event payload (github.event.pull_request.*), which needs no token scope.
     permissions:
       contents: read
-      pull-requests: read
 
     steps:
       - name: Checkout

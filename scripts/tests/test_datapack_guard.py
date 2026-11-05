@@ -207,6 +207,40 @@ class Wiring(unittest.TestCase):
                 self.assertIn(flag, text)
                 self.assertIn("exit 1", text)  # fail-closed when the guard is missing
 
+    def test_called_workflow_never_widens_caller_permissions(self):
+        """A reusable workflow may only narrow its caller's permissions.
+
+        Regression: the guard job asked for `pull-requests: read` while the
+        caller (build.yml) granted only `contents: read`. GitHub rejects that
+        at parse time with a bare `startup_failure` and no annotation, so CI
+        went red for a reason nobody could see. Every permission requested by
+        a job in quality.yml must already be granted at the top of quality.yml
+        AND by build.yml.
+        """
+        import yaml  # stdlib-adjacent; requirements pin PyYAML for the site build
+
+        build = yaml.safe_load(self.read(".github", "workflows", "build.yml"))
+        quality = yaml.safe_load(self.read(".github", "workflows", "quality.yml"))
+
+        build_granted = set(build.get("permissions") or {})
+        quality_top = set(quality.get("permissions") or {})
+        self.assertTrue(build_granted, "build.yml must declare top-level permissions")
+
+        for job_id, job in (quality.get("jobs") or {}).items():
+            if not isinstance(job, dict) or "uses" in job:
+                continue  # reusable-workflow call jobs: no steps, no permissions
+            job_perms = set(job.get("permissions") or {})
+            with self.subTest(job=job_id):
+                self.assertLessEqual(
+                    job_perms, quality_top,
+                    f"quality.yml job '{job_id}' requests {sorted(job_perms - quality_top)} "
+                    "which the reusable workflow itself does not declare")
+                self.assertLessEqual(
+                    job_perms, build_granted,
+                    f"quality.yml job '{job_id}' requests {sorted(job_perms - build_granted)} "
+                    "which the caller build.yml does not grant - GitHub fails the whole "
+                    "run with startup_failure")
+
     def test_ci_runs_the_guard_before_verification(self):
         quality = self.read(".github", "workflows", "quality.yml")
         self.assertIn("datapack-guard:", quality)
