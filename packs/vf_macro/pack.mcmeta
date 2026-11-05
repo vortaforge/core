@@ -1,6 +1,6 @@
 {
   "pack": {
-    "pack_format": 10,
-    "description": "VF Macro v1.5.10 – template expand, no debug spam"
+    "pack_format": 6,
+    "description": "VF Macro v1.9.0 — forced token resolve + join paths. No ostr. 1.16–1.20."
   }
 }

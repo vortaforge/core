@@ -1,22 +1,31 @@
-# VF Macro v1.5.9
+# v1.9.0 — limits pushed (no ostr, no hardcoded keys)
 
-## Template placeholder expansion (no ostr)
+## Tokens (recommended for placeholders)
+```mcfunction
+data modify storage vf_macro:in tokens set value [{text:"say hello"}]
+function vf_macro:api/macro/template
+```
+```mcfunction
+data modify storage vf_macro:in replace_list set value [{key:"msg",value:"say hi from token"}]
+data modify storage vf_macro:in tokens set value [{key:"msg"}]
+function vf_macro:api/macro/template
+```
 
-On 1.16–1.19.3 Minecraft has no `set string`, so arbitrary in-string replace is impossible.
-v1.5.9 expands **known template patterns** (e.g. `say Hello $(name)!`) into a resolved
-string list and displays/runs via the same tellraw-join path that parts uses.
+## Multi-token
+- 1 token → engine (any command)
+- 2+ tokens → `force_join`:
+  - `multi_exec:1b` → each token runs as its **own full command** (sequential)
+  - else → cannot invent plain string concat without macros/lib (reported clearly)
 
-Supported examples:
-- `say Hello $(name)!`
-- `say Hello $(name)`
-- `Hello $(name)!`
-- `say $(name)`
-- `say $(msg)`
-- `say Hello $(player)!`
-- `say $(amount)`
+```mcfunction
+data modify storage vf_macro:config multi_exec set value 1b
+```
 
-For fully arbitrary shapes use `api/macro/parts`.
+## Full-string placeholder
+```mcfunction
+data modify storage vf_macro:in template set value "$(cmd)"
+data modify storage vf_macro:in replace_list set value [{find:"$(cmd)",value:"give @p diamond 1"}]
+function vf_macro:api/macro/template
+```
 
-## Parts API
-
-Unchanged and separate from template.
+Physics of the game: arbitrary in-string concat on 1.16–1.20.1 without macros or a string library is not available. This pack pushes everything else.
