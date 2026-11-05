@@ -222,7 +222,7 @@ jobs:
           fi
 
           cp -v "${files[@]}" release-assets/
-          ( cd release-assets && sha256sum -- *.zip > SHA256SUMS )
+          ( cd release-assets && sha256sum -- *.jar > SHA256SUMS )
 
       - name: Write job summary
         shell: bash
@@ -233,7 +233,7 @@ jobs:
             echo
             echo "| Item | Value |"
             echo "|---|---|"
-            echo "| Gradle entry point | \`./gradlew ci -PconfirmZip=yes\` |"
+            echo "| Gradle entry point | \`./gradlew ci\` |"
             echo "| Java | \`25\` |"
             echo "| Python | \`3.12\` |"
             echo "| Node | \`20\` |"
