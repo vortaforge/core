@@ -13,7 +13,7 @@ in `vortaforge/core`. The full system description, in one language, is
 
 | Repository | Patch |
 |---|---|
-| `vortaforge/core` | `archived/patches/0001-chore-datapacks-retire-the-datapack-programme-disarm.patch` |
+| `vortaforge/core` | `archived/patches/0001-chore-datapacks-retire-the-datapack-programme-arm-th.patch` |
 | `vortaforge/.github` | `archived/patches-gh/0001-feat-blocklist-organisation-wide-datapack-blocklist-.patch` |
 
 Order matters: apply `core` first, then `vortaforge/.github`.
@@ -65,7 +65,7 @@ git config core.hooksPath .githooks
 python3 scripts/check_archive.py --strict          # 28 entries, 0 errors
 python3 scripts/datapacks_disable.py verify        # 0 problems
 python3 scripts/origin_watermarks.py --check       # 15 watermarks, 11 datapacks
-python3 -m unittest discover -s scripts/tests      # 81 tests
+python3 -m unittest discover -s scripts/tests      # 84 tests
 node scripts/tests/site_behavior.test.mjs
 ./gradlew checkDatapackSwitch checkArchive verifyProject
 ```
@@ -108,7 +108,7 @@ complete reversal procedure is in [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md).
   `packs/<name>` source path, and `scripts/origin_watermarks.py` understands the
   moved tree.
 - **Verified:** `check_archive --strict`, `datapacks_disable verify`,
-  `origin_watermarks --check`, 81 Python tests, the Node site test, Groovy
+  `origin_watermarks --check`, 84 Python tests, the Node site test, Groovy
   parsing, and Gradle 9.8.2 (JDK 21) with `guardArchives checkDatapackSwitch
   checkArchive verifyMod testRepository writeProjectInventory` plus
   `printArchiveList`.

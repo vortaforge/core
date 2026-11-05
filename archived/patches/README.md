@@ -1,16 +1,20 @@
 # archived/patches/
 
 The archival change set for `vortaforge/core`, as a `git format-patch` mailbox.
-One commit, one patch; apply it to a clean checkout of `main` to reproduce the
-2026-11-05 retirement exactly.
+
+> [!IMPORTANT]
+> **One patch, applied to a clean pre-retirement `main`.** It is a squash of
+> the whole change, not a series, so a reviewer can read the final state
+> without watching Turkish text arrive and then leave again.
 
 | File | What it applies |
 |---|---|
-| `0001-chore-datapacks-retire-the-datapack-programme-disarm.patch` | Moves every datapack, generator, linter and test harness into `archived/` (renames preserved), extracts the datapack Gradle logic out of the root `build.gradle` into `archived/build/*.gradle`, rebuilds `archived/archive.json` as schema v2, and adds the kill switch, the guard, the blocklist, the hooks and the CI job. |
+| `0001-chore-datapacks-retire-the-datapack-programme-arm-th.patch` | Moves every datapack, resource pack, generator, linter and test harness into `archived/` (renames preserved), extracts the datapack Gradle logic out of the root `build.gradle` into `archived/build/*.gradle`, rebuilds `archived/archive.json` as schema v2, and adds the kill switch, the guard, the blocklist, the hooks and the CI job. The live tree ends up English-only. |
 
-Sibling patches for `vortaforge/.github` (org-wide blocklist mirror, sync
-script and workflow) live in that repository after this patch is applied; the
-same `git am` workflow applies there.
+Base commit: `42665e9` (`Delete .devcontainer directory`). If `main` has moved
+past it, `git am -3` will still apply the patch as long as the touched files
+have not changed; a rejected hunk means `main` changed underneath it and the
+patch must be regenerated rather than hand-fixed.
 
 ## Apply
 
@@ -19,51 +23,43 @@ git clone https://github.com/vortaforge/core.git
 cd core
 git checkout -b datapacks-retired
 
-# One patch today. Use a shell glob so a later split into 0002, 0003, ...
-# still applies in filename order.
 git am archived/patches/*.patch
+
+# If the tree moved underneath the patch, try the three-way merge:
+git am -3 archived/patches/*.patch
+
+# A rejected hunk is a signal, not an obstacle:
+git am --abort
 ```
 
-`git am` recreates the commit (new hash) on your branch; it never rewrites
-`main`. If a patch fails to apply, `git am --abort` returns to the clean state -
-do not hand-fix a rejected hunk without understanding why it did not apply.
+`git am` recreates the commit on your branch (new hash). It never rewrites
+`main`.
 
-Alternative, if you only want the files and will craft your own commit:
+Files only, with your own commit message:
 
 ```bash
-git apply --stat  archived/patches/0001-*.patch   # summary
-git apply --check archived/patches/0001-*.patch   # dry run
+git apply --stat  archived/patches/0001-*.patch
+git apply --check archived/patches/0001-*.patch
 git apply         archived/patches/0001-*.patch
 ```
 
-## Verify the applied result
+## Verify after applying
 
 ```bash
-python3 scripts/check_archive.py --strict          # 27 projects, 0 errors
+python3 scripts/check_archive.py --strict          # 28 entries, 0 errors
 python3 scripts/datapacks_disable.py verify        # 0 problems
 python3 scripts/origin_watermarks.py --check       # 15 watermarks, 11 datapacks
-python3 -m unittest discover -s scripts/tests      # 76 tests
-node scripts/tests/site_behavior.test.mjs          # website retirement notices
-./gradlew checkDatapackSwitch checkArchive verifyProject
+python3 -m unittest discover -s scripts/tests      # 84 tests
+node scripts/tests/site_behavior.test.mjs
 ```
 
-Expected end state:
+> [!NOTE]
+> The applied tree is byte-identical to the one this patch was generated from:
+> `diff -r` is empty. That was checked against a pristine `git archive` of the
+> base commit, not against the author's working copy.
 
-- `packs/` is an empty directory; `packs/merge-manifest.json` is gone.
-- `archived/packs/` holds the 12 packs, `archived/tools/` the six retired tools,
-  `archived/build/` the six extracted Gradle sections, `archived/docs/` the two
-  retired documents, `archived/examples/` the template pack.
-- `archived/archive.json` has `"schema_version": 2` and 27 entries, each with
-  `"disarmed": true`.
-- `datapacks.disabled.json` has `"enabled": false`.
-- The root `build.gradle` contains no `zipPacks`, `mergeDatapacks`, `checkPacks`,
-  `checkOriginWatermarks` or `lintDatapacks`.
+## The sibling patch
 
-## What is deliberately not in the patch
-
-- No release assets, no server state, no credentials.
-- No rewrite of the archived packs' `_vc_origin.mcfunction` watermarks: they
-  still record the historical `packs/<name>` source path, which is the
-  provenance record. `scripts/origin_watermarks.py` understands the moved tree.
-- No change to `mods/` beyond moving `mods/datapack-blocker` into
-  `archived/tools/`.
+`vortaforge/.github` gets its own patch, applied **after** this one:
+`../patches-gh/0001-feat-blocklist-organisation-wide-datapack-blocklist-.patch`.
+It holds the org-wide blocklist mirror, the sync script and the sync workflow.

@@ -706,9 +706,9 @@ added: `scripts/datapack_guard.py`, `scripts/datapacks_disable.py`,
 `blocklist/blocklist.json`, `.githooks/`, the `datapack-guard` CI job and the
 org-wide sync in `vortaforge/.github`.
 
-**Verified (run here):** `python3 scripts/check_archive.py --strict` (27
+**Verified (run here):** `python3 scripts/check_archive.py --strict` (28
 entries, 0 errors), `scripts/datapacks_disable.py verify` (0 problems), the
-Python suite (76 tests) and the Node website test, Groovy parse of
+Python suite (84 tests) and the Node website test, Groovy parse of
 `build.gradle` / `settings.gradle` / `build-logic/project-tasks.gradle`, and a
 real `gradle checkArchive checkDatapackSwitch verifyMod printArchiveList` run
 plus `verifyProject writeProjectInventory` (mods and examples removed from a

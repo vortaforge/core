@@ -5,7 +5,7 @@
 
 > [!NOTE]
 > **Patches:** `archived/patches/` (core) and `archived/patches-gh/`
-> (`vortaforge/.github`). Validated with 28 registry entries, 81 Python tests
+> (`vortaforge/.github`). Validated with 28 registry entries, 84 Python tests
 > and Gradle 9.8.2. Installation steps: [`INSTALL.md`](../INSTALL.md).
 
 This document is the operator manual for the 2026-11-05 datapack retirement in
@@ -85,7 +85,7 @@ node scripts/tests/site_behavior.test.mjs
 ```
 
 Expected: switch `enabled=false`, `verify` 0 problems, registry 28 entries /
-0 errors, 81 Python tests OK, website test passes.
+0 errors, 84 Python tests OK, website test passes.
 
 ### 5. Day-to-day use
 
