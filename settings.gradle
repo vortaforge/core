@@ -6,7 +6,6 @@
 //   2. Auto-discovering every buildable subproject under mods/, packs/,
 //      examples/ and wiring it into the multi-project build.
 // =============================================================================
-
 pluginManagement {
     repositories {
         maven { url = 'https://maven.fabricmc.net/' }
@@ -14,15 +13,11 @@ pluginManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = 'vortaforge-core'
-
 def SCAN_ROOTS = ['mods', 'packs', 'examples']
 def EXCLUDED_PROJECT_DIRS = []
-
 def DEBUG = startParameter.projectProperties.get('debugSettings') == '1'
-
-// --- ANSI Renk Kodları ---
+// --- ANSI Color Codes ---
 def RESET   = "\u001B[0m"
 def RED     = "\u001B[31m"
 def GREEN   = "\u001B[32m"
@@ -31,23 +26,20 @@ def BLUE    = "\u001B[34m"
 def PURPLE  = "\u001B[35m"
 def CYAN    = "\u001B[36m"
 def BOLD    = "\u001B[1m"
-
-// Dinamik Log Fonksiyonları
+// Dynamic Log Functions
 def debugLog   = { String msg -> if (DEBUG) println "${CYAN}[settings:debug]${RESET} ${msg}" }
 def traceLog   = { String msg -> if (DEBUG) println "${PURPLE}[settings:trace]${RESET}   ↳ ${msg}" }
 def successLog = { String msg -> if (DEBUG) println "${GREEN}[settings:success]${RESET} ${BOLD}${msg}${RESET}" }
 def warnLog    = { String msg -> println "${YELLOW}[settings:warn]${RESET}    ${msg}" }
 def skipLog    = { String msg -> if (DEBUG) println "${BLUE}[settings:skip]${RESET}    ${msg}" }
-
 println "${BLUE}[settings]${RESET} vortaforge-core: initializing multi-project setup..."
 debugLog("Root directory (rootDir): ${rootDir}")
 debugLog("Gradle version: ${gradle.gradleVersion}")
 debugLog("Active SCAN_ROOTS: ${SCAN_ROOTS}")
 debugLog("Configured EXCLUDED_PROJECT_DIRS: ${EXCLUDED_PROJECT_DIRS}")
 debugLog("Debug mode status: ${DEBUG ? 'ENABLED (-PdebugSettings=1 active)' : 'DISABLED (run with -PdebugSettings=1 for full traces)'}")
-
 // -----------------------------------------------------------------------
-// Subproject Keşif ve Ekleme Motoru (Full Trace)
+// Subproject Discovery and Inclusion Engine (Full Trace)
 // -----------------------------------------------------------------------
 def includeIfGradle = { String base ->
     debugLog("=======================================================================")
@@ -56,7 +48,6 @@ def includeIfGradle = { String base ->
     
     File baseDir = file(base)
     debugLog("Resolved File object for base '${base}': absolutePath = ${baseDir.absolutePath}")
-
     if (!baseDir.exists()) {
         warnLog("Scan root '${base}' does NOT exist on disk! Skipping.")
         return 0
@@ -65,9 +56,7 @@ def includeIfGradle = { String base ->
         warnLog("Scan root '${base}' exists but is NOT a directory! Skipping.")
         return 0
     }
-
     successLog("Scan root '${base}' verified successfully. Starting recursive traversal...")
-
     int includedCount = 0
     List<File> buildFiles = []
     
@@ -80,58 +69,48 @@ def includeIfGradle = { String base ->
     }
     long traversalDuration = System.currentTimeMillis() - traversalStart
     debugLog("Traversal completed in ${traversalDuration}ms. Total candidate files found: ${buildFiles.size()}")
-
     if (buildFiles.isEmpty()) {
         warnLog("No build files found under scan root '${base}'.")
         return 0
     }
-
-    // Sıralama (Deterministic Order)
+    // Ordering (Deterministic Order)
     debugLog("Sorting build files alphabetically by path for deterministic ordering...")
     buildFiles.sort { it.path }
-
     buildFiles.each { File f ->
         File dir = f.parentFile
         traceLog("-------------------------------------------------------------------")
         traceLog("Evaluating directory: ${dir.absolutePath}")
         traceLog("Associated build file: ${f.name}")
-
-        // 1. Build / .gradle klasörü kontrolü
+        // 1. Build / .gradle directory check
         if (dir.path.contains(File.separator + 'build' + File.separator) ||
             dir.path.contains(File.separator + '.gradle' + File.separator)) {
             skipLog("IGNORED: Directory is inside an output build/ or .gradle/ folder -> ${dir.path}")
             return
         }
         traceLog("Check passed: Not inside a build output directory.")
-
-        // 2. Göreceli yol (Relative Path) hesaplama
+        // 2. Relative path calculation
         String relToRoot = rootDir.toPath().relativize(dir.toPath()).toString().replace(File.separator, '/')
         traceLog("Calculated relative path to repo root: '${relToRoot}'")
-
-        // 3. Hariç tutulanlar (Exclusions) kontrolü
+        // 3. Exclusions check
         def exclusionReason = EXCLUDED_PROJECT_DIRS.find { excludedPath, reason ->
             relToRoot == excludedPath || relToRoot.startsWith(excludedPath + '/')
         }?.value
-
         if (exclusionReason != null) {
             warnLog("EXCLUDED: Project at '${relToRoot}' skipped. Reason: ${exclusionReason}")
             return
         }
         traceLog("Check passed: Not listed in EXCLUDED_PROJECT_DIRS.")
-
-        // 4. Gradle Proje Yolu (Project Path) hesaplama
+        // 4. Gradle Project Path calculation
         String rel = baseDir.toPath().relativize(dir.toPath()).toString().replace(File.separator, ':')
         def path = rel.isEmpty() ? ":${base}" : ":${base}:${rel}"
         traceLog("Calculated Gradle project path string: '${path}'")
-
-        // 5. Zaten eklenmiş mi kontrolü
+        // 5. Already included check
         if (findProject(path)) {
             skipLog("SKIPPED: Project path '${path}' is already registered in the multi-project tree.")
             return
         }
         traceLog("Check passed: Project path is unique and not yet registered.")
-
-        // 6. Projeyi Dahil Etme
+        // 6. Include the project
         try {
             traceLog("Executing include('${path}') and mapping projectDir to '${dir.absolutePath}'...")
             include(path)
@@ -143,25 +122,20 @@ def includeIfGradle = { String base ->
             if (DEBUG) e.printStackTrace()
         }
     }
-
     debugLog("=======================================================================")
     debugLog("[SCAN-END] Root '${base}' finished. Total subprojects successfully included: ${includedCount}")
     debugLog("=======================================================================")
     return includedCount
 }
-
 // -----------------------------------------------------------------------
-// Çalıştırma ve Özet Raporlama
+// Execution and Summary Reporting
 // -----------------------------------------------------------------------
 debugLog("Initiating discovery across all defined SCAN_ROOTS: ${SCAN_ROOTS}")
 long globalStart = System.currentTimeMillis()
-
 def discoverySummary = SCAN_ROOTS.collectEntries { root -> 
     [(root): includeIfGradle(root)] 
 }
-
 long globalDuration = System.currentTimeMillis() - globalStart
-
 println "${BLUE}[settings]${RESET} ==========================================================="
 println "${BLUE}[settings]${RESET} Subproject Discovery Summary (Completed in ${globalDuration}ms):"
 println "${BLUE}[settings]${RESET} ==========================================================="
