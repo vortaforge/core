@@ -73,8 +73,8 @@ current deployment: verify each pack's metadata and deployment separately.
 
 ## Validation map
 
-The canonical checks and their prerequisites are documented in `README.md`
-and `HANDOVER.md`. In brief:
+The canonical checks and their prerequisites are documented in `README.md`.
+In brief:
 
 ```bash
 ./gradlew verifyProject
