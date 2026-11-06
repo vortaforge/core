@@ -346,6 +346,18 @@ def _in_scope(entry: dict, scope: str | None) -> bool:
     return str(scope) in {str(s) for s in declared}
 
 
+_AI_TOKEN_CACHE: dict[str, "re.Pattern[str]"] = {}
+
+
+def _ai_token_re(token: str) -> "re.Pattern[str]":
+    """A vendor name as a whole token, not a fragment of a longer handle."""
+    pattern = _AI_TOKEN_CACHE.get(token)
+    if pattern is None:
+        pattern = re.compile(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])")
+        _AI_TOKEN_CACHE[token] = pattern
+    return pattern
+
+
 class BlocklistError(RuntimeError):
     pass
 
@@ -426,8 +438,19 @@ class Blocklist:
                                                   or lowered.endswith("_bot") or lowered.endswith(".bot")):
                 return entry
             if entry.get("match_ai_accounts"):
-                if any(token in lowered for token in ("copilot", "claude", "chatgpt", "openai",
-                                                      "gemini", "grok", "codex", "anthropic")):
+                # Exact token, not substring. `"claude" in login` also matches
+                # "claudette" and "cLaudeLover"; `"grok"` matches "grokhalla";
+                # `"codex"` matches "codexy". Those are ordinary usernames, and
+                # blocking a person because their handle contains a vendor name
+                # is a false positive with a real cost -- it is the sort of rule
+                # that makes an account blocklist untrustworthy.
+                #
+                # A token must stand alone, separated by start/end or a
+                # non-alphanumeric character: "claude-bot", "use_claude",
+                # "openai.dev" still match; "claudette" and "openair" do not.
+                if any(_ai_token_re(token).search(lowered)
+                       for token in ("copilot", "claude", "chatgpt", "openai",
+                                     "gemini", "grok", "codex", "anthropic")):
                     return entry
                 if re.search(r"(^|[-_.])(ai|agent|automation|autobot|devlop)([-_.]|$)", lowered):
                     return entry

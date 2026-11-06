@@ -382,8 +382,23 @@ if ! command -v github-backup >/dev/null 2>&1; then
     PATH="$GHBK_VENV/bin:$PATH"
   fi
 fi
-command -v github-backup >/dev/null 2>&1 \
-  || die "github-backup is not on PATH; set GHBK_VENV to the venv that has it, or let this script install it"
+
+# The availability check must not run under --dry-run. A dry run deliberately
+# skips the install above, so requiring the binary here made every dry run on a
+# clean machine -- including a fresh ubuntu-latest runner, which has no
+# github-backup -- fail with "github-backup is not on PATH" immediately after
+# printing what it would install. A dry run's job is to prove the plan, not to
+# prove a dependency that it is explicitly not installing.
+if [ "$DRY_RUN" = 1 ]; then
+  if command -v github-backup >/dev/null 2>&1; then
+    log "github-backup present: $(github-backup --version 2>/dev/null | head -1 || echo 'present')"
+  else
+    log "[dry-run] github-backup is not installed; a real run would install ${GHBK_VERSION}"
+  fi
+else
+  command -v github-backup >/dev/null 2>&1 \
+    || die "github-backup is not on PATH; set GHBK_VENV to the venv that has it, or let this script install it"
+fi
 
 mkdir -p "$BACKUP_DIR" "$OUT_DIR" "$(dirname "$LOG_FILE")"
 exec > >(tee -a "$LOG_FILE") 2>&1
