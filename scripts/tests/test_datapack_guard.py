@@ -516,3 +516,57 @@ class LabelCannotBypassContentChecks(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AiAccountTokenMatching(unittest.TestCase):
+    """A vendor name inside a longer handle is not an AI account.
+
+    Audit 2026-11-06: `any(token in login for token in ("claude", "grok", ...))`
+    blocked claudette, grokhalla, codexy, openaiden, gemini_rose and
+    anthropic_fan. These are plausible human usernames. Blocking someone
+    because their handle contains a vendor name is a false positive that costs
+    a real person access to a project.
+    """
+
+    def setUp(self):
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "repo"))
+        import datapack_guard
+        self.guard = datapack_guard
+        self.bl = datapack_guard.Blocklist(
+            entries=[{"id": "ai", "match_ai_accounts": True}],
+            managed=set(), config={})
+
+    def assert_blocked(self, login):
+        self.assertIsNotNone(self.bl.matches(login=login),
+                             f"{login} should match the AI account rule")
+
+    def assert_allowed(self, login):
+        self.assertIsNone(self.bl.matches(login=login),
+                          f"{login} must not be blocked by a vendor substring")
+
+    def test_partial_names_are_allowed(self):
+        # A vendor name buried inside a longer word is not that vendor's account.
+        for login in ("claudette", "grokhalla", "codexy", "openaiden",
+                      "cLaudeLover", "realcopilot", "openair", "anthropos"):
+            self.assert_allowed(login)
+
+    def test_whole_tokens_are_blocked(self):
+        # A standalone token still matches, including with common separators.
+        # "gemini_rose" and "anthropic_fan" are blocked on purpose: the vendor
+        # name stands alone as its own token there, which is exactly the
+        # pattern this rule exists to catch.
+        for login in ("chatgpt", "CLAUDE", "claude-bot", "use_claude",
+                      "openai.dev", "grok", "copilot[bot]", "gemini_rose",
+                      "anthropic_fan"):
+            self.assert_blocked(login)
+
+    def test_digit_suffix_is_still_a_fragment(self):
+        # "gemini2" is one word, so the boundary rule treats it as a fragment.
+        # Documented rather than silently surprising.
+        self.assert_allowed("gemini2")
+
+    def test_matching_ignores_case(self):
+        for login in ("ChAtGpT", "OpenAI", "Anthropic"):
+            self.assert_blocked(login)

@@ -126,6 +126,18 @@ jobs:
           fi
           exit "${status:-0}"
 
+      - name: Ref policy (branch and tag names)
+        shell: bash
+        # `--audit-refs` existed but only ever ran when a human typed it, so the
+        # ref_patterns policy in the blocklist was documentation rather than
+        # enforcement. This runs it on every PR and push.
+        #
+        # It is a separate step from the guard so a ref-policy failure is
+        # reported as itself rather than buried in the blocklist output.
+        run: |
+          set -euo pipefail
+          python3 scripts/repo/datapack_guard.py --audit-refs
+
       - name: Archive verification (kill switch + registry)
         shell: bash
         run: |
