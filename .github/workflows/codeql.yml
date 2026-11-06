@@ -18,6 +18,12 @@ on:
     branches: [ "main" ]
   schedule:
     - cron: '17 1 * * 1'
+  # Without this the only way to prove the analysis still works after
+  # re-enabling it was to wait for the next push or the Monday cron. That is a
+  # bad position for a security control: a workflow that cannot be run on
+  # demand cannot be verified on demand, and "it is enabled" then means no more
+  # than a checkbox in the settings page.
+  workflow_dispatch:
 
 jobs:
   analyze:
