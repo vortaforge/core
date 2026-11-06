@@ -227,14 +227,28 @@ class EnglishOnly(unittest.TestCase):
     TURKISH = re.compile(r"[\u011F\u011E\u0131\u0130\u015F\u015E\u00F6\u00D6\u00FC\u00DC\u00E7\u00C7]")
 
     #: (path, needle that is allowed despite matching the pattern above)
-    ALLOWED = [("README.md", "DK-\u0130D"), ("CREDITS.md", "DK-\u0130D")]
+    ALLOWED = [
+        ("README.md", "DK-\u0130D"),
+        ("CREDITS.md", "DK-\u0130D"),
+        # The macroEngine docs cite Turkish Law 5651 by name when explaining which
+        # jurisdictions regulate platforms. "T\u00fcrkiye" is a proper noun in a legal
+        # citation, not Turkish prose, and renaming it would make the citation
+        # unfindable to anyone checking it.
+        ("mods/macroengine/INFO.md", "T\u00fcrkiye"),
+        ("mods/macroengine/src/main/resources/data/macroengine/dialog/gate/warning.json",
+         "T\u00fcrkiye"),
+    ]
 
     #: This file has to spell out the pattern it searches for, so it cannot be
     #: its own subject.
     SELF = "scripts/tests/test_repository_safeguards.py"
 
-    EXCLUDED_PREFIXES = ("archived/packs/", ".git/", "build/", "dist/",
-                         "node_modules/", "__pycache__/")
+    # Matched segment-wise, not as a string prefix: a Gradle subproject writes its
+    # own build/ and dist/ (mods/x/build/...), and the original string-prefix form
+    # only ever excluded the repository-root ones. Generated output is not prose and
+    # must not be reported as a language violation in either case.
+    EXCLUDED_PREFIXES = ("archived/packs/", ".git/")
+    EXCLUDED_SEGMENTS = {"build", "dist", "node_modules", "__pycache__", ".gradle", ".git"}
     SUFFIXES = (".md", ".py", ".json", ".yml", ".yaml", ".gradle", ".html",
                 ".mjs", ".sh", ".properties", ".toml")
 
@@ -247,6 +261,8 @@ class EnglishOnly(unittest.TestCase):
             if rel == self.SELF:
                 continue
             if any(rel.startswith(prefix) for prefix in self.EXCLUDED_PREFIXES):
+                continue
+            if self.EXCLUDED_SEGMENTS.intersection(rel.split("/")[:-1]):
                 continue
             if not rel.endswith(self.SUFFIXES):
                 continue

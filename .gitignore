@@ -38,3 +38,10 @@ __pycache__/
 .pytest_cache/
 node_modules/
 /archived/tools/gui-generator/dist/
+
+# Gradle subproject state and output: mods/*/build/ and mods/*/.gradle/ are generated,
+# never committed. The rules above only excluded the repository-root ones.
+mods/*/build/
+mods/*/.gradle/
+mods/*/.loom/
+**/__pycache__/
