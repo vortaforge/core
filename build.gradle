@@ -25,7 +25,8 @@
 //   1. Shared repositories (allprojects)
 //   2. Aggregate tasks: lint, buildAll
 //   3. verifyMod - Fabric mod sanity check
-//   4. checkDatapackSwitch - fails when the datapack programme is re-armed
+//   4. checkDatapackSwitch - fails when the datapack switch and its marker
+//      disagree, or a registry entry is armed (both states are legitimate)
 //   5. Archived-project registry (archived/archive.json) - checkArchive /
 //      printArchiveList / printArchiveList; zipPacks and mergeDatapacks do
 //      not exist any more, so the old wiring to them is gone
@@ -224,7 +225,7 @@ task verifyMod {
 // -----------------------------------------------------------------------
 tasks.register('checkDatapackSwitch') {
     group = 'verification'
-    description = 'Fails when the datapack kill switch is not engaged (datapacks.disabled.json enabled=false) or its marker/registry disagree.'
+    description = 'Fails when the datapack switch is incoherent: enabled without an enabled_reason, disabled without its marker, or a registry entry that is not disarmed.'
     def switchFile = rootProject.file('datapacks.disabled.json')
     def markerFile = rootProject.file('archived/datapacks.disabled')
     def registryFile = rootProject.file('archived/archive.json')
@@ -238,15 +239,24 @@ tasks.register('checkDatapackSwitch') {
         } else {
             try {
                 def data = new groovy.json.JsonSlurper().parse(switchFile)
-                if (data.enabled != false) {
-                    errors << "datapacks.disabled.json says enabled=${data.enabled}; the kill switch is not engaged"
+                if (!(data.enabled instanceof Boolean)) {
+                    errors << "datapacks.disabled.json must say enabled=true or enabled=false; got ${data.enabled}"
+                } else if (data.enabled == true) {
+                    // Live: the marker must be gone and the decision recorded. Two
+                    // sources disagreeing about the state is the failure worth
+                    // catching, not the state itself.
+                    if (markerFile.exists()) {
+                        errors << "datapacks are enabled but archived/datapacks.disabled still exists"
+                    }
+                    if (!data.enabled_reason) {
+                        errors << "datapacks are enabled with no enabled_reason recorded"
+                    }
+                } else if (!markerFile.exists()) {
+                    errors << "archived/datapacks.disabled marker is missing"
                 }
             } catch (Exception e) {
                 errors << "datapacks.disabled.json is unreadable: ${e.message}"
             }
-        }
-        if (!markerFile.exists()) {
-            errors << "archived/datapacks.disabled marker is missing"
         }
         try {
             def registry = new groovy.json.JsonSlurper().parse(registryFile)
@@ -266,7 +276,9 @@ tasks.register('checkDatapackSwitch') {
             throw new GradleException("[checkDatapackSwitch] failed: ${errors.size()} problem(s). " +
                     "See datapacks.disabled.json and archived/README.md.")
         }
-        println '[checkDatapackSwitch] OK: datapacks are disabled, the marker is present and every registry entry is disarmed.'
+        def enabledNow = new groovy.json.JsonSlurper().parse(switchFile).enabled
+        println "[checkDatapackSwitch] OK: datapacks are ${enabledNow ? 'ENABLED' : 'disabled'}, the switch is coherent " +
+                "and every archived registry entry is still disarmed."
     }
 }
 

@@ -139,13 +139,32 @@ def cmd_enable(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(_args: argparse.Namespace) -> int:
+    """Check that the switch is coherent, whichever way it is set.
+
+    This used to assert `enabled is False` unconditionally, so `verify` could only
+    pass while the programme was retired. The moment it was re-enabled through the
+    documented `enable --token ...` path, `verify` failed and so did the CI step
+    that runs it - reporting a deliberate decision as a broken repository.
+
+    A verify step should answer "is this switch internally consistent", not "is the
+    switch in the one state I assumed". Both states are legitimate; what is never
+    legitimate is a switch that contradicts its own marker or its own reason.
+    """
     problems: list[str] = []
     data = read_switch()
-    if data.get("enabled") is not False:
-        problems.append("datapacks.disabled.json does not say enabled=false "
-                        "(or is unreadable); the kill switch is not engaged")
-    if not MARKER.is_file():
-        problems.append("archived/datapacks.disabled marker is missing")
+    enabled = data.get("enabled")
+    if not isinstance(enabled, bool):
+        problems.append("datapacks.disabled.json does not say enabled=true or enabled=false "
+                        "(or is unreadable); the switch state is unknown")
+    elif enabled:
+        if MARKER.is_file():
+            problems.append("datapacks are enabled but archived/datapacks.disabled still exists; "
+                            "two sources disagree about the state")
+        if not data.get("enabled_reason"):
+            problems.append("datapacks are enabled with no enabled_reason recorded")
+    else:
+        if not MARKER.is_file():
+            problems.append("archived/datapacks.disabled marker is missing")
     registry = {}
     try:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))

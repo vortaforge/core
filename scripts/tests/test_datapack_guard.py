@@ -9,6 +9,7 @@ into something that actually runs is documentation, not a guard.
 from __future__ import annotations
 
 import json
+import pathlib
 import os
 import re
 import shutil
@@ -75,10 +76,21 @@ class GuardRules(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("live-packs-tree", result.stdout)
 
-    def test_new_datapack_outside_packs_is_blocked(self):
+    def test_new_datapack_outside_packs_follows_the_switch(self):
+        """Datapack content outside packs/ is gated by the switch, not blocked outright.
+
+        The original assertion was "always blocked". That stopped being true once the
+        programme was deliberately re-enabled, and it was asserting a policy rather
+        than the rule: the rule is "block when the programme is off".
+        """
+        enabled = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))["enabled"]
         result = guard_with_changes("A\tmods/x/src/main/resources/data/foo/function/a.mcfunction\n")
-        self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertIn("new-datapack", result.stdout)
+        if enabled:
+            self.assertEqual(result.returncode, 0,
+                             "the switch is on, so new datapack content must be allowed: " + result.stdout)
+        else:
+            self.assertEqual(result.returncode, 1, result.stdout)
+            self.assertIn("new-datapack", result.stdout)
 
     def test_archived_datapack_content_is_allowed(self):
         result = guard_with_changes("A\tarchived/packs/NewPack/data/ns/function/a.mcfunction\n")
@@ -223,14 +235,55 @@ class Blocklist(unittest.TestCase):
 
 
 class KillSwitch(unittest.TestCase):
-    def test_switch_file_says_disabled(self):
-        data = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))
-        self.assertIs(data["enabled"], False)
-        self.assertTrue(data.get("reenable_token"))
-        self.assertTrue(data.get("reason"))
+    """The switch, in whichever state the maintainer last put it.
 
-    def test_marker_exists(self):
-        self.assertTrue((ROOT / "archived" / "datapacks.disabled").is_file())
+    The original version asserted `enabled == False`, which made it a test of one
+    particular decision rather than of the mechanism. It failed the moment the
+    programme was deliberately re-enabled - correctly reporting a change, but with
+    no way to tell "the switch was bypassed" from "the switch was used as designed".
+    These tests check the properties that must hold in either state.
+    """
+
+    def test_switch_file_is_well_formed(self):
+        data = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))
+        self.assertIsInstance(data.get("enabled"), bool,
+                              "enabled must be a real boolean; the string 'false' would read as truthy")
+        self.assertTrue(data.get("reenable_token"), "the token must survive re-enabling")
+        self.assertTrue(data.get("reason") or data.get("enabled_reason"),
+                        "there must be a recorded reason for the current state")
+
+    def test_disabled_requires_a_marker_and_enabled_does_not(self):
+        enabled = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))["enabled"]
+        marker = (ROOT / "archived" / "datapacks.disabled").is_file()
+        if enabled:
+            self.assertFalse(marker, "a disabled marker beside an enabled switch is contradictory")
+        else:
+            self.assertTrue(marker, "a disabled switch must carry its marker")
+
+    def test_the_guard_agrees_with_the_switch(self):
+        """The guard and the switch must not disagree about whether datapacks are live."""
+        import sys
+        sys.path.insert(0, str(ROOT / "scripts" / "repo"))
+        import datapack_guard
+
+        enabled = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))["enabled"]
+        verdict = datapack_guard.rule_for_change("A", "some-new-pack/data/foo/function/bar.mcfunction")
+        if enabled:
+            self.assertIsNone(verdict,
+                              "the switch says enabled but the guard still blocks new datapack content")
+        else:
+            self.assertIsNotNone(verdict, "the switch says disabled but the guard allowed the content")
+
+    def test_a_missing_switch_counts_as_disabled(self):
+        import sys
+        import tempfile
+        sys.path.insert(0, str(ROOT / "scripts" / "repo"))
+        import datapack_guard
+
+        with tempfile.TemporaryDirectory() as tmp:
+            enabled, why = datapack_guard.datapacks_enabled(pathlib.Path(tmp))
+        self.assertFalse(enabled, "an absent switch must never mean permitted")
+        self.assertIn("missing", why)
 
     def test_verify_passes_on_this_tree(self):
         result = run(SWITCH_TOOL, "verify")

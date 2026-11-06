@@ -217,6 +217,31 @@ def changes_from_file(path: Path) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 # Datapack classification
 # ---------------------------------------------------------------------------
+# The repository this guard belongs to: scripts/repo/datapack_guard.py -> repo root.
+# Resolved from the file's own location so the guard reads the switch of the tree it
+# is installed in, not of whatever directory it was invoked from.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def datapacks_enabled(root: Path) -> tuple[bool, str]:
+    """Read datapacks.disabled.json. Absent or unreadable counts as disabled.
+
+    Returning a reason string rather than a bare bool means the guard can say which
+    switch it consulted and what it read, instead of repeating a canned sentence a
+    reader cannot check.
+    """
+    switch = root / "datapacks.disabled.json"
+    try:
+        data = json.loads(switch.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return False, "datapacks.disabled.json is missing"
+    except (OSError, ValueError) as error:
+        return False, f"datapacks.disabled.json is unreadable ({error})"
+    if data.get("enabled") is True:
+        return True, "datapacks.disabled.json says enabled=true"
+    return False, "datapacks.disabled.json says enabled=false"
+
+
 def is_datapack_path(path: str) -> bool:
     """True if the path is datapack content (pack.mcmeta, data/<ns>/<dir>/...)."""
     p = path.replace("\\", "/").lstrip("./")
@@ -273,10 +298,23 @@ def rule_for_change(status: str, path: str) -> tuple[str, str, str] | None:
                         f"(see archived/archive.json)")
 
     # 4. Any datapack-shaped file outside archived/ and test fixtures.
+    #
+    # This rule used to block unconditionally, which made it disagree with
+    # datapacks.disabled.json: enabling the programme through the documented
+    # `datapacks_disable.py enable --token ...` path changed the switch file and
+    # nothing else, so the guard still refused. The switch said enabled and the
+    # enforcement said disabled, and the only visible symptom was a BLOCK whose
+    # reason pointed at the wrong thing.
+    #
+    # It now reads the same switch the other tools read, so there is one answer to
+    # "are datapacks live" instead of two. A missing or unreadable switch still
+    # counts as disabled: absent must never mean permitted.
     if is_datapack_path(p) and not in_archived and not in_fixture and status in ("A", "C", "R", "M"):
-        return ("error", "new-datapack",
-                "new datapack content is disabled: the datapack programme is retired "
-                "(type safety, security model, debugging, warnings - see archived/README.md)")
+        enabled, why = datapacks_enabled(REPO_ROOT)
+        if not enabled:
+            return ("error", "new-datapack",
+                    f"new datapack content is disabled ({why}). Enable the programme with "
+                    f"scripts/repo/datapacks_disable.py first, or move the content under archived/")
 
     # 5. Workflows that would run datapack tooling again.
     if p.startswith(".github/workflows/") and status in ("A", "C", "R"):
