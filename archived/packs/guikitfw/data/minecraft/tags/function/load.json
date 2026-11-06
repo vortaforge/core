@@ -1,3 +1,6 @@
 {
-  "values": ["guikit:core/load"]
+  "values": [
+    "guikit:archive_warning",
+    "guikit:core/load"
+  ]
 }

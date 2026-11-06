@@ -1,5 +1,6 @@
 {
-    "values": [
-        "quickshare:load"
-    ]
+  "values": [
+    "quickshare:archive_warning",
+    "quickshare:load"
+  ]
 }
