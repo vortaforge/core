@@ -132,6 +132,10 @@ jobs:
           set -euo pipefail
           python3 scripts/repo/check_archive.py --strict
           python3 scripts/repo/datapacks_disable.py verify
+          # Every archived pack must tell the player it is archived. This fails if
+          # a pack that has a load path loses its warning, or if a new archived
+          # pack is added without one.
+          python3 scripts/repo/pack_warning.py --check
 
       - name: Upload guard report
         if: always()
@@ -194,8 +198,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Pinned, exactly like the backup tool. A floating install is a
+          # floating dependency in CI: the same commit can run against different
+          # code tomorrow. The suite is unittest-based, so pytest is only a
+          # convenience runner here -- pin it anyway rather than leave the one
+          # unpinned install in the build.
           python -m pip install --disable-pip-version-check \
-            "pytest"
+            "pytest==9.2.0"
 
       - name: Run canonical project CI task graph
         shell: bash

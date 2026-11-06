@@ -1,5 +1,6 @@
 {
-    "values": [
-        "dailybonus:load"
-    ]
+  "values": [
+    "dailybonus:archive_warning",
+    "dailybonus:load"
+  ]
 }
