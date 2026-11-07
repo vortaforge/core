@@ -21,7 +21,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.vortacraftmc.rtwrapper.RTWrapper"
+      "com.vortaforge.rtwrapper.RTWrapper"
     ]
   },
   "depends": {

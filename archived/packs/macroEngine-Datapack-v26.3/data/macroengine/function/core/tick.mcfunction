@@ -16,16 +16,16 @@
 function #macroengine:hook/config_ensure
 
 # Config-level pause guard (separate from the storage-level pause below)
-execute if score #vortacraftmc.packs.macroengine.config.tick.pause macroengine.meta matches 1 run return 0
+execute if score #vortaforge.packs.macroengine.config.tick.pause macroengine.meta matches 1 run return 0
 
 # Config not applied yet (before the first load finished): nothing to do
-execute unless score #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta matches 1.. run return 0
+execute unless score #vortaforge.packs.macroengine.config.tick.rate macroengine.meta matches 1.. run return 0
 
 # tick_rate: run the engine once every N game ticks (the config module's apply keeps the rate >= 1)
 scoreboard players add #gt_ctr macroengine.tick 1
 execute if score #gt_ctr macroengine.tick matches 2000000000.. run scoreboard players set #gt_ctr macroengine.tick 0
 scoreboard players operation #gt_mod macroengine.tick = #gt_ctr macroengine.tick
-scoreboard players operation #gt_mod macroengine.tick %= #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta
+scoreboard players operation #gt_mod macroengine.tick %= #vortaforge.packs.macroengine.config.tick.rate macroengine.meta
 execute unless score #gt_mod macroengine.tick matches 0 run return 0
 
 # Guard: no players online → nothing to process

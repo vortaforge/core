@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.vortacraftmc.jointhrottle.mixin",
+  "package": "com.vortaforge.jointhrottle.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["PlayerManagerMixin"],
   "injectors": { "defaultRequire": 1 }
