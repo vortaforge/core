@@ -11,7 +11,7 @@
   "license": "Unlicense",
   "environment": "server",
   "entrypoints": {
-    "main": ["com.vortacraftmc.afkmanager.AfkManagerMod"]
+    "main": ["com.vortaforge.afkmanager.AfkManagerMod"]
   },
   "mixins": [],
   "depends": {

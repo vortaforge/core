@@ -2,14 +2,30 @@
 # Single source of runtime configuration (replaces _rt_origin + scattered defaults).
 # Other packs may read macroengine:engine config / macroengine.meta scores; do not hardcode.
 
+# ── Migration: vortacraftmc -> vortaforge scoreboard holders ─────────────
+# The organization was renamed; these holders are world state, so they are
+# moved rather than dropped. A world that has never run this build has no old
+# score (the objective is created on first load), so the copy is a no-op there.
+# The old score is removed afterwards so a later hand-edit of the old name
+# cannot silently resurrect a stale value.
+scoreboard objectives add macroengine.meta dummy
+execute if score #vortacraftmc.packs.macroengine.version macroengine.meta matches -2147483648..2147483647 run scoreboard players operation #vortaforge.packs.macroengine.version macroengine.meta = #vortacraftmc.packs.macroengine.version macroengine.meta
+execute if score #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta matches -2147483648..2147483647 run scoreboard players operation #vortaforge.packs.macroengine.config.tick.rate macroengine.meta = #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta
+execute if score #vortacraftmc.packs.macroengine.config.tick.pause macroengine.meta matches -2147483648..2147483647 run scoreboard players operation #vortaforge.packs.macroengine.config.tick.pause macroengine.meta = #vortacraftmc.packs.macroengine.config.tick.pause macroengine.meta
+execute if score #vortacraftmc.archivedpacks.macroengine macroengine.meta matches -2147483648..2147483647 run scoreboard players operation #vortaforge.archivedpacks.macroengine macroengine.meta = #vortacraftmc.archivedpacks.macroengine macroengine.meta
+scoreboard players reset #vortacraftmc.packs.macroengine.version macroengine.meta
+scoreboard players reset #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta
+scoreboard players reset #vortacraftmc.packs.macroengine.config.tick.pause macroengine.meta
+scoreboard players reset #vortacraftmc.archivedpacks.macroengine macroengine.meta
+
 # ── Version (263 = 26.3) ──────────────────────────────────────────
 scoreboard objectives add macroengine.meta dummy
-scoreboard players set #vortacraftmc.packs.macroengine.version macroengine.meta 263
+scoreboard players set #vortaforge.packs.macroengine.version macroengine.meta 263
 
 # Archived flag: opt-in, default 0 (the pack is in active development). Set it to 1 by hand to mark a copy as archived:
-# scoreboard players set #vortacraftmc.archivedpacks.macroengine macroengine.meta 1
+# scoreboard players set #vortaforge.archivedpacks.macroengine macroengine.meta 1
 # Worlds that loaded an earlier build keep the value that build stored (it defaulted to 1); reset it with the line above and 0.
-execute unless score #vortacraftmc.archivedpacks.macroengine macroengine.meta matches -2147483648..2147483647 run scoreboard players set #vortacraftmc.archivedpacks.macroengine macroengine.meta 0
+execute unless score #vortaforge.archivedpacks.macroengine macroengine.meta matches -2147483648..2147483647 run scoreboard players set #vortaforge.archivedpacks.macroengine macroengine.meta 0
 
 # ── Engine defaults (only fill missing keys — preserves live data) ─
 execute unless data storage macroengine:engine global run data modify storage macroengine:engine global set value {}

@@ -153,5 +153,9 @@ Full description, switches and examples: [perm.md](perm.md).
 ## Not configurable (on purpose)
 
 - `systems/validate/safe_name` rules other than the length limit, and the macro-injection guards in `api/store`: turning them off would let untrusted text into commands.
-- Runtime identifiers (`#vortacraftmc.*` fake players, `macroengine:*` storage names): renaming them breaks existing worlds.
+- Runtime identifiers (`macroengine:*` storage names): renaming them breaks existing worlds.
+  The `#vortacraftmc.*` fake players were the exception: they were renamed to `#vortaforge.*`
+  with a migration at the top of `core/config/init` that copies each score across before
+  dropping the old holder, because those scores are world state (an operator sets the
+  archive flag by hand).
 - The `macroengine:engine security.multi_type_allowlist` field has no code that reads it, so it is not a config key.

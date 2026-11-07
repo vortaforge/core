@@ -11,8 +11,8 @@
   "license": "Unlicense",
   "environment": "*",
   "entrypoints": {
-    "preLaunch": ["com.vortacraftmc.datapackblocker.DatapackBlockerPreLaunch"],
-    "main": ["com.vortacraftmc.datapackblocker.DatapackBlockerMod"]
+    "preLaunch": ["com.vortaforge.datapackblocker.DatapackBlockerPreLaunch"],
+    "main": ["com.vortaforge.datapackblocker.DatapackBlockerMod"]
   },
   "mixins": [],
   "depends": {

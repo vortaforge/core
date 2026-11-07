@@ -6,7 +6,7 @@
 
 execute unless data storage macroengine:engine global{loaded:1b} run data modify storage macroengine:output diagnostics.issues append value "engine.not_loaded"
 execute if data storage macroengine:engine tick{paused:1b} run data modify storage macroengine:output diagnostics.notices append value "tick.paused_storage"
-execute if score #vortacraftmc.packs.macroengine.config.tick.pause macroengine.meta matches 1 run data modify storage macroengine:output diagnostics.notices append value "tick.paused_config"
+execute if score #vortaforge.packs.macroengine.config.tick.pause macroengine.meta matches 1 run data modify storage macroengine:output diagnostics.notices append value "tick.paused_config"
 
 execute store result storage macroengine:output diagnostics.log.level int 1 run scoreboard players get #macroengine.log_level macroengine.log_level
 execute store result storage macroengine:output diagnostics.log.buffered int 1 run data get storage macroengine:engine log_display
