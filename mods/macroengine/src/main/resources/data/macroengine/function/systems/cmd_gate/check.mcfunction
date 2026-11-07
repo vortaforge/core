@@ -27,7 +27,7 @@
 # stopped by it. The boundary is (2) + (3): only enable dynamic_cmd and grant
 # cmd.dynamic to players you already trust with function-permission-level
 # commands. Like every datapack check this is a safeguard, not a sandbox -
-# non-bypassable enforcement belongs in a Fabric mod (see gate/version).
+# non-bypassable enforcement belongs in a Fabric mod.
 #
 # INPUT  (storage macroengine:cmd_gate):  in.cmd     the command string (no leading /)
 # OUTPUT (storage macroengine:cmd_gate):  out.allowed 1b / 0b, out.error  reason
@@ -36,8 +36,6 @@
 #       string.result (shared string-library scratch), like other systems do.
 # ======================================================================================
 
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 data modify storage macroengine:cmd_gate out set value {allowed:0b,error:""}
 data remove storage macroengine:cmd_gate tmp
 data modify storage macroengine:cmd_gate tmp set value {}
