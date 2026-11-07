@@ -9,10 +9,6 @@
 # directly via #minecraft:tick, see data/minecraft/tags/function/tick.json.
 
 # Runtime config: fill and apply anything missing (worlds loaded by an older version)
-execute unless score #macroengine.gate.2 vortaforge.gate matches 0 unless score #macroengine.permit vortaforge.gate matches 1 run function macroengine:gate/permit_tick
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute unless score #macroengine.gate.3 vortaforge.gate matches 0 as @a[tag=!macroengine.consented] run function macroengine:gate/consent_tick
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 function macroengine:core/config/ensure
 
 # Config-level pause guard (separate from the storage-level pause below)
