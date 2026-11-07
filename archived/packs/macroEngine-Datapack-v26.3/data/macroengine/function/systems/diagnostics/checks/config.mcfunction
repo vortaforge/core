@@ -8,7 +8,7 @@ execute unless data storage macroengine:engine config run data modify storage ma
 execute unless data storage macroengine:engine config_rev run data modify storage macroengine:output diagnostics.issues append value "config.rev_missing"
 execute unless data storage macroengine:engine config_schema run data modify storage macroengine:output diagnostics.issues append value "config.schema_missing"
 
-execute unless score #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta matches 1.. run data modify storage macroengine:output diagnostics.issues append value "config.not_applied:tick_rate"
+execute unless score #vortaforge.packs.macroengine.config.tick.rate macroengine.meta matches 1.. run data modify storage macroengine:output diagnostics.issues append value "config.not_applied:tick_rate"
 execute unless score #queue_cap macroengine.tick matches 1.. run data modify storage macroengine:output diagnostics.issues append value "config.not_applied:queue_max_depth"
 execute unless score #hook_interval macroengine.tick matches 1.. run data modify storage macroengine:output diagnostics.issues append value "config.not_applied:hook_interval"
 execute unless score #dynamic_cmd macroengine.tick_flags matches 0.. run data modify storage macroengine:output diagnostics.issues append value "config.not_applied:dynamic_cmd"

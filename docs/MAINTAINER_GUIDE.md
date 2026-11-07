@@ -58,6 +58,19 @@ current deployment: verify each pack's metadata and deployment separately.
 8. **Preserve runtime identifiers.** Do not rename `data/vortacraftmc/`,
    `#vortacraftmc.*`, `com.vortacraftmc` or other public identifiers without an
    explicit world/API migration plan.
+
+   Two renames have been carried out under this rule, both with the migration
+   written first:
+
+   | Old | New | Migration |
+   |---|---|---|
+   | `com.vortacraftmc.*` | `com.vortaforge.*` | source-only: package dirs, `package`/`import` lines, `*.mixins.json`, `fabric.mod.json` entry points and `maven_group`. No world state, so nothing to migrate. |
+   | `#vortacraftmc.packs.macroengine.*`, `#vortacraftmc.archivedpacks.macroengine` | `#vortaforge....` | `scoreboard players operation` copies each live score to the new holder, then `reset` drops the old one. It runs at the top of `core/config/init`, which is in the load chain and idempotent, so it is safe on every load and a no-op on a world that never had the old names. `core/config/reset` clears the old holders first so a stale score cannot be copied back in. |
+
+   History is not an identifier. `runtoolkit -> vortacraftmc -> vortaforge` in
+   `README.md`, `CREDITS.md` and the provenance watermarks stays exactly as
+   written; rewriting it would falsify the record. Same for
+   `archived/patches/*.patch`, which is a `git am` series and must apply.
 9. **Preserve notices and provenance.** Keep `LICENSE`, `NOTICE.md`, the
    `_vc_origin.mcfunction` watermarks (now under `archived/`), historical
    records, `CREDITS.md` and third-party licence notices intact. Pin

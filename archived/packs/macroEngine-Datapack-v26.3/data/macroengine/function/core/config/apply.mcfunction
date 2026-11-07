@@ -5,7 +5,7 @@
 #
 #   module_<name>      -> macroengine:engine modules.<name>   (read by the module guards and scans)
 #   sys_<name>         -> #sys_<name> (macroengine.tick_flags)
-#   tick_rate          -> #vortacraftmc.packs.macroengine.config.tick.rate (macroengine.meta)
+#   tick_rate          -> #vortaforge.packs.macroengine.config.tick.rate (macroengine.meta)
 #   hud_rate, admin_rate, hook_interval, geo_interval, interaction_interval, wand_interval,
 #   perm_trigger_interval -> #<key> (macroengine.tick)
 #   queue_max_depth    -> #queue_cap (macroengine.tick)
@@ -53,7 +53,7 @@ execute store result score #perm_cmd macroengine.tick_flags run data get storage
 execute store result score #cfg_v macroengine.tmp run data get storage macroengine:engine config.tick_rate
 execute if score #cfg_v macroengine.tmp matches ..0 run scoreboard players set #cfg_v macroengine.tmp 1
 execute if score #cfg_v macroengine.tmp matches 1201.. run scoreboard players set #cfg_v macroengine.tmp 1200
-scoreboard players operation #vortacraftmc.packs.macroengine.config.tick.rate macroengine.meta = #cfg_v macroengine.tmp
+scoreboard players operation #vortaforge.packs.macroengine.config.tick.rate macroengine.meta = #cfg_v macroengine.tmp
 execute store result storage macroengine:engine config.tick_rate int 1 run scoreboard players get #cfg_v macroengine.tmp
 
 execute store result score #cfg_v macroengine.tmp run data get storage macroengine:engine config.hud_rate
