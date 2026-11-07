@@ -1,10 +1,8 @@
-# macroengine:config
+# macroengine:core/config/init
 # Single source of runtime configuration (replaces _rt_origin + scattered defaults).
 # Other packs may read macroengine:engine config / macroengine.meta scores; do not hardcode.
 
 # ── Version (263 = 26.3) ──────────────────────────────────────────
-execute unless score #macroengine.open vortaforge.gate matches 1 run return 0
-execute if entity @s[type=minecraft:player] unless entity @s[tag=macroengine.consented] unless score #macroengine.gate.3 vortaforge.gate matches 0 run return 0
 scoreboard objectives add macroengine.meta dummy
 scoreboard players set #vortacraftmc.packs.macroengine.version macroengine.meta 263
 
