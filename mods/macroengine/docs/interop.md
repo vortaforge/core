@@ -6,18 +6,12 @@ is now retired. Nothing here was run in a Minecraft server.
 
 ## 1. Is macroEngine usable right now?
 
-```mcfunction
-execute if function macroengine:gate/is_open run function mypack:use_macroengine
-```
+It has no admission gate. The five-gate layer (version, approval, consent,
+incomplete-load, reload-loop) was removed: it read as closed while it was
+open, and enabling anything tripped it. The mod runs on load.
 
-`gate/is_open` reads one score (`#macroengine.open` in `vortaforge.gate`), prints nothing and returns 1 or 0. It has
-no gate guard on purpose, so it can answer while the pack is closed (not approved, consent pending, incomplete or
-reload-looping load).
-
-`vortaforge.gate` is a shared objective: `RTWrapper-v1.0.1` creates it too,
-as did historical `guikit-datapack` distributions, each with its own fake
-players (`#macroengine.*`, ...). Read your own fake players; do not write to
-another pack's.
+If you were calling `macroengine:gate/is_open` to test whether this was
+ready, delete that call. There is nothing to wait for.
 
 ## 2. Extension points (function tags)
 
