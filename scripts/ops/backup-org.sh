@@ -7,7 +7,7 @@
 #
 # Usage:
 #   bash scripts/backup-org.sh              # full backup
-#   bash scripts/backup-org.sh --dry-run    # show what would run, change nothing
+#   bash scripts/backup-org.sh --dry-run    # show what would run; writes nothing at all
 #   bash scripts/backup-org.sh --verify-only ARCHIVE
 #                                           # verify an existing archive only
 #

@@ -2,7 +2,6 @@ package net.vortaforge.macroengine.ack;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -104,7 +103,10 @@ public final class AcknowledgementStore {
                 }
             }
             return new AcknowledgementStore(file, clean);
-        } catch (IOException | JsonSyntaxException | RuntimeException e) {
+        // JsonSyntaxException extends RuntimeException, so it must not appear
+        // alongside it in a multi-catch: the alternatives may not be related by
+        // subclassing, and IOException | RuntimeException already covers both.
+        } catch (IOException | RuntimeException e) {
             // Unreadable or malformed: fail closed by knowing nothing.
             return new AcknowledgementStore(file, new LinkedHashMap<>());
         }

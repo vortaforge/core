@@ -1,7 +1,6 @@
 package net.vortaforge.macroengine.ack;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -111,7 +110,10 @@ public final class ArchiveRegistry {
                     }
                 }
             }
-        } catch (IOException | JsonSyntaxException | RuntimeException e) {
+        // JsonSyntaxException extends RuntimeException, so it must not appear
+        // alongside it in a multi-catch: the alternatives may not be related by
+        // subclassing, and IOException | RuntimeException already covers both.
+        } catch (IOException | RuntimeException e) {
             // An unreadable registry must not take world load down, and must not
             // pretend packs are archived either.
             return new ArchiveRegistry(new HashMap<>(), new HashMap<>());

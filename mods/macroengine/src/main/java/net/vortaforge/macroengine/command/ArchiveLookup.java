@@ -1,14 +1,16 @@
 package net.vortaforge.macroengine.command;
 
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.repository.Pack;
 import net.vortaforge.macroengine.ack.ArchiveRegistry;
 import net.vortaforge.macroengine.ack.DeclaredStatus;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Answers "is this pack a retired one?" for the command layer.
@@ -28,36 +30,50 @@ import java.util.zip.ZipFile;
  * boolean would couple two things that do not need to know each other.
  */
 final class ArchiveLookup {
+    /**
+     * The resource id of a pack's own metadata file.
+     *
+     * <p>The name is {@code pack.mcmeta} at the pack root, which the game models as
+     * a resource in the {@code minecraft} namespace. If this turns out to be the
+     * wrong id for 26.3, the only consequence is that a pack declaring its own
+     * archived status is not recognised as archived - the hash-based match and the
+     * general warning are unaffected, and nothing is ever refused on this basis.
+     */
+    private static final Identifier PACK_META_ID =
+            Identifier.fromNamespaceAndPath("minecraft", "pack.mcmeta");
+
     private ArchiveLookup() {
     }
 
-    static boolean isArchived(String packId, String hash, Path packFile) {
+    static boolean isArchived(String packId, String hash, Pack pack) {
         ArchiveRegistry registry = ArchiveRegistry.get();
         if (registry.byContentHash(hash).isPresent()) {
             return true;
         }
-        return DeclaredStatus.declaresArchived(readPackMeta(packFile));
+        return DeclaredStatus.declaresArchived(readPackMeta(pack));
     }
 
-    /** Read {@code pack.mcmeta} from a pack directory or a pack zip. Null on any failure. */
-    static String readPackMeta(Path packFile) {
-        if (packFile == null) {
+    /**
+     * Read {@code pack.mcmeta} through the pack's own resource access.
+     *
+     * <p>Not from a path: {@code Pack} has none. {@code PACK_META} is the id the
+     * game uses for the file itself, so this asks the same question the game asks
+     * rather than reconstructing a filename.
+     */
+    static String readPackMeta(Pack pack) {
+        if (pack == null) {
             return null;
         }
-        try {
-            if (Files.isDirectory(packFile)) {
-                Path meta = packFile.resolve("pack.mcmeta");
-                return Files.isRegularFile(meta) ? Files.readString(meta, StandardCharsets.UTF_8) : null;
-            }
-            if (Files.isRegularFile(packFile)) {
-                try (ZipFile zip = new ZipFile(packFile.toFile())) {
-                    ZipEntry entry = zip.getEntry("pack.mcmeta");
-                    if (entry == null) {
-                        return null;
-                    }
-                    try (var in = zip.getInputStream(entry)) {
-                        return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                    }
+        AtomicReference<String> found = new AtomicReference<>(null);
+        try (var stream = pack.open()) {
+            for (PackResources source : stream.toList()) {
+                var supplier = source.getResource(PackType.SERVER_DATA, PACK_META_ID);
+                if (supplier == null) {
+                    continue;
+                }
+                try (InputStream in = supplier.get()) {
+                    found.set(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                    break;
                 }
             }
         } catch (IOException | RuntimeException e) {
@@ -65,6 +81,6 @@ final class ArchiveLookup {
             // conservative answer: the general warning assumes less.
             return null;
         }
-        return null;
+        return found.get();
     }
 }

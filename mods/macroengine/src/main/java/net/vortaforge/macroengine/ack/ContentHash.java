@@ -8,9 +8,11 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -103,6 +105,35 @@ public final class ContentHash {
             }
             return HexFormat.of().formatHex(digest.digest());
         }
+    }
+
+    /**
+     * Hash a pack from the resources the game will actually load.
+     *
+     * <p>This is the entry point that matters for a pack the game handed us:
+     * {@code Pack} exposes no file path. Verified against the 26.3 server jar -
+     * {@code Pack} has {@code open(): Stream<PackResources>}, and its
+     * {@code ResourcesSupplier} offers {@code openResources(...)}, but neither a
+     * {@code Pack} nor a {@code PackLocationInfo} carries a {@link Path}. Trying
+     * to build one from the pack id and a guess about the folder layout would
+     * hash bytes the game is not loading, which is worse than not hashing at all.
+     *
+     * <p>The content itself is fine to hash from: {@code PackResources} is
+     * {@code Closeable} and {@code getNamespaces}/{@code getResource} work for
+     * every pack type, so a folder pack and a zip pack produce the same digest
+     * for the same files. That is what makes an acknowledgement written by a
+     * dedicated server comparable with one written by a client.
+     *
+     * @param entries resource path -> content; iteration order does not matter
+     */
+    public static String ofResources(Map<String, byte[]> entries) {
+        List<String> paths = new ArrayList<>(entries.keySet());
+        Collections.sort(paths);
+        MessageDigest digest = sha256();
+        for (String path : paths) {
+            feed(digest, path, entries.get(path));
+        }
+        return HexFormat.of().formatHex(digest.digest());
     }
 
     /** Dispatch on what the path actually is. */

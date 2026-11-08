@@ -36,18 +36,18 @@ import java.util.List;
  *       again for different ones.</li>
  * </ul>
  *
- * <h2>Confirmed vs unverified for 26.3</h2>
+ * <h2>Verified against 26.3</h2>
  *
- * Confirmed by the previous implementation of this same file: {@link Screen},
- * {@code init()}, {@code addRenderableWidget}, {@link Button#builder},
- * {@link GuiGraphicsExtractor}, {@code centeredText}, {@code text}, {@code font},
- * {@code setScreenAndShow}.
+ * Everything this file uses was checked against the 26.3 server and client jars and
+ * then compiled with JDK 25 against them: {@link Screen}, {@code init()},
+ * {@code addRenderableWidget}, {@link Button#builder}, {@link GuiGraphicsExtractor},
+ * {@code centeredText}, {@code text}, {@code font}, {@code setScreenAndShow},
+ * and {@link Checkbox} with {@code builder(...)}, {@code pos(...)},
+ * {@code selected(...)}, {@code onValueChange(...)} and {@code build()}.
  *
- * <p><b>Unverified:</b> {@link Checkbox} - its constructor signature and whether it
- * is a {@code Renderable} that {@code addRenderableWidget} accepts. If the class or
- * its constructor does not exist, this file will not compile, which is the correct
- * failure. The alternative is a plain button that toggles a boolean, at the cost of
- * looking less like a consent control than it is.
+ * <p>The earlier version of this comment listed {@code Checkbox} as unverified and
+ * offered a plain toggle button as the fallback. It was not needed: the class
+ * exists, {@code Checkbox.OnValueChange} exists, and the builder is what compiles.
  */
 public final class ContentWarningScreen extends Screen {
     private static final int MARGIN = 24;

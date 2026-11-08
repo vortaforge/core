@@ -8,7 +8,6 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.Pack;
 import net.vortaforge.macroengine.ack.PackGate;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,12 +71,11 @@ public final class AckCommand {
     private static List<String> unacknowledgedIds(PackRepository repository) {
         List<String> ids = new ArrayList<>();
         for (Pack pack : repository.getAvailablePacks()) {
-            Path path = packPath(pack);
-            String hash = path == null ? null : PackGate.hashOf(path);
+            String hash = PackHasher.hashOf(pack);
             if (hash == null) {
                 continue;
             }
-            boolean archived = ArchiveLookup.isArchived(pack.getId(), hash, path);
+            boolean archived = ArchiveLookup.isArchived(pack.getId(), hash, pack);
             if (PackGate.get().verdict(pack.getId(), hash, archived, "").needsAsking()) {
                 ids.add(pack.getId());
             }
@@ -89,9 +87,8 @@ public final class AckCommand {
         PackRepository repository = source.getServer().getPackRepository();
         int pending = 0;
         for (Pack pack : repository.getAvailablePacks()) {
-            Path path = packPath(pack);
-            String hash = path == null ? null : PackGate.hashOf(path);
-            boolean archived = path != null && ArchiveLookup.isArchived(pack.getId(), hash, path);
+            String hash = PackHasher.hashOf(pack);
+            boolean archived = hash != null && ArchiveLookup.isArchived(pack.getId(), hash, pack);
 
             var verdict = PackGate.get().verdict(pack.getId(), hash, archived, "");
             if (!verdict.needsAsking()) {
@@ -123,13 +120,7 @@ public final class AckCommand {
             return 0;
         }
 
-        Path path = packPath(pack);
-        if (path == null) {
-            source.sendFailure(Component.literal("macroEngine: '" + id
-                    + "' is a built-in pack with no file to hash; it does not need acknowledging."));
-            return 0;
-        }
-        String hash = PackGate.hashOf(path);
+        String hash = PackHasher.hashOf(pack);
         if (hash == null) {
             source.sendFailure(Component.literal("macroEngine: '" + id
                     + "' could not be hashed. An unreadable pack cannot be acknowledged."));
@@ -143,7 +134,7 @@ public final class AckCommand {
             return 0;
         }
 
-        boolean archived = ArchiveLookup.isArchived(id, hash, path);
+        boolean archived = ArchiveLookup.isArchived(id, hash, pack);
         String warning = archived
                 ? " This pack is RETIRED and unmaintained; the risk is yours."
                 : "";
@@ -152,44 +143,4 @@ public final class AckCommand {
         return 1;
     }
 
-    /**
-     * The pack's file on disk, or null for a built-in pack.
-     *
-     * <p>{@code Pack#getPackLocation} is a record of two paths (a directory inside
-     * the pack and a zip root). Only the zip root gives a hashable file for a
-     * zipped pack, and only the directory does for a folder pack.
-     *
-     * <p><b>Unverified for 26.3:</b> the accessor names on {@code Pack} and
-     * {@code PackLocationInfo} were not checked against a 26.3 source tree in this
-     * environment. See the note at the bottom of this class.
-     */
-    private static Path packPath(Pack pack) {
-        try {
-            var location = pack.getPackLocation();
-            if (location == null) {
-                return null;
-            }
-            Path root = location.getPath();
-            return root == null ? null : root;
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
-    /*
-     * ---------------------------------------------------------------------
-     * TO VERIFY BEFORE MERGE (26.3 names, not guessed further)
-     * ---------------------------------------------------------------------
-     * 1. Pack#getPackLocation() and the record accessor it returns
-     *    (.getPath() / a zip-root accessor) - the name and the nullability of
-     *    both. If Pack exposes only a resource supplier and no path, the pack's
-     *    file cannot be hashed from the repository and the flow has to hash
-     *    through ResourceManager instead.
-     * 2. PackRepository#getAvailablePacks() and #getPack(String) - both exist in
-     *    the 1.21 line; confirm they survived into 26.3 with the same names.
-     * 3. SharedSuggestionProvider#suggest(Iterable<String>, ...) overload.
-     * 4. Whether a built-in (vanilla) pack reaches this code at all: it should be
-     *    filtered before hashing, because it has no file and needs no approval.
-     * ---------------------------------------------------------------------
-     */
 }

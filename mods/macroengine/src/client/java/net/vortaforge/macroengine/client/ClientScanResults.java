@@ -43,12 +43,12 @@ public final class ClientScanResults {
     /**
      * Content hash for a pack, or null when the client cannot obtain one.
      *
-     * <p><b>Unverified for 26.3.</b> The client resource manager is consulted for a
-     * path to the pack; if it does not expose one, this returns null and the pack
-     * is silently skipped rather than shown as a prompt that could never be
-     * satisfied. The honest fix is a {@code ContentHash} overload that hashes
-     * {@code (name, bytes)} pairs straight out of the resource manager; see the
-     * note in {@code MacroEngineClient}.
+     * <p><b>Still returns null.</b> {@code ContentHash.ofResources(Map<String,
+     * byte[]>)} now exists and the server side uses it, so the remaining work is
+     * to enumerate the client's pack resources the same way {@code PackHasher}
+     * does. That needs the client pack repository, which is not reachable from
+     * here without the call site this class is waiting on - so the fix is one
+     * change, not two, and it lands with the hook.
      */
     public static String hashOf(String packId) {
         // Deliberately returning null rather than guessing at an accessor. A wrong

@@ -123,11 +123,14 @@ public final class MacroEngineClient implements ClientModInitializer {
      *       callback re-runs the original action; the cancel callback does not.</li>
      * </ul>
      *
-     * <p><b>Unverified for 26.3:</b> where this should be called from. The hook
-     * needs a point after the pack list for the world is known and before the
-     * integrated server starts, and the previous code copied
-     * {@code net.minecraft.client.server.IntegratedServer} into the signature
-     * without checking that any such hook exists. See the note below.
+     * <p><b>The methods compile against 26.3; the call site does not exist yet.</b>
+     * All four classes this file touches were checked against the 26.3 client jar
+     * and the module compiles. What is still open is <em>where</em> to call this
+     * from: the pack list for a world is only final after the world's own files
+     * are read, and no such hook is wired up in this build. Until it is,
+     * {@code showWorldWarningIfNeeded} has no caller and the client prompt does
+     * not appear. It is stated here rather than implied by a compile error,
+     * because compiling is not the same as running.
      */
     public static boolean showWorldWarningIfNeeded(Minecraft client, Screen parent, Runnable openWorld) {
         if (client == null || parent == null) {
@@ -171,20 +174,25 @@ public final class MacroEngineClient implements ClientModInitializer {
 
     /*
      * ---------------------------------------------------------------------
-     * TO VERIFY BEFORE MERGE (26.3 hooks, not guessed further)
+     * WHAT IS DONE, AND WHAT IS NOT
      * ---------------------------------------------------------------------
-     * 1. Where showWorldWarningIfNeeded should be called from. Candidates, none
-     *    confirmed here:
-     *      - ScreenEvents / screen-replacement events on CreateWorldScreen's
-     *        "Create" and WorldOpenFlows' "Play Selected World" path;
-     *      - Mixin into WorldOpenFlows#openWorld (or whatever 26.3 names it).
-     *    The pack list for the world is only final after the world's level.json
-     *    is read, so a hook that fires before that cannot see the right packs.
-     * 2. Whether ClientScanResults can obtain a pack's file path. If the client
-     *    resource manager does not expose one, the hash has to be computed from
-     *    the resource bytes instead, which means ContentHash needs an overload
-     *    taking (name, bytes) pairs rather than a Path.
-     * 3. Checkbox's constructor and its membership in addRenderableWidget.
+     * Done, and proven by compiling against the 26.3 client and server jars:
+     * every class this module references exists, with the signatures used. The
+     * earlier note here worried about three things and two of them turned out to
+     * be non-issues - the resource-side hashing it asked for now exists as
+     * ContentHash.ofResources(...) and is used by PackHasher on the server, and
+     * Checkbox is a real builder-based widget.
+     *
+     * Not done: the call site. showWorldWarningIfNeeded compiles and does what it
+     * says, but nothing invokes it, so no client prompt appears in this build.
+     * The pack list for a world is final only after that world's files are read,
+     * and wiring that read is a mixin into the world-open path - a change that
+     * cannot be verified by compiling, only by launching the game.
+     *
+     * Whoever wires it: the ack is a prompt, not a refusal. If the hook cannot
+     * show a screen, the world must still load and the pack must be reported, the
+     * same way the server reports it. Never turn a missing screen into a failure
+     * to open a world.
      * ---------------------------------------------------------------------
      */
 }
