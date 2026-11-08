@@ -15,9 +15,9 @@ retired at all is in [`README.md`](../README.md#why-datapacks-are-not-accepted-a
 
 | Piece | Where | What it does |
 |---|---|---|
-| Kill switch | `datapacks.disabled.json`, `archived/datapacks.disabled` | `"enabled": false`. Missing/unreadable counts as disabled. |
+| Programme switch | `datapacks.disabled.json`, `archived/datapacks.disabled` | Currently `"enabled": true`, which governs one rule only. Missing/unreadable counts as disabled. The exact scope is in [`README.md`](../README.md#what-the-switch-actually-does). |
 | Switch CLI | `scripts/repo/datapacks_disable.py` | `status`, `disable`, `enable`, `verify` |
-| Guard | `scripts/repo/datapack_guard.py` | blocks new datapacks, revived archived tooling, blocklisted accounts |
+| Guard | `scripts/repo/datapack_guard.py` | blocks `packs/` regardless of the switch, blocks a datapack embedded in any `mods/**`, blocks revived archived tooling, blocks blocklisted accounts |
 | Archive registry | `archived/archive.json` (schema v2), `archived/archive.schema.json` | every retired project, `"disarmed": true` |
 | Registry validator | `scripts/repo/check_archive.py` | fail-closed validation incl. disarmed/bijection/no-workflow rules |
 | Account blocklist | `blocklist/blocklist.json` | logins, bot/AI rules, public-profile scan policy |
@@ -84,7 +84,7 @@ python3 -m unittest discover -s scripts/tests -v
 node scripts/tests/site_behavior.test.mjs
 ```
 
-Expected: switch `enabled=false`, `verify` 0 problems, registry 31 entries /
+Expected: `verify` 0 problems, registry entries consistent, switch value as set (both values pass `verify`) /
 0 errors, 90 Python tests OK, website test passes.
 
 ### 5. Day-to-day use

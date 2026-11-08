@@ -42,8 +42,11 @@ the project name, so the description said nothing about what is in here.
 > **The datapack programme in this repository is retired and hard-disabled.**
 > `packs/` is empty, every datapack, generator, linter and test harness is
 > archived and disarmed in [`archived/archive.json`](archived/archive.json), and
-> [`datapacks.disabled.json`](datapacks.disabled.json) (`"enabled": false`) is
-> the switch that keeps it that way.
+> [`datapacks.disabled.json`](datapacks.disabled.json) is the switch that governs
+> the programme. **The switch currently reads `"enabled": true`, and that does
+> not mean datapacks are back** - see
+> [What the switch actually does](#what-the-switch-actually-does) for the exact
+> difference, which is smaller than the flag suggests.
 >
 > **Why:** datapacks here had no type safety (every value crossing a function
 > call, storage read, scoreboard comparison or macro expansion is an untyped
@@ -62,6 +65,40 @@ the project name, so the description said nothing about what is in here.
 > Read [`archived/README.md`](archived/README.md) for the policy and
 > [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) for the whole system, including how to
 > install it and how to re-enable it deliberately.
+
+## What the switch actually does
+
+`datapacks.disabled.json` reads `"enabled": true`. The flag does **not** mean the
+datapack programme is running again. It controls exactly one rule, and three other
+rules do the actual work without consulting it at all.
+
+Measured behaviour of `scripts/repo/datapack_guard.py`, for a new file
+(`A`) at each path:
+
+| Path | `enabled: true` | `enabled: false` | Rule |
+| --- | --- | --- | --- |
+| `packs/New/pack.mcmeta` | **blocked** | **blocked** | `live-packs-tree` - unconditional |
+| `mods/<mod>/.../data/ns/function/a.mcfunction` | **blocked** | **blocked** | `embedded-datapack` - unconditional |
+| `mods/<mod>/.../pack.mcmeta` | **blocked** | **blocked** | `embedded-datapack` - unconditional |
+| `archived/packs/.../*.mcfunction` | allowed | allowed | no rule applies |
+| `examples/e/data/ns/function/a.mcfunction` | allowed | **blocked** | `new-datapack` - the switch |
+| `anything/*.mcfunction` (outside all of the above) | allowed | **blocked** | `new-datapack` - the switch |
+
+So `"enabled": true` buys one thing: a `.mcfunction` or `pack.mcmeta` may be
+created outside `packs/`, outside `mods/` and outside `archived/`. It cannot revive
+`packs/`, it cannot put a pack back inside a mod jar, and it does not touch the
+retired-tooling or merge-manifest rules.
+
+**This is deliberate, and the reason is a hole that used to be here.** Before this
+rule, `mods/` embedded datapacks were gated by the same switch, so with
+`"enabled": true` a mod could re-embed a pack and the guard reported a pass.
+`mods/macroengine` was in exactly that state: 1,525 files under `data/` plus a
+`pack.mcmeta`. The switch now governs live-pack production only; a jar embedding a
+pack is refused by a rule that never reads it.
+
+If you want the flag to say what the prose says, setting `"enabled": false` is
+strictly safer and does not change anything measured above except the two `examples/`
+and catch-all rows.
 
 ## Why datapacks are not accepted any more
 
@@ -199,7 +236,7 @@ time.
 - `docs/`        — Maintainer notes: [`docs/ARCHIVAL.md`](docs/ARCHIVAL.md) explains the retirement, [`docs/MAINTAINER_GUIDE.md`](docs/MAINTAINER_GUIDE.md) the rules, and [`docs/SCORECARD.md`](docs/SCORECARD.md) scores every part of the repository.
 - `examples/`    — Example Fabric mods (the datapack template was archived)
 - `build-logic/` — Shared Gradle script (`shared-fabric-mod.gradle`) applied by the mod subprojects
-- `datapacks.disabled.json` — The kill switch (`"enabled": false`)
+- `datapacks.disabled.json` — The programme switch (currently `"enabled": true`; see [What the switch actually does](#what-the-switch-actually-does))
 
 Content that does not fit another category is not given its own directory.
 Register it in `archived/archive.json` with `"kind": "other"` instead; the

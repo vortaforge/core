@@ -77,20 +77,74 @@ class GuardRules(unittest.TestCase):
         self.assertIn("live-packs-tree", result.stdout)
 
     def test_new_datapack_outside_packs_follows_the_switch(self):
-        """Datapack content outside packs/ is gated by the switch, not blocked outright.
+        """Datapack content outside packs/ and outside mods/ follows the switch.
 
-        The original assertion was "always blocked". That stopped being true once the
-        programme was deliberately re-enabled, and it was asserting a policy rather
-        than the rule: the rule is "block when the programme is off".
+        The original assertion was "always blocked", then "blocked only when the
+        programme is off". Both were about the same rule, and both were right for
+        their time. The path in this test used to be under mods/, which is now
+        covered by an unconditional rule of its own - so the switch's behaviour is
+        checked at a path that is neither a live pack nor inside a mod.
         """
         enabled = json.loads((ROOT / "datapacks.disabled.json").read_text(encoding="utf-8"))["enabled"]
-        result = guard_with_changes("A\tmods/x/src/main/resources/data/foo/function/a.mcfunction\n")
+        result = guard_with_changes("A\texamples/demo/data/foo/function/a.mcfunction\n")
         if enabled:
             self.assertEqual(result.returncode, 0,
                              "the switch is on, so new datapack content must be allowed: " + result.stdout)
         else:
             self.assertEqual(result.returncode, 1, result.stdout)
             self.assertIn("new-datapack", result.stdout)
+
+    def test_a_pack_may_never_be_embedded_in_a_mod_again(self):
+        """mods/macroengine shipped 1,525 data files and a pack.mcmeta.
+
+        That is what made hosting platforms treat the mod as a payload. The rule
+        that stops it has to hold regardless of the programme switch: the switch
+        answers "may packs/ produce new packs", never "may a jar embed one".
+        """
+        for path in (
+            "mods/x/src/main/resources/pack.mcmeta",
+            "mods/x/src/main/resources/data/foo/function/a.mcfunction",
+            "mods/x/src/main/resources/data/foo/tags/function/tick.json",
+            "mods/x/pack.mcmeta",
+        ):
+            with self.subTest(path=path):
+                result = guard_with_changes(f"A\t{path}\n")
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn("embedded-datapack", result.stdout)
+
+    def test_the_embedded_pack_rule_ignores_the_programme_switch(self):
+        """Proved against a throwaway root with the switch forced to enabled=true.
+
+        The old rule 4 read the switch and skipped mods/ when it said enabled, so
+        a mod could embed a pack while the guard reported a pass. This pins the
+        separation: the new rule must not consult the switch at all.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "scripts" / "repo").mkdir(parents=True)
+            (root / "datapacks.disabled.json").write_text(
+                json.dumps({"enabled": True, "allowlist": [], "denylist": []}), encoding="utf-8")
+            from datapack_guard import rule_for_change  # resolved via sys.path above
+
+            original_root = datapack_guard.REPO_ROOT
+            try:
+                datapack_guard.REPO_ROOT = root
+                hit = rule_for_change(
+                    "A", "mods/x/src/main/resources/data/foo/function/a.mcfunction")
+            finally:
+                datapack_guard.REPO_ROOT = original_root
+
+            self.assertIsNotNone(hit, "an embedded pack must be refused even with the switch on")
+            self.assertEqual(hit[1], "embedded-datapack")
+
+    def test_fixtures_may_still_contain_a_pack(self):
+        result = guard_with_changes("A\tscripts/tests/fixtures/demo/data/ns/function/a.mcfunction\n")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_deleting_an_embedded_pack_is_allowed(self):
+        """Removing the pack from a mod is the fix, so it must not be blocked."""
+        result = guard_with_changes("D\tmods/macroengine/src/main/resources/pack.mcmeta\n")
+        self.assertEqual(result.returncode, 0, result.stdout)
 
     def test_archived_datapack_content_is_allowed(self):
         result = guard_with_changes("A\tarchived/packs/NewPack/data/ns/function/a.mcfunction\n")
@@ -145,10 +199,18 @@ class Blocklist(unittest.TestCase):
             self.assertTrue(entry.get("reason"), "every blocked entry needs a reason")
             self.assertTrue(entry.get("added_on"))
 
-    def test_known_datapack_developer_is_matched(self):
-        hit = self.blocklist.matches("misode")
+    def test_a_blocked_account_is_matched(self):
+        """Uses the bot rule, not a person: names were removed on 2026-11-08.
+
+        The blocklist no longer names individual datapack authors. It was never
+        about those people - it was about automation and about a retired
+        programme - and a list of human names could only ever be a list of the
+        wrong thing. What remains is behaviour: bot suffix, AI-agent pattern,
+        managed accounts.
+        """
+        hit = self.blocklist.matches("build-helper[bot]")
         self.assertIsNotNone(hit)
-        self.assertEqual(hit["id"], "misode")
+        self.assertEqual(hit["id"], "bot-accounts")
 
     def test_managed_accounts_are_exempt(self):
         for login in ("vortaforge", "vortaforge-maintenance", "github-actions"):
@@ -216,7 +278,7 @@ class Blocklist(unittest.TestCase):
         self.assertIsNotNone(self.blocklist.matches("codex-agent"))
 
     def test_unrelated_account_is_not_matched(self):
-        for login in ("octocat", "misode-fan-club"):
+        for login in ("octocat", "some-human-contributor"):
             with self.subTest(login=login):
                 self.assertIsNone(self.blocklist.matches(login))
 
@@ -225,7 +287,7 @@ class Blocklist(unittest.TestCase):
             datapack_guard.Blocklist.load(ROOT / "blocklist" / "does-not-exist.json")
 
     def test_pr_by_blocked_login_is_blocked(self):
-        result = run(GUARD, "--pr", "--login", "misode", "--no-remote")
+        result = run(GUARD, "--pr", "--login", "copilot-swe-agent", "--no-remote")
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("blocklist-account", result.stdout)
 
@@ -528,10 +590,42 @@ class NumericUserIdEnforcement(unittest.TestCase):
     """
 
     def test_a_renamed_account_is_caught_by_its_id(self):
-        result = run(GUARD, "--pr", "--login", "totally-new-name",
-                     "--login-id", "17352009", "--no-remote")
-        self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertIn("blocklist-user-id", result.stdout)
+        """Run against a temporary blocklist, because the real one has no ids left.
+
+        The real list used to carry the numeric id of a named datapack author.
+        That entry was removed - it was a person, and the policy it encoded was
+        about a programme, not about them - which left `user_ids` empty in every
+        production entry. The *mechanism* is still load-bearing: whoever adds an
+        account later must be able to block a rename as well as a login. So it is
+        exercised through the matcher directly, on a list built for the purpose.
+
+        Driven through the library rather than `--pr`, because `--pr` also runs
+        the archive validator, which a throwaway root does not carry - the CLI
+        would then answer "archive validator is missing", not the question asked.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            bl = Path(tmp) / "blocklist.json"
+            bl.write_text(json.dumps({
+                "schema_version": 1,
+                "managed": {"accounts": []},
+                "policy": {"default_action": "block", "pr_label_override": "datapack-approved"},
+                "blocked": [{
+                    "id": "test-account", "reason": "fixture", "enforcement": "block",
+                    "scope": ["pull_request", "push"], "logins": ["old-name"],
+                    "user_ids": [424242], "ref_patterns": [], "added_on": "2026-11-05",
+                    "added_by": "test",
+                }],
+            }), encoding="utf-8")
+
+            blocklist = datapack_guard.Blocklist.load(bl)
+
+            # The rename case: the login is new, the id is not.
+            hit = blocklist.matches("totally-new-name", 424242)
+            self.assertIsNotNone(hit, "a rename must not launder a blocked account")
+            self.assertEqual(hit["id"], "test-account")
+
+            # The same name without the id is not matched: it is the id doing the work.
+            self.assertIsNone(blocklist.matches("totally-new-name"))
 
     def test_an_unrelated_id_is_not_blocked(self):
         result = run(GUARD, "--pr", "--login", "octocat",

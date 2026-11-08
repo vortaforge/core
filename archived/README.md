@@ -101,11 +101,11 @@ successor) into failures.
 
 | Piece | Path | Meaning |
 |---|---|---|
-| Switch | `datapacks.disabled.json` | `"enabled": false`. Missing or unreadable counts as disabled. |
+| Switch | `datapacks.disabled.json` | Currently `"enabled": true`; governs new datapack production outside `packs/` and `mods/` only. Missing or unreadable counts as disabled. |
 | Marker | `archived/datapacks.disabled` | Human-readable explanation. |
 | Token | `datapacks.disabled.json#reenable_token` | Required to re-enable. |
 | CLI | `scripts/repo/datapacks_disable.py` | `status`, `disable`, `enable`, `verify`. |
-| Guard | `scripts/repo/datapack_guard.py` | Blocks new datapack content anywhere live. |
+| Guard | `scripts/repo/datapack_guard.py` | Blocks `packs/` and datapacks embedded in `mods/**` unconditionally; blocks other live datapack content when the switch is off. |
 
 Re-enabling is deliberate:
 
