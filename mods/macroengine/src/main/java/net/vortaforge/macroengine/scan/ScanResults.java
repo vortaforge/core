@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * reports on it.
  *
  * <p>Holding it in one place keeps the report honest: the screen, the log line and
- * the datapack module all read the same object, so they cannot disagree about
+ * the modules all read the same object, so they cannot disagree about
  * what was found. A missing scan is represented explicitly rather than as an
  * empty clean report, because "we have not looked" and "we looked and found
  * nothing" are different statements and must not render the same way.

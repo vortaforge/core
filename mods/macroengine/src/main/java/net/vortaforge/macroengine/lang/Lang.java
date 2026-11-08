@@ -144,7 +144,7 @@ public final class Lang {
         }
     }
 
-    /** How many keys are loaded, for {@code /function macroengine:module/vf_log} diagnostics. */
+    /** How many keys are loaded, for the {@code /macroengine modules} diagnostics. */
     public static synchronized int size() {
         return EN.size();
     }

@@ -3,7 +3,7 @@
   "id": "macroengine",
   "version": "${version}",
   "name": "macroEngine",
-  "description": "Validation layer for the macroEngine data pack. Checks pack structure, prompt injection and suspicious links, and reports them at world load, on the server log, and in a warning before a world opens.",
+  "description": "Validation layer for data packs. Checks pack structure, prompt injection and suspicious links, and reports them at world load, on the server log, and in a confirmation screen before a world opens. Ships no data pack of its own.",
   "authors": [
     "VortaForge"
   ],

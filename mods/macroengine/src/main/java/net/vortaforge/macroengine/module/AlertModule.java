@@ -4,12 +4,13 @@ import net.vortaforge.macroengine.scan.ScanResults;
 import net.vortaforge.macroengine.validate.PackScanner;
 
 /**
- * {@code macroengine:module/vf_alert} - report the current verdict to the caller.
+ * {@code vf_alert} - report the current verdict to the caller.
  *
  * <p>Where {@code vf_log} writes a message, this answers a question: is the
- * content loaded on this world currently clean, warned, or flagged? A datapack
- * function can branch on the answer, so a pack can refuse to open its own menu
- * while an unresolved finding exists, instead of pretending nothing happened.
+ * content loaded on this world currently clean, warned, or flagged? A command
+ * block can branch on the answer - {@code execute if entity ... run} style - so a
+ * map or a pack can refuse to open its own menu while an unresolved finding
+ * exists, instead of pretending nothing happened.
  *
  * <p>Arguments: none. Returns {@code clean}, {@code warnings} or {@code flagged}.
  */
@@ -64,7 +65,7 @@ public final class AlertModule implements MacroModule {
     @Override
     public String run(Context ctx) {
         Verdict verdict = Verdict.of(ScanResults.current());
-        ctx.log("macrolengine verdict: " + verdict.token());
+        ctx.log("macroEngine verdict: " + verdict.token());
         return verdict.token();
     }
 }

@@ -3,17 +3,19 @@ package net.vortaforge.macroengine.module;
 import net.vortaforge.macroengine.lang.Lang;
 
 /**
- * {@code macroengine:module/vf_log} - log a localised message from the datapack.
+ * {@code vf_log} - log a localised message.
  *
- * <p>The datapack's functions already have a log system ({@code systems/log} in
- * the pack). It writes plain strings. This module exists so a function can log a
- * message that is translated: the argument is a translation key plus optional
- * placeholders, resolved against the player's own language on the client and the
- * server's configured language on a dedicated server.
+ * <p>This module exists so a caller can log a message that is translated: the
+ * first argument is a translation key, the rest are positional placeholders,
+ * resolved against the server's configured language with English as the
+ * guaranteed fallback.
  *
  * <pre>
- *   /function macroengine:module/vf_log {key:"macroengine.msg.gate_open", with:["Player1"]}
+ *   /macroengine module vf_log macroengine.log.report_header 3 120
  * </pre>
+ *
+ * <p>Callers were {@code /function macroengine:module/vf_log {key:...}} before the
+ * bundled datapack was removed. The Brigadier form above is the only one now.
  */
 public final class LangModule implements MacroModule {
 

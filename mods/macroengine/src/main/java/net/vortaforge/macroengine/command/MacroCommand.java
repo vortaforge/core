@@ -15,11 +15,15 @@ import net.vortaforge.macroengine.validate.PackScanner;
 /**
  * {@code /macroengine ...} - the operator's entry point.
  *
- * <p>This is also what the datapack calls: a function can run
- * {@code macroengine module vf_alert} and read the result, so the pack does not
- * need its own copy of the verdict.
+ * <p>Before the bundled datapack was removed, a pack function reached these
+ * modules through {@code /function macroengine:module/<id>}. That path no longer
+ * exists here. A pack that wants a verdict now calls
+ * {@code /macroengine module <id>} with a command block or {@code execute ... run},
+ * which is a superset: it takes real arguments, it reports errors, and it is the
+ * same code path an operator uses by hand.
  *
- * <p>Permission level 2 (gamemaster) throughout. A player being able to trigger a
+ * <p>Permission level 2 (gamemaster) throughout, except {@code ack}, which needs
+ * level 4 - see {@code AcknowledgementCommand}. A player being able to trigger a
  * full re-scan is a trivial way to make a server stutter every tick, and nothing
  * here is a player-facing action.
  */
@@ -67,7 +71,7 @@ public final class MacroCommand {
                             return modules.size();
                         }))
 
-                // The datapack-facing call: run a module by id with string args.
+                // The pack-facing call: run a module by id with string args.
                 .then(Commands.literal("module")
                         .then(Commands.argument("id", StringArgumentType.word())
                                 .executes(ctx -> runModule(ctx.getSource(),

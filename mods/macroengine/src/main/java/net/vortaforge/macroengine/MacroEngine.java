@@ -21,21 +21,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * macroEngine - server-side validation for the macroEngine datapack.
+ * macroEngine - server-side validation for data packs.
  *
  * <h2>What problem this solves</h2>
  *
- * The datapack this mod is paired with is a scripting layer built out of
- * functions, advancements, dialogs and tags. A vanilla datapack has no type
- * checking and no error surface: a wrong field name, a format number that lies,
- * or a string that is really an instruction aimed at whatever reads the files
- * next all fail silently or fail late. The pack has no way to tell its operator
- * that it saw something it did not like.
+ * A vanilla datapack has no type checking and no error surface: a wrong field
+ * name, a format number that lies, or a string that is really an instruction
+ * aimed at whatever reads the files next all fail silently or fail late. The
+ * pack has no way to tell its operator that it saw something it did not like.
  *
  * <p>This mod adds that missing surface. It reads the packs the game has actually
  * loaded - not a folder on disk, which would miss zips and built-in packs - and
  * reports structural problems and content problems at world load, in the server
  * log, and in a warning the player sees before they press "Create New World".
+ *
+ * <h2>This mod ships no datapack</h2>
+ *
+ * Every page of this mod used to carry a copy of the macroEngine datapack inside
+ * its jar. That copy was removed: it was not current, and a mod that hides a
+ * datapack in {@code data/} is indistinguishable from a mod that hides a payload
+ * there. The validator now looks at whatever packs the world actually loads,
+ * including the archived macroEngine pack if an operator installs it by hand.
  *
  * <h2>The one rule this mod is built around</h2>
  *
@@ -56,7 +62,7 @@ public final class MacroEngine implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOG.info("macroEngine starting - validator for loaded data packs");
+        LOG.info("macroEngine starting - validator only, no bundled data pack");
 
         registerModules();
 
@@ -70,9 +76,10 @@ public final class MacroEngine implements ModInitializer {
     }
 
     private static void registerModules() {
-        // The module list is the datapack's public API surface. Keeping it in one
-        // place makes it reviewable at a glance, and the registry's duplicate check
-        // makes a collision loud instead of silent.
+        // The module list is this mod's public API surface, reachable through
+        // `/macroengine module <id>`. Keeping it in one place makes it reviewable
+        // at a glance, and the registry's duplicate check makes a collision loud
+        // instead of silent.
         List.of(
                 new LangModule(),
                 new ReportModule(),

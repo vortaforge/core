@@ -9,13 +9,12 @@ import net.vortaforge.macroengine.validate.SuspiciousText;
 import java.util.List;
 
 /**
- * {@code macroengine:module/vf_report} - a structural report of the last scan.
+ * {@code vf_report} - a structural report of the last scan.
  *
  * <p>Prints counts and the first few concrete findings. Used by the in-game
- * "Content check" screen and by {@code macroengine:module/vf_report} from a pack
- * function. It reports the scan's own limits too: if the scan was capped before
- * finishing, that is stated, because "0 findings" from a truncated scan means
- * nothing.
+ * "Content check" screen and by {@code /macroengine module vf_report}. It reports
+ * the scan's own limits too: if the scan was capped before finishing, that is
+ * stated, because "0 findings" from a truncated scan means nothing.
  */
 public final class ReportModule implements MacroModule {
 

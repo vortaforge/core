@@ -3,7 +3,7 @@ package net.vortaforge.macroengine.module;
 import net.minecraft.commands.CommandSourceStack;
 
 /**
- * A macroEngine unit of behaviour that the datapack can invoke.
+ * A macroEngine unit of behaviour a caller can invoke via {@code /macroengine module <id>}.
  *
  * <h2>The boundary this interface enforces</h2>
  *
@@ -16,10 +16,10 @@ import net.minecraft.commands.CommandSourceStack;
  *
  * <h2>Why modules are registered instead of hard-coded</h2>
  *
- * The datapack calls them by name ({@code macroengine:module/vf_log} and friends),
- * so adding one must not mean editing a switch statement and hoping no branch was
+ * They are called by name ({@code /macroengine module vf_log} and friends), so
+ * adding one must not mean editing a switch statement and hoping no branch was
  * missed. Registration also makes the module list inspectable at runtime, which is
- * what {@code macroengine:module/list} reports.
+ * what {@code /macroengine modules} reports.
  */
 public interface MacroModule {
 

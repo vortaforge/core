@@ -8,7 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * {@code macroengine:module/vf_quarantine} - a per-player self-restriction.
+ * {@code vf_quarantine} - a per-player self-restriction.
  *
  * <h2>What this is</h2>
  *
@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * lose players, and the audit that produced this mod was explicit about that.
  *
  * <pre>
- *   /function macroengine:module/vf_quarantine {action:"on"}
- *   /function macroengine:module/vf_quarantine {action:"off"}
- *   /function macroengine:module/vf_quarantine {action:"status"}
+ *   /macroengine module vf_quarantine on
+ *   /macroengine module vf_quarantine off
+ *   /macroengine module vf_quarantine status
  * </pre>
  */
 public final class QuarantineModule implements MacroModule {
