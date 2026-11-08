@@ -18,7 +18,7 @@ execute store result storage macroengine:hook placed.tick int 1 run scoreboard p
 execute as @s run function macroengine:systems/uuid/from_entity
 data modify storage macroengine:hook placed.uuid set from storage macroengine:output uuid
 
-execute as @s run function macroengine:player/get_name
+execute as @s run function macroengine:player/get/name
 data modify storage macroengine:hook placed.name set from storage macroengine:names temp.NAME
 data modify storage macroengine:hook placed.uuid_array set from storage macroengine:names temp.UUID
 
@@ -31,7 +31,7 @@ execute as @s run function macroengine:core/internal/systems/hook/fire with stor
 data remove storage macroengine:engine _hook_fire_tmp
 
 # Legacy event system support (if present)
-execute if score #m_hook macroengine.Flags matches 1.. run function macroengine:events/fire {id:"hook.placed"}
+execute if score #m_hook macroengine.flags matches 1.. run function macroengine:events/fire {id:"hook.placed"}
 
 # Cleanup: reset counter
 scoreboard players reset @s macroengine.tmp

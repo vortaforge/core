@@ -6,14 +6,14 @@ scoreboard objectives add macroengine.tmp dummy
 scoreboard objectives add macroengine.anvil_t dummy
 scoreboard objectives add macroengine.meta dummy
 scoreboard objectives add macroengine.time dummy
-scoreboard objectives add macroengine_run trigger
-scoreboard objectives add macroengine_action trigger
+scoreboard objectives add macroengine.run trigger
+scoreboard objectives add macroengine.action trigger
 scoreboard objectives add macroengine.pre_version dummy
 scoreboard objectives add macroengine.pid dummy
 scoreboard objectives add macroengine.freeze_id dummy
 scoreboard objectives add macroengine.health health
 scoreboard objectives add macroengine.food food
-scoreboard objectives add macroengine.rightClick minecraft.used:minecraft.carrot_on_a_stick
+scoreboard objectives add macroengine.right_click minecraft.used:minecraft.carrot_on_a_stick
 scoreboard objectives add macroengine.hook_online dummy
 scoreboard objectives add macroengine.hook_deaths deathCount
 scoreboard objectives add macroengine.hook_placed dummy
@@ -32,7 +32,7 @@ scoreboard objectives add macroengine.hook_dim_changed dummy
 scoreboard objectives add macroengine.hook_traded dummy
 scoreboard objectives add macroengine.tick dummy
 scoreboard objectives add macroengine.tick_flags dummy
-scoreboard objectives add macroengine.Flags dummy
+scoreboard objectives add macroengine.flags dummy
 scoreboard objectives add macroengine.hook_jump minecraft.custom:minecraft.jump
 scoreboard objectives add macroengine.hook_open_chest minecraft.custom:minecraft.open_chest
 scoreboard objectives add macroengine.hook_drop minecraft.custom:minecraft.drop

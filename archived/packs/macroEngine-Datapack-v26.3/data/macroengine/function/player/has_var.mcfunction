@@ -1,3 +1,0 @@
-# macroengine:player/has_var [MACRO]
-data modify storage macroengine:output result set value 0b
-$execute if data storage macroengine:engine players.$(player).$(key) run data modify storage macroengine:output result set value 1b

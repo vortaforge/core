@@ -25,7 +25,7 @@ tag @s remove macroengine.admin
 # text module: working buffers and lookup tables
 function macroengine:core/internal/text/unload
 
-kill @e[type=minecraft:command_block_minecart,tag=macroengine_input]
+kill @e[type=minecraft:command_block_minecart,tag=macroengine.input]
 
 execute if score #sys_admin macroengine.tick_flags matches 1.. run scoreboard players reset #sys_admin macroengine.tick_flags
 execute if score #sys_hud macroengine.tick_flags matches 1.. run scoreboard players reset #sys_hud macroengine.tick_flags
@@ -33,8 +33,8 @@ execute if score #sys_queue macroengine.tick_flags matches 1.. run scoreboard pl
 execute if score #sys_player macroengine.tick_flags matches 1.. run scoreboard players reset #sys_player macroengine.tick_flags
 execute if score #sys_time macroengine.tick_flags matches 1.. run scoreboard players reset #sys_time macroengine.tick_flags
 
-scoreboard players reset @a[tag=macroengine.admin] macroengine_action
-scoreboard players reset @a[tag=macroengine.admin] macroengine_run
+scoreboard players reset @a[tag=macroengine.admin] macroengine.action
+scoreboard players reset @a[tag=macroengine.admin] macroengine.run
 
 schedule clear macroengine:core/runtime/sync_tick
 
@@ -109,7 +109,7 @@ scoreboard objectives remove macroengine.hook_target_hit
 scoreboard objectives remove macroengine.hook_drop
 scoreboard objectives remove macroengine.hook_open_chest
 scoreboard objectives remove macroengine.hook_jump
-scoreboard objectives remove macroengine.Flags
+scoreboard objectives remove macroengine.flags
 scoreboard objectives remove macroengine.tick_flags
 scoreboard objectives remove macroengine.tick
 scoreboard objectives remove macroengine.hook_traded
@@ -128,12 +128,12 @@ scoreboard objectives remove macroengine.hook_lvl
 scoreboard objectives remove macroengine.hook_placed
 scoreboard objectives remove macroengine.hook_deaths
 scoreboard objectives remove macroengine.hook_online
-scoreboard objectives remove macroengine.rightClick
+scoreboard objectives remove macroengine.right_click
 scoreboard objectives remove macroengine.freeze_id
 scoreboard objectives remove macroengine.pid
 scoreboard objectives remove macroengine.pre_version
-scoreboard objectives remove macroengine_action
-scoreboard objectives remove macroengine_run
+scoreboard objectives remove macroengine.action
+scoreboard objectives remove macroengine.run
 scoreboard objectives remove macroengine.time
 scoreboard objectives remove macroengine.meta
 scoreboard objectives remove macroengine.tmp

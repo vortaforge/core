@@ -70,7 +70,7 @@ data remove storage macroengine:input spread
 data remove storage macroengine:input max_range
 
 data remove storage macroengine:input uuid
-data remove storage macroengine:input customData
+data remove storage macroengine:input custom_data
 data remove storage macroengine:input invoke
 data remove storage macroengine:input slot
 data remove storage macroengine:input modifier
@@ -164,7 +164,7 @@ data modify storage macroengine:input spread set from storage macroengine:engine
 data modify storage macroengine:input max_range set from storage macroengine:engine _input_stack[-1].max_range
 
 data modify storage macroengine:input uuid set from storage macroengine:engine _input_stack[-1].uuid
-data modify storage macroengine:input customData set from storage macroengine:engine _input_stack[-1].customData
+data modify storage macroengine:input custom_data set from storage macroengine:engine _input_stack[-1].custom_data
 data modify storage macroengine:input invoke set from storage macroengine:engine _input_stack[-1].invoke
 data modify storage macroengine:input slot set from storage macroengine:engine _input_stack[-1].slot
 data modify storage macroengine:input modifier set from storage macroengine:engine _input_stack[-1].modifier

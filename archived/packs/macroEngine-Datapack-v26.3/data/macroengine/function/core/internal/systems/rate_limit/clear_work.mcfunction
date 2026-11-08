@@ -2,7 +2,7 @@
 # Internal — do not call directly.
 #
 # Scheduled 3 ticks after systems/rate_limit/check writes to the shared
-# macroengine:rl_work scratch storage (ensure_key, rule, prune_before,
+# macroengine:rate_limit scratch storage (ensure_key, rule, prune_before,
 # new_hit), so it doesn't sit populated between calls. 'replace' collapses
 # repeated check calls within the same 3-tick window onto a single
 # pending clear — safe because every write into rl_work is a 'set value'
@@ -14,8 +14,8 @@
 # itself (see https://minecraft.wiki/w/Commands/data). Every top-level
 # key ever written to rl_work across check/evaluate/prune must be listed
 # here explicitly: ensure_key, rule, prune_before, rule_key, new_hit.
-data remove storage macroengine:rl_work ensure_key
-data remove storage macroengine:rl_work rule
-data remove storage macroengine:rl_work prune_before
-data remove storage macroengine:rl_work rule_key
-data remove storage macroengine:rl_work new_hit
+data remove storage macroengine:rate_limit ensure_key
+data remove storage macroengine:rate_limit rule
+data remove storage macroengine:rate_limit prune_before
+data remove storage macroengine:rate_limit rule_key
+data remove storage macroengine:rate_limit new_hit

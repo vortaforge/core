@@ -82,7 +82,7 @@ execute unless data storage macroengine:engine fibers run data modify storage ma
 # concurrency fix — resume targets now travel inside each queue entry
 # (id/resume fields) instead of a separate shared FIFO list.
 
-# core/lib/process_queue module init
+# core/lib/queue/process module init
 # BUGFIX: the header comment above ("pq_depth is reset — queue state
 # cannot survive reload safely") describes intent that was never
 # actually implemented. queue is only ever cleared in

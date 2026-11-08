@@ -1,8 +1,8 @@
 # macroengine:core/internal/api/trigger/dispatch
-scoreboard players operation $tc_player macroengine.tmp = @s macroengine_action
+scoreboard players operation $tc_player macroengine.tmp = @s macroengine.action
 
-scoreboard players set @s macroengine_action 0
-scoreboard players enable @s macroengine_action
+scoreboard players set @s macroengine.action 0
+scoreboard players enable @s macroengine.action
 
 execute unless data storage macroengine:engine trigger_binds[0] run return 0
 

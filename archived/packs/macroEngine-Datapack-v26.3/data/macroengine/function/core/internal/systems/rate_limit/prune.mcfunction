@@ -1,5 +1,5 @@
 # macroengine:systems/rate_limit/internal/prune — Remove hits outside the sliding window [MACRO]
-# Input: $(rule_key), macroengine:rl_work.prune_before (int, from evaluate)
+# Input: $(rule_key), macroengine:rate_limit.prune_before (int, from evaluate)
 #
 # Strategy: iterate hits array from index 0 upward.
 # Hits are appended in chronological order, so hits[0] is always the oldest.
@@ -16,4 +16,4 @@ execute if score $rl_oldest macroengine.tmp >= $rl_start macroengine.tmp run ret
 
 # Oldest hit is expired → remove it and recurse
 $data remove storage macroengine:engine rate_limit.rules.$(rule_key).hits[0]
-function macroengine:core/internal/systems/rate_limit/prune with storage macroengine:rl_work
+function macroengine:core/internal/systems/rate_limit/prune with storage macroengine:rate_limit

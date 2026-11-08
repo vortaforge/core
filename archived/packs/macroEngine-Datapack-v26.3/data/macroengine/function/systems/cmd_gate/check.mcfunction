@@ -2,7 +2,7 @@
 # macroengine:systems/cmd_gate/check
 # ======================================================================================
 # The single gate every *stored-string* command executor in this pack must pass
-# before it macro-executes its string (core/lib/once_cmd, the hook/wand/trigger
+# before it macro-executes its string (core/lib/once/cmd, the hook/wand/trigger
 # callers, the work queue, multi_cmd, region_watch and the command-block runners).
 #
 # FAIL-CLOSED. The command runs only when ALL of these hold:

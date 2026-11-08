@@ -21,14 +21,14 @@ data modify storage macroengine:output found set value 1b
 # Compute absolute expiry tick = current gametime + requested offset
 execute store result score #macroengine_item_now macroengine.tmp run time query gametime
 $scoreboard players add #macroengine_item_now macroengine.tmp $(ticks)
-execute store result storage macroengine:_item_tmp expiry int 1 run scoreboard players get #macroengine_item_now macroengine.tmp
+execute store result storage macroengine:item_tmp expiry int 1 run scoreboard players get #macroengine_item_now macroengine.tmp
 
-$data modify storage macroengine:_item_tmp player set value "$(player)"
-function macroengine:core/internal/api/item/read_macroengine_compound with storage macroengine:_item_tmp
+$data modify storage macroengine:item_tmp player set value "$(player)"
+function macroengine:core/internal/api/item/read_macroengine_compound with storage macroengine:item_tmp
 
-data modify storage macroengine:_item_tmp macroengine.cooldown_until set from storage macroengine:_item_tmp expiry
-$data modify storage macroengine:_item_tmp slot set value "$(slot)"
+data modify storage macroengine:item_tmp macroengine.cooldown_until set from storage macroengine:item_tmp expiry
+$data modify storage macroengine:item_tmp slot set value "$(slot)"
 
-function macroengine:core/internal/api/item/use_cooldown_apply with storage macroengine:_item_tmp
+function macroengine:core/internal/api/item/use_cooldown_apply with storage macroengine:item_tmp
 
 schedule function macroengine:core/internal/api/item/clear_tmp 3t replace

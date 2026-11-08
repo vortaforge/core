@@ -1,6 +1,6 @@
 # ======================================================================================
 # macroengine:core/internal/ext/player/add_var_clamped [MACRO] [INTERNAL]
-# $(player), $(key) validated; #ext_pv_d / _min / _max prepared by player/add_var_clamped.
+# $(player), $(key) validated; #ext_pv_d / _min / _max prepared by player/var/add_clamped.
 # ======================================================================================
 
 scoreboard players set #ext_pv macroengine.tmp 0

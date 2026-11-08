@@ -1,6 +1,6 @@
 # ======================================================================================
 # macroengine:core/internal/ext/player/toggle_var [MACRO] [INTERNAL]
-# $(player), $(key) validated by player/toggle_var.
+# $(player), $(key) validated by player/var/toggle.
 # ======================================================================================
 
 scoreboard players set #ext_tv macroengine.tmp 0

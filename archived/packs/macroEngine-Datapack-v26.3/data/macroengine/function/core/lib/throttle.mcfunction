@@ -11,4 +11,4 @@ $scoreboard players set $thr_int macroengine.tmp $(interval)
 scoreboard players operation $thr_now macroengine.tmp += $thr_int macroengine.tmp
 $execute store result storage macroengine:engine throttle.$(key) int 1 run scoreboard players get $thr_now macroengine.tmp
 
-function macroengine:core/lib/queue_add with storage macroengine:input {}
+function macroengine:core/lib/queue/add with storage macroengine:input {}

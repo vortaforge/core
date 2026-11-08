@@ -1,5 +1,5 @@
 # macroengine:api/wand/internal/tick_scan
-# Every tick: detect players with macroengine.rightClick score 1+,
+# Every tick: detect players with macroengine.right_click score 1+,
 # check their held item, run the matching bind.
 
 # Module toggle guard — skips this module when disabled via macroengine:api/toggle/wand/false
@@ -10,5 +10,5 @@ execute unless score #scan_mod macroengine.tick matches 0 run return 0
 
 execute unless data storage macroengine:engine wand_binds[0] run return 0
 
-execute as @a[scores={macroengine.rightClick=1..}] at @s run function macroengine:core/internal/api/wand/dispatch
-scoreboard players set @a[scores={macroengine.rightClick=1..}] macroengine.rightClick 0
+execute as @a[scores={macroengine.right_click=1..}] at @s run function macroengine:core/internal/api/wand/dispatch
+scoreboard players set @a[scores={macroengine.right_click=1..}] macroengine.right_click 0

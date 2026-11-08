@@ -27,16 +27,16 @@ data modify storage macroengine:output found set value 0b
 $execute unless entity @a[name=$(player),limit=1] run return 0
 data modify storage macroengine:output found set value 1b
 
-$data modify storage macroengine:_item_tmp player set value "$(player)"
-function macroengine:core/internal/api/item/read_macroengine_compound with storage macroengine:_item_tmp
+$data modify storage macroengine:item_tmp player set value "$(player)"
+function macroengine:core/internal/api/item/read_macroengine_compound with storage macroengine:item_tmp
 
-execute unless data storage macroengine:_item_tmp macroengine.flags run data modify storage macroengine:_item_tmp macroengine.flags set value []
-data modify storage macroengine:_item_tmp macroengine.flags append value {}
-$data modify storage macroengine:_item_tmp macroengine.flags[-1].name set value "$(name)"
-$data modify storage macroengine:_item_tmp macroengine.flags[-1].value set value $(value)
+execute unless data storage macroengine:item_tmp macroengine.flags run data modify storage macroengine:item_tmp macroengine.flags set value []
+data modify storage macroengine:item_tmp macroengine.flags append value {}
+$data modify storage macroengine:item_tmp macroengine.flags[-1].name set value "$(name)"
+$data modify storage macroengine:item_tmp macroengine.flags[-1].value set value $(value)
 
-$data modify storage macroengine:_item_tmp slot set value "$(slot)"
+$data modify storage macroengine:item_tmp slot set value "$(slot)"
 
-function macroengine:core/internal/api/item/hidden_flag_apply with storage macroengine:_item_tmp
+function macroengine:core/internal/api/item/hidden_flag_apply with storage macroengine:item_tmp
 
 schedule function macroengine:core/internal/api/item/clear_tmp 3t replace

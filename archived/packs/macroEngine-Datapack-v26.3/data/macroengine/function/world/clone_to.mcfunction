@@ -1,2 +1,0 @@
-# macroengine:world/clone_to [MACRO]
-$clone $(x1) $(y1) $(z1) $(x2) $(y2) $(z2) $(dx) $(dy) $(dz)

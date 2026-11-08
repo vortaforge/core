@@ -8,7 +8,7 @@
 # PURPOSE:
 #   Detect a player holding a writable_book marked with
 #   custom_data={macroengine:{input:1b,inputItem:"writable_book"}} (given
-#   via macroengine:input/give_writable_book),
+#   via macroengine:input/give/writable_book),
 #   and extract the raw text of page[0] from
 #   SelectedItem.components."minecraft:writable_book_content".pages[0].raw
 #   into macroengine:input storage. Input capture ONLY — no execution here.

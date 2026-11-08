@@ -1,2 +1,2 @@
 # macroengine:player/inv/player_unless_item [MACRO]
-$execute as @a[name=$(player),limit=1] at @s unless items entity @s contents $(item)[minecraft:custom_data=$(customData)] run $(invoke)
+$execute as @a[name=$(player),limit=1] at @s unless items entity @s contents $(item)[minecraft:custom_data=$(custom_data)] run $(invoke)

@@ -26,18 +26,18 @@ data modify storage macroengine:output result set value 1b
 # Guard: rule must exist — try auto-create from player template first
 # Key format "player:<tpl>:<name>" → tpl is the second segment
 # We attempt player_ensure unconditionally; it exits early if not a player key or no template
-$data modify storage macroengine:rl_work ensure_key set value "$(key)"
-function macroengine:core/internal/systems/rate_limit/player_check with storage macroengine:rl_work
+$data modify storage macroengine:rate_limit ensure_key set value "$(key)"
+function macroengine:core/internal/systems/rate_limit/player_check with storage macroengine:rate_limit
 
 $execute unless data storage macroengine:engine rate_limit.rules.$(key) run function macroengine:core/internal/systems/rate_limit/no_rule
 $execute unless data storage macroengine:engine rate_limit.rules.$(key) run schedule function macroengine:core/internal/systems/rate_limit/clear_work 3t replace
 $execute unless data storage macroengine:engine rate_limit.rules.$(key) run return 0
 
 # Copy rule into work storage with key context
-$data modify storage macroengine:rl_work rule set from storage macroengine:engine rate_limit.rules.$(key)
-$data modify storage macroengine:rl_work rule.key set value "$(key)"
+$data modify storage macroengine:rate_limit rule set from storage macroengine:engine rate_limit.rules.$(key)
+$data modify storage macroengine:rate_limit rule.key set value "$(key)"
 
 # Run the sliding window evaluation
-function macroengine:core/internal/systems/rate_limit/evaluate with storage macroengine:rl_work rule
+function macroengine:core/internal/systems/rate_limit/evaluate with storage macroengine:rate_limit rule
 
 schedule function macroengine:core/internal/systems/rate_limit/clear_work 3t replace
