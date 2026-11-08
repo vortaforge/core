@@ -1,3 +1,4 @@
+# macroengine:systems/string/format_ticks [MACRO]
 execute if data storage macroengine:engine modules{string:0b} run return 0
 $scoreboard players set $ft_t macroengine.tmp $(ticks)
 

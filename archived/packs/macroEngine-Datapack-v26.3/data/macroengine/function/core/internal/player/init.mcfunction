@@ -8,7 +8,7 @@ schedule function macroengine:core/internal/player/tick 5t
 schedule function macroengine:core/internal/player/click_detection/tick_entities 100t
 
 # Scratch storage used by the per-player pipeline
-data merge storage macroengine:core/internal/player/temp {list:[], obj:{}, var:""}
+data merge storage macroengine:player_tmp {list:[], obj:{}, var:""}
 
 # Generic scratch + identity
 scoreboard objectives add player_action.data dummy

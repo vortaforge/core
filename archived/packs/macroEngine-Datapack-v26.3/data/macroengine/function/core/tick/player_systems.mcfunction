@@ -1,8 +1,9 @@
-execute as @a[scores={macroengine_run=1..}] run function #macroengine:admin/run
-scoreboard players set @a[scores={macroengine_run=1..}] macroengine_run 0
-scoreboard players enable @a[scores={macroengine_run=-1..}] macroengine_run
+# macroengine:core/tick/player_systems
+execute as @a[scores={macroengine.run=1..}] run function #macroengine:admin/run
+scoreboard players set @a[scores={macroengine.run=1..}] macroengine.run 0
+scoreboard players enable @a[scores={macroengine.run=-1..}] macroengine.run
 
-execute as @a[scores={macroengine_action=1..}] run function macroengine:core/internal/api/trigger/dispatch
+execute as @a[scores={macroengine.action=1..}] run function macroengine:core/internal/api/trigger/dispatch
 
 function macroengine:core/internal/api/interaction/tick_scan
 

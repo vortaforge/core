@@ -26,11 +26,11 @@ data modify entity @s Command set value ""
 
 # Resolve player context (never leave @s as the minecart)
 # Preferred: the player who summoned this CBM
-execute as @a[tag=macroengine.cbm_owner,limit=1] at @s run function macroengine:player/get_name
+execute as @a[tag=macroengine.cbm_owner,limit=1] at @s run function macroengine:player/get/name
 execute as @a[tag=macroengine.cbm_owner,limit=1] at @s run function #macroengine:input/command_block_minecart
 
 # Fallback (if tag was lost / old minecart): nearest player within 8 blocks
-execute unless entity @a[tag=macroengine.cbm_owner] as @a[distance=..8,sort=nearest,limit=1] at @s run function macroengine:player/get_name
+execute unless entity @a[tag=macroengine.cbm_owner] as @a[distance=..8,sort=nearest,limit=1] at @s run function macroengine:player/get/name
 execute unless entity @a[tag=macroengine.cbm_owner] as @a[distance=..8,sort=nearest,limit=1] at @s run function #macroengine:input/command_block_minecart
 
 # Release this entity's own debounce now that handling was attempted,

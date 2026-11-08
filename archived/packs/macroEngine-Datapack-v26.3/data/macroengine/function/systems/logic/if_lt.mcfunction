@@ -1,3 +1,4 @@
+# macroengine:systems/logic/if_lt [MACRO]
 execute if data storage macroengine:engine modules{logic:0b} run return 0
 $scoreboard players set $if_a macroengine.tmp $(a)
 $scoreboard players set $if_b macroengine.tmp $(b)

@@ -1,3 +1,4 @@
+# macroengine:systems/math/minmax [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $mmx_a macroengine.tmp $(a)
 $scoreboard players set $mmx_b macroengine.tmp $(b)

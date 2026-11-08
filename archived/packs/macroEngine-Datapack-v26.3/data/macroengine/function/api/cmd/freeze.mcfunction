@@ -1,4 +1,3 @@
-
 # ─────────────────────────────────────────────────────────────────
 # macroengine:api/cmd/freeze
 # Freezes a player in place using an invisible marker armor stand.

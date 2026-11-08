@@ -1,3 +1,4 @@
+# macroengine:core/internal/load/loader/other
 forceload add 0 0
 
 data modify storage macroengine:input func set value "macroengine:core/runtime/sync_tick"
@@ -8,8 +9,8 @@ data remove storage macroengine:input func
 data remove storage macroengine:input interval
 data remove storage macroengine:input key
 
-scoreboard players enable @a[tag=macroengine.admin] macroengine_run
-scoreboard players enable @a[tag=macroengine.admin] macroengine_action
+scoreboard players enable @a[tag=macroengine.admin] macroengine.run
+scoreboard players enable @a[tag=macroengine.admin] macroengine.action
 
 # Initialize tick system on/off flags on first world load (idempotent —
 # "unless matches .." only true when score is unset, so this never

@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/perm/trigger/player_dispatch [MACRO]
 $scoreboard players operation $ptd_val macroengine.tmp = @s $(name)
 
 $scoreboard players set @s $(name) 0

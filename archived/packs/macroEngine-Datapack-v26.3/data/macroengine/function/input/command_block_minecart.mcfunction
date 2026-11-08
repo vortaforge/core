@@ -5,9 +5,9 @@
 # TRIGGERED BY: #macroengine:input/command_block_minecart function tag
 #
 # PURPOSE:
-#   Reads the Command NBT off any command_block_minecart tagged 'macroengine_input',
+#   Reads the Command NBT off any command_block_minecart tagged 'macroengine.input',
 #   dropped into the world via
-#   'summon minecraft:command_block_minecart ~ ~ ~ {Tags:["macroengine_input"]}'.
+#   'summon minecraft:command_block_minecart ~ ~ ~ {Tags:["macroengine.input"]}'.
 #   CAPTURE ONLY — never executes the string itself.
 #
 # CALLBACK CONTRACT (register your handler in this tag's JSON):
@@ -88,6 +88,6 @@
 # ======================================================================================
 
 # Fast exit — nothing tagged, nothing to scan this tick.
-execute unless entity @e[type=minecraft:command_block_minecart,tag=macroengine_input] run return 0
+execute unless entity @e[type=minecraft:command_block_minecart,tag=macroengine.input] run return 0
 
-execute as @e[type=minecraft:command_block_minecart,tag=macroengine_input] run function macroengine:input/private/cbm_process
+execute as @e[type=minecraft:command_block_minecart,tag=macroengine.input] run function macroengine:input/private/cbm_process

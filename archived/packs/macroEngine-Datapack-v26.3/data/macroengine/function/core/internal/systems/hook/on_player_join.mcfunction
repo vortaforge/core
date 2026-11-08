@@ -9,5 +9,5 @@ function #macroengine:events/on_join
 
 # Initialize player data and assign macroengine.pid
 # get_name populates macroengine:names temp.NAME; init_from_name relays it to player/init
-function macroengine:player/get_name
+function macroengine:player/get/name
 function macroengine:core/internal/player/init_from_name with storage macroengine:names temp

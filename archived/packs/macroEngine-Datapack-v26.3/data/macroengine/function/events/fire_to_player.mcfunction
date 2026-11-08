@@ -1,3 +1,4 @@
+# macroengine:events/fire_to_player [MACRO]
 $execute unless data storage macroengine:engine events.$(event) run return 0
 
 $data modify storage macroengine:engine _event_tmp set from storage macroengine:engine events.$(event)

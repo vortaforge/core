@@ -1,3 +1,4 @@
+# macroengine:core/cooldown/extend [MACRO]
 execute store result score $ce_base macroengine.tmp run scoreboard players get $epoch macroengine.time
 scoreboard players operation $ce_exp macroengine.tmp = $ce_base macroengine.tmp
 

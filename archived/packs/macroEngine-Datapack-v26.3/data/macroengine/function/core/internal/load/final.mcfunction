@@ -1,4 +1,4 @@
-
+# macroengine:core/internal/load/final
 data modify storage macroengine:engine global.version set value "v26.3"
 scoreboard players set #vortaforge.packs.macroengine.version macroengine.meta 263
 function #macroengine:init

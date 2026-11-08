@@ -1,4 +1,3 @@
-
 # ─────────────────────────────────────────────────────────────────
 # macroengine:api/cmd/unfreeze
 # Releases a player previously frozen by macroengine:api/cmd/freeze.

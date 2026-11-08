@@ -1,4 +1,4 @@
-
+# macroengine:core/internal/player/click_detection/start_2
 scoreboard players operation @s player_action.uuid.0 = #uuid.0 player_action.data
 scoreboard players operation @s player_action.uuid.1 = #uuid.1 player_action.data
 scoreboard players operation @s player_action.uuid.2 = #uuid.2 player_action.data

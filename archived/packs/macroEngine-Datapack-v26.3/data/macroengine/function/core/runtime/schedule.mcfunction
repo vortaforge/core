@@ -1,3 +1,4 @@
+# macroengine:core/runtime/schedule [MACRO]
 $execute if data storage macroengine:engine schedules.$(key) run data remove storage macroengine:engine schedules.$(key)
 
 $data modify storage macroengine:engine schedules.$(key).func set value "$(func)"

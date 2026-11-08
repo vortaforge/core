@@ -1,3 +1,4 @@
+# macroengine:player/init [MACRO]
 $execute unless data storage macroengine:engine players.$(player) run data modify storage macroengine:engine players.$(player) set value {}
 $execute unless data storage macroengine:engine players.$(player).coins run data modify storage macroengine:engine players.$(player).coins set value 0
 $execute unless data storage macroengine:engine players.$(player).level run data modify storage macroengine:engine players.$(player).level set value 1

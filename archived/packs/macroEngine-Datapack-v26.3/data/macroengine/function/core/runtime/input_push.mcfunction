@@ -1,3 +1,4 @@
+# macroengine:core/runtime/input_push
 data modify storage macroengine:engine _input_stack append value {}
 
 data modify storage macroengine:engine _input_stack[-1].player set from storage macroengine:input player
@@ -71,7 +72,7 @@ data modify storage macroengine:engine _input_stack[-1].spread set from storage 
 data modify storage macroengine:engine _input_stack[-1].max_range set from storage macroengine:input max_range
 
 data modify storage macroengine:engine _input_stack[-1].uuid set from storage macroengine:input uuid
-data modify storage macroengine:engine _input_stack[-1].customData set from storage macroengine:input customData
+data modify storage macroengine:engine _input_stack[-1].custom_data set from storage macroengine:input custom_data
 data modify storage macroengine:engine _input_stack[-1].invoke set from storage macroengine:input invoke
 data modify storage macroengine:engine _input_stack[-1].slot set from storage macroengine:input slot
 data modify storage macroengine:engine _input_stack[-1].modifier set from storage macroengine:input modifier

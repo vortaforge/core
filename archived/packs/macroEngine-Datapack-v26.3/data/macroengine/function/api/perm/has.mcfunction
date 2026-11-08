@@ -1,3 +1,4 @@
+# macroengine:api/perm/has [MACRO]
 execute if data storage macroengine:engine modules{perm:0b} run return 0
 data modify storage macroengine:output result set value 0b
 

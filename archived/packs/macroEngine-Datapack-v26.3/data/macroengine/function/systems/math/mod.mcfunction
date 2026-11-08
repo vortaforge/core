@@ -1,3 +1,4 @@
+# macroengine:systems/math/mod [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $mod_v macroengine.tmp $(value)
 $scoreboard players set $mod_d macroengine.tmp $(divisor)

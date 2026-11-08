@@ -37,7 +37,6 @@ execute as @a run function macroengine:core/internal/systems/hook/check_block_br
 execute as @a[scores={macroengine.hook_item_used=1..}] run function macroengine:core/internal/systems/hook/on_item_use
 execute as @a[scores={macroengine.hook_item_used=1..}] run scoreboard players set @s macroengine.hook_item_used 0
 
-
 # entity_kill — advancement-based, score increase
 execute as @a[scores={macroengine.hook_entity_killed=1..}] run function macroengine:core/internal/systems/hook/on_entity_kill
 execute as @a[scores={macroengine.hook_entity_killed=1..}] run scoreboard players set @s macroengine.hook_entity_killed 0
@@ -71,7 +70,6 @@ execute as @a[scores={macroengine.hook_elytra=..0},predicate=macroengine:is_glid
 execute as @a[scores={macroengine.hook_elytra=1},predicate=!macroengine:is_gliding] run function macroengine:core/internal/systems/hook/on_elytra_stop
 execute as @a[predicate=macroengine:is_gliding] run scoreboard players set @s macroengine.hook_elytra 1
 execute as @a[predicate=!macroengine:is_gliding] run scoreboard players set @s macroengine.hook_elytra 0
-
 
 execute as @a[scores={macroengine.hook_dim_changed=1..}] run function macroengine:core/internal/systems/hook/on_dimension_change
 execute as @a[scores={macroengine.hook_dim_changed=1..}] run scoreboard players set @s macroengine.hook_dim_changed 0

@@ -1,3 +1,4 @@
+# macroengine:core/cooldown/remaining [MACRO]
 data modify storage macroengine:output result set value 0
 $execute unless data storage macroengine:engine cooldowns.$(player).$(key) run return 0
 

@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/interaction/on_attack
 tag @s add macroengine.ia_active
 
 data modify storage macroengine:engine _ia_iter set from storage macroengine:engine interaction_binds.attack

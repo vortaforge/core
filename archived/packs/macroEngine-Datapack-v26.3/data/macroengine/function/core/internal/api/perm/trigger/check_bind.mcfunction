@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/perm/trigger/check_bind
 execute unless data storage macroengine:engine _ptd_binds[0] run return 0
 
 data modify storage macroengine:engine _ptd_current set from storage macroengine:engine _ptd_binds[0]

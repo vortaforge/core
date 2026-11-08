@@ -3,6 +3,14 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-11-08 - chore(macroengine): v26.3 cleanup series (formatting, folder reorganization, dead-code removal)
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `archived/packs/macroEngine-Datapack-v26.3/`: three commits applied by `macroengine-v26_3-cleanup.sh`. (1) Header comment with the function ID on every `.mcfunction` that lacked one, final newlines, collapsed blank-line runs, 2-space JSON, one stale doc comment in `systems/rate_limit/config`; command lines unchanged. (2) 101 functions moved into per-feature folders and objectives, a tag, storages and a key renamed; this breaks callers that use the old function IDs, the old-to-new list is in `RENAMES.md`. (3) Six unreferenced functions and the unused `macroengine.pre_version` objective removed; `REMOVED.md` lists what was removed and what was kept on purpose.
+- Not applied: the series' own `README.md` (main already has one that is newer and says the pack is maintained).
+- **Not performed:** no Minecraft server or in-game test. Only checked: the series applies cleanly to main, commit 1 changes no command lines and no JSON values (compared before/after), and the resulting tree matches a plain `git am` of the same series. Commits 2 and 3 were not re-audited.
+
 ## 2026-11-02 - fix: guikitfw menu registry and docs, macroEngine rate_limit result, perm scratch cleanup and gate documentation
 
 **Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.

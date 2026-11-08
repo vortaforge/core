@@ -17,12 +17,12 @@ scoreboard players operation $rl_start macroengine.tmp -= $rl_win macroengine.tm
 scoreboard players add $rl_start macroengine.tmp 1
 
 # Step 2: write boundary into work storage for the pruner macro
-execute store result storage macroengine:rl_work prune_before int 1 run scoreboard players get $rl_start macroengine.tmp
+execute store result storage macroengine:rate_limit prune_before int 1 run scoreboard players get $rl_start macroengine.tmp
 
 # Step 3: prune expired hits (hits[i].t < prune_before)
 # We do this by rebuilding the hits list via internal/prune
-$data modify storage macroengine:rl_work rule_key set value "$(key)"
-function macroengine:core/internal/systems/rate_limit/prune with storage macroengine:rl_work
+$data modify storage macroengine:rate_limit rule_key set value "$(key)"
+function macroengine:core/internal/systems/rate_limit/prune with storage macroengine:rate_limit
 
 # Step 4: count surviving hits
 $execute store result score $rl_count macroengine.tmp run data get storage macroengine:engine rate_limit.rules.$(key).hits
@@ -35,5 +35,5 @@ execute if score $rl_count macroengine.tmp >= $rl_limit macroengine.tmp run data
 execute if score $rl_count macroengine.tmp >= $rl_limit macroengine.tmp run return 0
 
 # ALLOWED path — append new hit timestamp
-execute store result storage macroengine:rl_work new_hit.t int 1 run scoreboard players get $rl_now macroengine.tmp
-$data modify storage macroengine:engine rate_limit.rules.$(key).hits append from storage macroengine:rl_work new_hit
+execute store result storage macroengine:rate_limit new_hit.t int 1 run scoreboard players get $rl_now macroengine.tmp
+$data modify storage macroengine:engine rate_limit.rules.$(key).hits append from storage macroengine:rate_limit new_hit
