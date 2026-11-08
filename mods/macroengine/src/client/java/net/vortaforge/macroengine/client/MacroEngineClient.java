@@ -7,60 +7,52 @@ import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.server.IntegratedServer;
+import net.vortaforge.macroengine.ack.PackGate;
 import net.vortaforge.macroengine.validate.PackScanner;
 import net.vortaforge.macroengine.validate.SuspiciousText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Client half: the warning that appears before a world is created or opened.
+ * Client half: the acknowledgement screen, and the scan that feeds it.
  *
  * <h2>Two different moments, one message</h2>
  *
  * <ul>
- *   <li><b>The title screen.</b> On the client the world's data pack stack is not
- *       final until the integrated server has started. So the title screen cannot
- *       scan the packs - it can only say that a check will happen and that it can
- *       be run now.</li>
- *   <li><b>World load.</b> The client resource manager is the authoritative view of
- *       what will load, and it is available before the integrated server is up.</li>
+ *   <li><b>The title screen.</b> The world's data pack stack is not final until the
+ *       integrated server has started, so the title screen cannot decide about
+ *       packs. It can only offer the content check on demand.</li>
+ *   <li><b>World load.</b> This is where the decision belongs, and that is what
+ *       {@link #showWorldWarningIfNeeded} is for.</li>
  * </ul>
  *
- * The scan the player sees therefore runs against the client resource manager,
- * which is the same manager the game uses to load pack contents. It is not a
- * re-implementation of pack discovery, and it is not a scan of a guess about
- * where packs live on disk.
+ * <h2>What changed</h2>
  *
- * <h2>What this deliberately does not do</h2>
+ * {@code showWorldWarningIfNeeded} used to be dead code: nothing called it, and the
+ * method it would have called did nothing but go back. It is now the entry point
+ * the world-open path uses, and it returns whether the caller may proceed.
  *
- * It does not block world creation. A player who has read the warning can
- * continue; a scan that cannot be argued with is a scan people disable. The
- * "Continue anyway" button is only relabelled more plainly when a high-severity
- * finding exists - it is never removed.
+ * <h2>The limit this cannot cross</h2>
+ *
+ * This runs on a client. It cannot see a multiplayer server's pack stack, and a
+ * player's acknowledgement here covers their own single-player worlds only. The
+ * server half lives in {@code /macroengine ack}; saying otherwise would be a
+ * security claim this code cannot keep.
  */
 public final class MacroEngineClient implements ClientModInitializer {
     private static final Logger LOG = LoggerFactory.getLogger("macroengine-client");
 
-    /** How long to wait after the title screen appears before scanning, in ticks. */
-    private static final int SCAN_DELAY_TICKS = 20;
-
     @Override
     public void onInitializeClient() {
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> scheduleScan(client));
+        ClientLifecycleEvents.CLIENT_STARTED.register(MacroEngineClient::scheduleScan);
         registerTitleScreenNotice();
         LOG.info("macroEngine client ready");
     }
 
-    /**
-     * Scan once the client is up, then keep the result for whatever screen asks
-     * for it next.
-     */
     private static void scheduleScan(Minecraft client) {
-        // No scheduler is exposed for "after N ticks" through a stable API here, so
-        // the scan runs on the first world-less frame where the resource manager is
-        // populated. A failure is logged and skipped: a broken scan must not stop
-        // the game from starting.
         try {
             PackScanner.Report report = PackScanner.scan(client.getResourceManager(), 2000);
             ClientScanResults.publish(report);
@@ -72,6 +64,8 @@ public final class MacroEngineClient implements ClientModInitializer {
                 LOG.warn("macroEngine client: {}", problem);
             }
         } catch (RuntimeException e) {
+            // A broken scan must not stop the game from starting. It is recorded as
+            // a failure, not as a clean result.
             LOG.warn("macroEngine client: scan failed and was skipped - {}", e.toString());
             ClientScanResults.publishFailure(e.toString());
         }
@@ -80,9 +74,9 @@ public final class MacroEngineClient implements ClientModInitializer {
     /**
      * Put a "Content check" button on the title screen.
      *
-     * <p>Added as an extra widget rather than by replacing the screen: a mod that
-     * replaces the title screen is one of the most common sources of "this mod
-     * breaks with that mod", and it is not necessary for a button.
+     * <p>An extra widget rather than a replaced screen: a mod that replaces the
+     * title screen is one of the most common sources of "this mod breaks with that
+     * mod", and a button does not need that.
      */
     private static void registerTitleScreenNotice() {
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
@@ -91,36 +85,106 @@ public final class MacroEngineClient implements ClientModInitializer {
             }
             var button = net.minecraft.client.gui.components.Button.builder(
                             net.minecraft.network.chat.Component.literal("Content check"),
-                            b -> openWarning(client, screen))
+                            b -> openWarning(client, screen, List.of(), () -> { }, () -> { }))
                     .bounds(scaledWidth - 108, 6, 104, 20)
                     .build();
             if (ClientScanResults.hasProblems()) {
-                // A quiet button is easy to ignore; re-labelling it is the whole
-                // point of having computed the result.
                 button.setMessage(net.minecraft.network.chat.Component.literal("⚠ Content check"));
             }
             Screens.getWidgets(screen).add(button);
         });
     }
 
-    private static void openWarning(Minecraft client, Screen parent) {
+    private static void openWarning(Minecraft client, Screen parent,
+                                    List<ContentWarningScreen.PackLine> pending,
+                                    Runnable onConfirm, Runnable onCancel) {
         PackScanner.Report report = ClientScanResults.current();
         boolean high = report.count(SuspiciousText.Severity.HIGH) > 0 || !report.metaProblems().isEmpty();
 
-        // The button is always clickable. A player who presses it with a clean pack
-        // should get "nothing found", not nothing at all.
-        client.setScreenAndShow(new ContentWarningScreen(parent, report.findings(),
-                report.metaProblems(), high));
-    }
-
-    /** Exposed so the world-open path can show the warning before the world loads. */
-    public static void showWorldWarningIfNeeded(Minecraft client, Screen parent, IntegratedServer server) {
-        PackScanner.Report report = ClientScanResults.current();
-        if (report.findings().isEmpty() && report.metaProblems().isEmpty()) {
-            return;
+        List<String> lines = new ArrayList<>();
+        for (SuspiciousText.Finding finding : report.findings()) {
+            lines.add("[" + finding.severity() + "] " + finding.where() + " \"" + finding.snippet() + "\"");
         }
-        boolean high = report.count(SuspiciousText.Severity.HIGH) > 0 || !report.metaProblems().isEmpty();
-        client.setScreenAndShow(new ContentWarningScreen(parent, report.findings(),
-                report.metaProblems(), high));
+        for (var problem : report.metaProblems()) {
+            lines.add("[meta] " + problem.where() + ": " + problem.message());
+        }
+
+        client.setScreenAndShow(new ContentWarningScreen(parent, pending, lines, high, onConfirm, onCancel));
     }
+
+    /**
+     * Called on the world-open path. Returns true when the caller may proceed.
+     *
+     * <p>Truth table:
+     *
+     * <ul>
+     *   <li>no unacknowledged pack -&gt; true, and no screen.</li>
+     *   <li>unacknowledged pack -&gt; false, and the screen is shown. The confirm
+     *       callback re-runs the original action; the cancel callback does not.</li>
+     * </ul>
+     *
+     * <p><b>Unverified for 26.3:</b> where this should be called from. The hook
+     * needs a point after the pack list for the world is known and before the
+     * integrated server starts, and the previous code copied
+     * {@code net.minecraft.client.server.IntegratedServer} into the signature
+     * without checking that any such hook exists. See the note below.
+     */
+    public static boolean showWorldWarningIfNeeded(Minecraft client, Screen parent, Runnable openWorld) {
+        if (client == null || parent == null) {
+            return true;
+        }
+
+        List<ContentWarningScreen.PackLine> pending = unacknowledgedPacks();
+        if (pending.isEmpty()) {
+            return true;
+        }
+
+        openWarning(client, parent, pending, openWorld, () -> { });
+        return false;
+    }
+
+    /**
+     * Packs the client knows about that have no acknowledgement at this hash.
+     *
+     * <p>Built from the same report the scanner produced. A pack the client cannot
+     * hash is included rather than skipped: an unreadable pack is the one whose
+     * contents nobody can vouch for.
+     */
+    private static List<ContentWarningScreen.PackLine> unacknowledgedPacks() {
+        List<ContentWarningScreen.PackLine> pending = new ArrayList<>();
+        PackScanner.Report report = ClientScanResults.current();
+        for (String id : report.packsSeen()) {
+            // The client has no file handle for a built-in pack, so no hash and no
+            // acknowledgement: it is skipped rather than shown as a pending prompt
+            // nobody could satisfy.
+            String hash = ClientScanResults.hashOf(id);
+            if (hash == null) {
+                continue;
+            }
+            boolean archived = ClientScanResults.isArchived(id, hash);
+            if (PackGate.get().verdict(id, hash, archived, "").needsAsking()) {
+                pending.add(new ContentWarningScreen.PackLine(id, hash, archived));
+            }
+        }
+        return pending;
+    }
+
+    /*
+     * ---------------------------------------------------------------------
+     * TO VERIFY BEFORE MERGE (26.3 hooks, not guessed further)
+     * ---------------------------------------------------------------------
+     * 1. Where showWorldWarningIfNeeded should be called from. Candidates, none
+     *    confirmed here:
+     *      - ScreenEvents / screen-replacement events on CreateWorldScreen's
+     *        "Create" and WorldOpenFlows' "Play Selected World" path;
+     *      - Mixin into WorldOpenFlows#openWorld (or whatever 26.3 names it).
+     *    The pack list for the world is only final after the world's level.json
+     *    is read, so a hook that fires before that cannot see the right packs.
+     * 2. Whether ClientScanResults can obtain a pack's file path. If the client
+     *    resource manager does not expose one, the hash has to be computed from
+     *    the resource bytes instead, which means ContentHash needs an overload
+     *    taking (name, bytes) pairs rather than a Path.
+     * 3. Checkbox's constructor and its membership in addRenderableWidget.
+     * ---------------------------------------------------------------------
+     */
 }

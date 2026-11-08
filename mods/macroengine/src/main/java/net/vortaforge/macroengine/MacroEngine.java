@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.vortaforge.macroengine.command.AckCommand;
 import net.vortaforge.macroengine.command.MacroCommand;
 import net.vortaforge.macroengine.lang.Lang;
 import net.vortaforge.macroengine.module.AlertModule;
@@ -70,6 +71,7 @@ public final class MacroEngine implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(MacroEngine::onServerStopping);
 
         MacroCommand.register();
+        AckCommand.register();
 
         LOG.info("macroEngine ready: {} module(s), {} translation key(s)",
                 ModuleRegistry.size(), Lang.size());
