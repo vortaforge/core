@@ -4,6 +4,13 @@ declare(strict_types=1);
 /**
  * Build-time data generator for the GitHub Pages download page (index.html).
  *
+ * STATUS: ARCHIVED, and superseded. This script belonged to the GitHub Pages
+ * download page that this repository no longer publishes; the documentation
+ * build moved to the `vortaforge/docs` repository, where
+ * `tools/build_docs_index.php` generates the page index instead. The file is
+ * kept because it is the record of how the old snapshot was produced, not
+ * because anything runs it. `archived/` is not a build root.
+ *
  * GitHub Pages only serves static files, so PHP cannot run when a visitor opens
  * the page. Instead this script runs inside .github/workflows/pages.yml, asks
  * the GitHub API for the mods/ directory using the
@@ -26,6 +33,17 @@ declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
+    exit(1);
+}
+
+// PHP 8.1 is the floor: `never` as a return type and first-class readonly
+// support both land after 8.0, and a lower runtime fails with a parse error
+// rather than a useful message.
+if (PHP_VERSION_ID < 80100) {
+    fwrite(STDERR, sprintf(
+        "build_site_data: PHP 8.1 or newer is required, running %s\n",
+        PHP_VERSION
+    ));
     exit(1);
 }
 
