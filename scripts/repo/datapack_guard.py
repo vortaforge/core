@@ -110,6 +110,16 @@ RETIRED_LIVE_PATHS = (
 FIXTURE_PREFIXES = ("scripts/tests/fixtures/", "archived/")
 # A live `packs/` tree must stay empty; deleting from it is how archiving works.
 LIVE_PACKS_PREFIX = "packs/"
+# No mod may carry a datapack again. This is the structural version of the
+# 2026-11-08 removal: mods/macroengine shipped 1,525 files under data/ plus a
+# pack.mcmeta, which is what made hosting platforms treat it as a payload.
+#
+# Note this rule does NOT consult datapacks.disabled.json. The switch answers
+# "may the datapack programme produce new packs under packs/", and the answer is
+# allowed to be yes; it has never meant "a jar may embed a pack". Keeping the two
+# separate is what stops the switch from silently reopening this hole - which it
+# did: with the switch at enabled=true the old rule 4 skipped mods/ entirely.
+EMBEDDED_PACK_PREFIX = "mods/"
 # The one file the retired tree is allowed to carry: its own explanation.
 LIVE_PACKS_ALLOWED = {"packs/README.md", "packs/.gitkeep"}
 
@@ -315,6 +325,20 @@ def rule_for_change(status: str, path: str) -> tuple[str, str, str] | None:
             return ("error", "new-datapack",
                     f"new datapack content is disabled ({why}). Enable the programme with "
                     f"scripts/repo/datapacks_disable.py first, or move the content under archived/")
+
+    # 4b. A mod must not carry a datapack. Unconditional, and independent of the
+    #     programme switch: see EMBEDDED_PACK_PREFIX above for why.
+    #
+    #     Test fixtures are the one exception - test_datapack_guard.py builds
+    #     fake packs there to prove this rule works, and a rule that blocked its
+    #     own fixture would be untestable.
+    if p.startswith(EMBEDDED_PACK_PREFIX) and not in_fixture and is_datapack_path(p) \
+            and status in ("A", "C", "R", "M"):
+        return ("error", "embedded-datapack",
+                f"'{p}' is datapack content inside mods/. A mod jar must not embed a pack: "
+                f"it makes the mod indistinguishable from a payload, and that is why "
+                f"macroEngine was removed from hosting platforms. Keep the pack in "
+                f"archived/ or make it a separate datapack the operator installs.")
 
     # 5. Workflows that would run datapack tooling again.
     if p.startswith(".github/workflows/") and status in ("A", "C", "R"):

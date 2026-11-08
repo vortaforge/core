@@ -7,7 +7,7 @@
 #
 # Usage:
 #   bash scripts/backup-org.sh              # full backup
-#   bash scripts/backup-org.sh --dry-run    # show what would run, change nothing
+#   bash scripts/backup-org.sh --dry-run    # show what would run; writes nothing at all
 #   bash scripts/backup-org.sh --verify-only ARCHIVE
 #                                           # verify an existing archive only
 #
@@ -210,8 +210,24 @@ mtime_of() {
   else stat -f %m "$1"; fi
 }
 
+# Redact anything that looks like a credential before it reaches stdout.
+#
+# The dry run printed `[dry-run] $*` verbatim, and the command it was describing
+# carried `-t <token>`: `--dry-run` wrote the GitHub token into the terminal and
+# into LOG_FILE in clear text. The run it was previewing is precisely the one
+# that does not need the token, so the preview had no reason to hold one.
+redact() {
+  local text="$1"
+  [ -n "${TOKEN:-}" ] && text="${text//"$TOKEN"/***REDACTED***}"
+  # github token shapes, in case one arrives from somewhere other than $TOKEN
+  printf '%s' "$text" | sed -E \
+    -e 's/(gh[pousr]_[A-Za-z0-9]{20,})/***REDACTED***/g' \
+    -e 's/(github_pat_[A-Za-z0-9_]{20,})/***REDACTED***/g' \
+    -e 's/(-t |--token[= ])([^ ] )?[^ ]+/***REDACTED***/g'
+}
+
 run() { # run <cmd...> - honours --dry-run
-  if [ "$DRY_RUN" = 1 ]; then log "[dry-run] $*"; return 0; fi
+  if [ "$DRY_RUN" = 1 ]; then log "[dry-run] $(redact "$*")"; return 0; fi
   "$@"
 }
 
@@ -400,8 +416,24 @@ else
     || die "github-backup is not on PATH; set GHBK_VENV to the venv that has it, or let this script install it"
 fi
 
-mkdir -p "$BACKUP_DIR" "$OUT_DIR" "$(dirname "$LOG_FILE")"
-exec > >(tee -a "$LOG_FILE") 2>&1
+# A dry run must not touch the filesystem.
+#
+# It used to `mkdir -p` the backup directory, the output directory and the log
+# directory, then fork `tee -a` to append to the log - so `--dry-run`, documented
+# as "show what would run, change nothing", created three directories and left a
+# log file behind on every invocation. That is not nothing: it is enough to make
+# a read-only filesystem fail a preview, and enough for someone to believe a
+# backup exists because a directory of that name does.
+#
+# A dry run now prints to the terminal and writes no log. It cannot be merged into
+# "the log also shows what a dry run would have done", because the log is the
+# artefact of a real backup and a preview inside it reads as a real run.
+if [ "$DRY_RUN" = 1 ]; then
+  log "dry run: no directory will be created and no log file will be written"
+else
+  mkdir -p "$BACKUP_DIR" "$OUT_DIR" "$(dirname "$LOG_FILE")"
+  exec > >(tee -a "$LOG_FILE") 2>&1
+fi
 
 log "Starting backup: $ORG -> $BACKUP_DIR  (dry-run=$DRY_RUN)"
 
@@ -431,8 +463,23 @@ if grep -q -- 'file://' <<<"$HELP"; then
   TOKEN_FILE="$(mktemp)"
   printf '%s' "$TOKEN" > "$TOKEN_FILE"
   TOKEN_ARG="file://$TOKEN_FILE"
+elif [ "$DRY_RUN" = 1 ]; then
+  # In a dry run the command is only printed, so the argv shape is not a secret
+  # worth refusing over - but say plainly that a real run would refuse.
+  note "this github-backup has no file:// token support: a real run would refuse rather than put the token in argv"
 else
-  warn "this github-backup has no file:// token support; the token is passed on the command line (visible in ps)"
+  # This used to be a warning and then the run continued, which meant the one
+  # thing the comment above promised - "keep the token out of argv" - was
+  # conditional on a pip package's version, and the condition failed silently in
+  # exactly the case nobody checks. A token in argv is readable by every local
+  # user through /proc/<pid>/cmdline for the hours a backup takes, and it is
+  # inherited by anything the tool spawns.
+  #
+  # Refusing is the right trade because there is no partial-credit version of
+  # this: a backup that leaks the credential it authenticated with is a worse
+  # outcome than a backup that did not run, and the operator can see the reason
+  # and pick a github-backup build that supports file://.
+  die "github-backup ${GHBK_VERSION} has no file:// token support; refusing to put the token in argv (visible in ps). Upgrade github-backup, or set GHBK_VENV to a build that supports it."
 fi
 
 run github-backup "$ORG" --organization -t "$TOKEN_ARG" -o "$BACKUP_DIR" \
@@ -525,7 +572,7 @@ PY
 if [ "$DRY_RUN" = 1 ]; then
   log "[dry-run] would fetch org-meta/{teams,members,rulesets}.json"
 else
-  mkdir -p "$BACKUP_DIR/org-meta"
+  [ "$DRY_RUN" = 1 ] || mkdir -p "$BACKUP_DIR/org-meta"
   for ep in teams members rulesets; do
     if api_get "/orgs/$ORG/$ep" > "$BACKUP_DIR/org-meta/$ep.json.tmp" 2>/dev/null; then
       mv "$BACKUP_DIR/org-meta/$ep.json.tmp" "$BACKUP_DIR/org-meta/$ep.json"
@@ -586,7 +633,7 @@ fi
 # Actions workflows, recent run history and open security alerts.
 # Note: the Actions secrets endpoint never returns secret values, only names
 # and timestamps, so storing the raw response is safe.
-mkdir -p "$BACKUP_DIR/repo-meta"
+[ "$DRY_RUN" = 1 ] || mkdir -p "$BACKUP_DIR/repo-meta"
 save() { # save <outfile> <api path>; a missing permission is not fatal
   local out="$1" path="$2"
   if [ "$DRY_RUN" = 1 ]; then log "[dry-run] save $out <- $path"; return 0; fi
@@ -628,7 +675,7 @@ try:
 except Exception: pass' < "$BACKUP_DIR/org-meta/teams.json" 2>/dev/null || true)"
 fi
 if [ -n "$TEAM_SLUGS" ]; then
-  mkdir -p "$BACKUP_DIR/org-meta/teams"
+  [ "$DRY_RUN" = 1 ] || mkdir -p "$BACKUP_DIR/org-meta/teams"
   while IFS= read -r slug; do
     [ -n "$slug" ] || continue
     save "$BACKUP_DIR/org-meta/teams/$slug-members.json" "/orgs/$ORG/teams/$slug/members"
@@ -646,7 +693,7 @@ if [ -z "$REPO_LIST" ]; then
 else
   while IFS= read -r repo; do
     [ -n "$repo" ] || continue
-    d="$BACKUP_DIR/repo-meta/$repo"; mkdir -p "$d"
+    d="$BACKUP_DIR/repo-meta/$repo"; [ "$DRY_RUN" = 1 ] || mkdir -p "$d"
     save "$d/repo.json"                 "/repos/$ORG/$repo"
     save "$d/collaborators.json"        "/repos/$ORG/$repo/collaborators"
     save "$d/hooks.json"                "/repos/$ORG/$repo/hooks"
@@ -661,7 +708,7 @@ try:
     for e in json.load(sys.stdin).get("environments", []): print(urllib.parse.quote(e["name"], safe=""))
 except Exception: pass' < "$d/environments.json" 2>/dev/null || true)"
       if [ -n "$ENV_NAMES" ]; then
-        mkdir -p "$d/environments-detail"
+        [ "$DRY_RUN" = 1 ] || mkdir -p "$d/environments-detail"
         while IFS= read -r en; do
           [ -n "$en" ] || continue
           save "$d/environments-detail/$en-branch-policies.json" \
@@ -682,7 +729,7 @@ try:
     for r in json.load(sys.stdin): print(r["id"])
 except Exception: pass' < "$d/rulesets.json" 2>/dev/null || true)"
       if [ -n "$RS_IDS" ]; then
-        mkdir -p "$d/rulesets-detail"
+        [ "$DRY_RUN" = 1 ] || mkdir -p "$d/rulesets-detail"
         while IFS= read -r rid; do
           [ -n "$rid" ] || continue
           save "$d/rulesets-detail/$rid.json" "/repos/$ORG/$repo/rulesets/$rid"
@@ -996,7 +1043,7 @@ if [ "$DRY_RUN" = 1 ]; then
 else
   echo "  Archive: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"
   [ -f "$ARCHIVE.sha256" ] && echo "  SHA256 : $(cut -d' ' -f1 "$ARCHIVE.sha256")"
-  echo "  Log    : $LOG_FILE"
+  [ "$DRY_RUN" = 1 ] || echo "  Log    : $LOG_FILE"
 fi
 echo
 echo "Next steps:"

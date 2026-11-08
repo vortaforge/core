@@ -36,7 +36,6 @@ Account-level blocklist for the retired datapack programme.
 | `ref_patterns` | Branch/tag *name* globs (e.g. `*/misode*`) used by `--audit-refs` / the sync job. |
 | `match_bot_suffix` | Match any login ending in `[bot]`, `-bot`, `_bot`, `.bot`. |
 | `match_ai_accounts` | Match AI-agent-looking logins (see the entry's `notes`). |
-| `profile_scan` | Entry is a placeholder for a login discovered through public-profile scanning; a human confirms or exempts each hit. |
 
 Accounts in `managed.accounts` / `managed.owners` are **never** matched by the
 broad rules. Put your own bots there instead of in `blocked`.
@@ -59,16 +58,39 @@ Do not add someone for a technical disagreement. Write down in `reason` what
 happened and which policy decision it maps to; this file is public and will be
 read by the blocked person.
 
-## Profile scan (datapack developer detection)
+## What this list blocks, and what it no longer blocks
 
-`policy.profile_scan` is performed only by `vortaforge/.github`'s
-`.github/scripts/blocklist_sync.py`, with a read-only token, against **public**
-profile fields (`bio`, `company`, `name`, `blog`) and only for accounts that
-already interacted with the organisation (PR author, issue author, org
-invitation). It never reads private data, never scans GitHub globally, and a
-hit does not auto-block anyone: it opens an issue in `vortaforge/.github` with
-the matched token. Until that issue is resolved the account's pull requests are
-refused (fail-closed).
+Two categories, both about **behaviour**, not about people:
+
+| Entry | What it matches |
+| --- | --- |
+| `bot-accounts` | Logins ending in `[bot]`, `-bot`, `_bot` or `.bot`. |
+| `ai-agent-accounts` | Logins containing a vendor or agent token as a **whole** token between separators - never as a substring, because `"claude" in login` also matches `claudette`. |
+
+Plus `managed.accounts`, which are never enforced against, and the
+`user_ids` mechanism, which survives a rename by matching the numeric id instead
+of the login.
+
+Removed on 2026-11-08: the entry for a named datapack tooling author, and an
+entry that collected seven more datapack tooling authors under one id. Both said
+in their own `reason` that they were policy rather than accusation - the policy
+being that a retired programme's authors were not invited to maintain it. That
+policy is now enforced where it belongs: `datapacks.disabled.json` and
+`datapack_guard.py` decide what may exist in this repository, and a file listing
+human names could only ever decide who is allowed to be a person here. Both
+entries are gone, and the profile-scanning mechanism that existed to find more
+of the same is gone with them.
+
+Two things that removal costs, stated rather than hidden:
+
+* **`user_ids` is empty in every remaining entry.** The mechanism is tested
+  (`test_a_renamed_account_is_caught_by_its_id`) against a fixture, not against
+  production data, because there is no production id left to test it with.
+* **Nothing now catches a datapack author who is not a bot.** That is the
+  intended trade: the guard blocks datapack *content* unconditionally, which is
+  both more effective and not a judgement about a person.
+
+## Removing an entry
 
 ## Removing an entry
 

@@ -93,6 +93,10 @@ class ScoreMigration(unittest.TestCase):
         for rel in (
             "archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/init.mcfunction",
         ):
+            # The mod used to carry a byte-identical copy of this file. It no longer
+            # carries a datapack at all, so the archived pack is the only copy and
+            # the only copy that has to be right; asserting against two files that
+            # must stay identical was always a way of hoping they would.
             text = self._init(rel)
             for h in self.HOLDERS:
                 copy = (f"scoreboard players operation #vortaforge.{h} macroengine.meta "
