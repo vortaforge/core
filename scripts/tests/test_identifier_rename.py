@@ -30,7 +30,6 @@ HISTORY_OK = {
     "docs/interop.md",
     "archived/packs/macroEngine-Datapack-v26.3/README.md",
     "archived/packs/macroEngine-Datapack-v26.3/docs/interop.md",
-    "mods/macroengine/docs/interop.md",
 }
 
 # A `git am` series. Editing it would mean the patch no longer applies, and the
@@ -93,7 +92,6 @@ class ScoreMigration(unittest.TestCase):
     def test_each_old_score_is_copied_before_it_is_dropped(self):
         for rel in (
             "archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/init.mcfunction",
-            "mods/macroengine/src/main/resources/data/macroengine/function/config.mcfunction",
         ):
             text = self._init(rel)
             for h in self.HOLDERS:
@@ -117,7 +115,6 @@ class ScoreMigration(unittest.TestCase):
     def test_reset_cannot_let_an_old_score_walk_back_in(self):
         for rel in (
             "archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/reset.mcfunction",
-            "mods/macroengine/src/main/resources/data/macroengine/function/core/config/reset.mcfunction",
         ):
             text = (ROOT / rel).read_text(encoding="utf-8")
             for h in self.HOLDERS:
@@ -126,9 +123,7 @@ class ScoreMigration(unittest.TestCase):
 
     def test_nothing_outside_the_migration_reads_an_old_holder(self):
         allowed = {"archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/init.mcfunction",
-                   "mods/macroengine/src/main/resources/data/macroengine/function/config.mcfunction",
-                   "archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/reset.mcfunction",
-                   "mods/macroengine/src/main/resources/data/macroengine/function/core/config/reset.mcfunction"}
+                   "archived/packs/macroEngine-Datapack-v26.3/data/macroengine/function/core/config/reset.mcfunction"}
         hits = []
         for p in _files():
             if p.suffix != ".mcfunction":
