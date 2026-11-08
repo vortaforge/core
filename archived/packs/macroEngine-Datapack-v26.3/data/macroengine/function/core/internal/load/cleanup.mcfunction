@@ -131,7 +131,6 @@ scoreboard objectives remove macroengine.hook_online
 scoreboard objectives remove macroengine.right_click
 scoreboard objectives remove macroengine.freeze_id
 scoreboard objectives remove macroengine.pid
-scoreboard objectives remove macroengine.pre_version
 scoreboard objectives remove macroengine.action
 scoreboard objectives remove macroengine.run
 scoreboard objectives remove macroengine.time

@@ -25,7 +25,7 @@ data modify storage macroengine:output result set value 1b
 
 # Guard: rule must exist — try auto-create from player template first
 # Key format "player:<tpl>:<name>" → tpl is the second segment
-# We attempt player_ensure unconditionally; it exits early if not a player key or no template
+# We attempt player_check unconditionally; it exits early if not a player key or no template
 $data modify storage macroengine:rate_limit ensure_key set value "$(key)"
 function macroengine:core/internal/systems/rate_limit/player_check with storage macroengine:rate_limit
 

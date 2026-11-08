@@ -8,7 +8,6 @@ scoreboard objectives add macroengine.meta dummy
 scoreboard objectives add macroengine.time dummy
 scoreboard objectives add macroengine.run trigger
 scoreboard objectives add macroengine.action trigger
-scoreboard objectives add macroengine.pre_version dummy
 scoreboard objectives add macroengine.pid dummy
 scoreboard objectives add macroengine.freeze_id dummy
 scoreboard objectives add macroengine.health health
