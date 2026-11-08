@@ -1,3 +1,4 @@
+# macroengine:core/lib/repeat [MACRO]
 $data modify storage macroengine:engine _repeat.func set value "$(func)"
 $scoreboard players set $rep_n macroengine.tmp $(count)
 scoreboard players set $rep_i macroengine.tmp 0

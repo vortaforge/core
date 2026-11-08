@@ -1,3 +1,4 @@
+# macroengine:player/list_vars [MACRO]
 $tellraw @a[tag=macroengine.admin] ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"━━━ Player: ","color":"aqua"},{"text":"$(player)","color":"white","bold":true},{"text":" ━━━━━━━━━━━━━━","color":"#555555"}]
 $execute if data storage macroengine:engine players.$(player) run tellraw @a[tag=macroengine.admin] ["",{"text":" vars ","color":"#555555"},{"plain":true ,"storage":"macroengine:engine","nbt":"players.$(player)","interpret":false,"color":"yellow"}]
 $execute unless data storage macroengine:engine players.$(player) run tellraw @a[tag=macroengine.admin] ["",{"text":" vars ","color":"#555555"},{"text":"(no data)","color":"gray","italic":true}]

@@ -1,3 +1,4 @@
+# macroengine:systems/log/show
 execute if data storage macroengine:engine modules{log:0b} run return 0
 execute unless data storage macroengine:engine log_display[0] run tellraw @s {"text":"[Log] No entries.","color":"gray","italic":false}
 execute unless data storage macroengine:engine log_display[0] run return 0

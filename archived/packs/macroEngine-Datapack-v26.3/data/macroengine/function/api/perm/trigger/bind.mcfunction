@@ -1,3 +1,4 @@
+# macroengine:api/perm/trigger/bind [MACRO]
 execute if data storage macroengine:engine modules{perm:0b} run return 0
 $scoreboard objectives add $(name) trigger
 

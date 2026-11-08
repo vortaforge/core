@@ -17,8 +17,8 @@
 # limit (int) — max number of hits allowed inside the window
 # window (int) — sliding window width in ticks (20 = 1 second)
 #
-# Removing a rule: function macroengine:systems/rate_limit/delete {key:"..."}
-# Listing rules: function macroengine:systems/rate_limit/list
+# Removing or listing rules: no helper functions exist; edit
+# macroengine:engine rate_limit.rules.<key> directly.
 
 execute if data storage macroengine:engine modules{rate_limit:0b} run return 0
 $data modify storage macroengine:engine rate_limit.rules.$(key) set value {limit:$(limit),window:$(window),hits:[]}

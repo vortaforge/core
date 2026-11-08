@@ -12,7 +12,6 @@
 #   function macroengine:api/gamerule/get with storage macroengine:input {}
 #   # read: data get storage macroengine:output gamerule
 
-
 # Normalize key (spaces -> underscores, lowercase). Leaves _gamerule_norm unset when
 # the name cannot be normalized safely (contains a quote or a backslash).
 execute if data storage macroengine:engine modules{gamerule:0b} run return 0

@@ -1,3 +1,4 @@
+# macroengine:core/lib/schedule_reset [MACRO]
 $execute unless data storage macroengine:engine schedules.$(key) run return 0
 
 $data modify storage macroengine:engine _sreset set from storage macroengine:engine schedules.$(key)

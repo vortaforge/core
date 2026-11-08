@@ -1,3 +1,4 @@
+# macroengine:systems/flag/toggle [MACRO]
 scoreboard players set $ftgl macroengine.tmp 0
 $execute if data storage macroengine:engine flags.$(key) run scoreboard players set $ftgl macroengine.tmp 1
 

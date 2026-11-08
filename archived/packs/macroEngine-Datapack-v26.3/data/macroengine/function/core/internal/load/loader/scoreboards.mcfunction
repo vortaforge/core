@@ -2,7 +2,6 @@
 # (moved from macroengine:core/internal/load/load/scoreboards in v26.3 — load/ vs loader/
 #  separates the loader bookkeeping from the actual init routines)
 
-
 scoreboard objectives add macroengine.tmp dummy
 scoreboard objectives add macroengine.anvil_t dummy
 scoreboard objectives add macroengine.meta dummy

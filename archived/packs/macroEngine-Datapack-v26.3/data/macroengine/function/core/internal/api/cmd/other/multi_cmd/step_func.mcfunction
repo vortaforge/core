@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/cmd/other/multi_cmd/step_func
 execute unless data storage macroengine:engine _mcmd_list[0] run return 0
 
 data modify storage macroengine:engine _mcmd_entry set value {}

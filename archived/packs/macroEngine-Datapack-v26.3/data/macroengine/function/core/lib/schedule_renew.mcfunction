@@ -1,3 +1,4 @@
+# macroengine:core/lib/schedule_renew [MACRO]
 $execute unless data storage macroengine:engine schedules.$(key) run return 0
 $data modify storage macroengine:engine _sched_tmp set from storage macroengine:engine schedules.$(key)
 execute if data storage macroengine:engine _sched_tmp.func if data storage macroengine:engine _sched_tmp.player run function macroengine:core/internal/core/lib/schedule_requeue_as with storage macroengine:engine _sched_tmp

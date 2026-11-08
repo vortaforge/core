@@ -1,9 +1,9 @@
 {
-    "type": "minecraft:set_custom_data",
-    "tag": {
-        "macroengine": {
-            "input": true,
-            "inputItem": "writable_book"
-        }
+  "type": "minecraft:set_custom_data",
+  "tag": {
+    "macroengine": {
+      "input": true,
+      "inputItem": "writable_book"
     }
+  }
 }

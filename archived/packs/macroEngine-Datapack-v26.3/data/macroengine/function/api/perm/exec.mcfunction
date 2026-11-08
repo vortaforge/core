@@ -1,3 +1,4 @@
+# macroengine:api/perm/exec [MACRO]
 execute if data storage macroengine:engine modules{perm:0b} run return 0
 scoreboard players set $pex_pid macroengine.tmp 0
 $execute store result score $pex_pid macroengine.tmp run data get storage macroengine:engine player_pids.$(player)

@@ -1,3 +1,4 @@
+# macroengine:api/toggle/cb/true
 data modify storage macroengine:engine config.module_cb set value 1b
 function macroengine:core/config/apply
 

@@ -1,3 +1,4 @@
+# macroengine:core/cooldown/is_ready [MACRO]
 $data modify storage macroengine:input player set value "$(player)"
 $data modify storage macroengine:input key set value "$(key)"
 function macroengine:core/cooldown/check with storage macroengine:input {}

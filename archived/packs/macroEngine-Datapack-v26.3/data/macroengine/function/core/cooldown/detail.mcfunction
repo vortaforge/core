@@ -1,3 +1,4 @@
+# macroengine:core/cooldown/detail [MACRO]
 data merge storage macroengine:output {active:0b,remaining:0,expires:0}
 
 $execute unless data storage macroengine:engine cooldowns.$(player).$(key) run return 0

@@ -1,3 +1,4 @@
+# macroengine:api/interaction/unbind_use [MACRO]
 execute if data storage macroengine:engine modules{interaction:0b} run return 0
 execute unless data storage macroengine:engine interaction_binds.use[0] run return 0
 

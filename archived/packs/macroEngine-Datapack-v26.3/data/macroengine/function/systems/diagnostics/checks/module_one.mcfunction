@@ -2,7 +2,6 @@
 # Internal: checks one module. $(name) comes only from the constant list in checks/modules.
 # Codes: module.missing:<name>  module.invalid:<name>  module.mismatch:<name>
 
-
 $execute unless data storage macroengine:engine modules.$(name) run data modify storage macroengine:output diagnostics.issues append value "module.missing:$(name)"
 $execute if data storage macroengine:engine modules{$(name):1b} run scoreboard players add #macroengine.dg_on macroengine.tmp 1
 $execute if data storage macroengine:engine modules{$(name):0b} run scoreboard players add #macroengine.dg_off macroengine.tmp 1

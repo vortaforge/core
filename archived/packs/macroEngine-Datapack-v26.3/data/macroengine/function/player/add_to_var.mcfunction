@@ -1,3 +1,4 @@
+# macroengine:player/add_to_var [MACRO]
 $execute store result score $pvar macroengine.tmp run data get storage macroengine:engine players.$(player).$(key)
 $scoreboard players set $pamount macroengine.tmp $(amount)
 scoreboard players operation $pvar macroengine.tmp += $pamount macroengine.tmp

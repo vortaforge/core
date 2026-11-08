@@ -3,7 +3,6 @@
 # Issue:   engine.not_loaded
 # Notices: tick.paused_storage  tick.paused_config  log.debug_level  audit.buffer_full
 
-
 execute unless data storage macroengine:engine global{loaded:1b} run data modify storage macroengine:output diagnostics.issues append value "engine.not_loaded"
 execute if data storage macroengine:engine tick{paused:1b} run data modify storage macroengine:output diagnostics.notices append value "tick.paused_storage"
 execute if score #vortaforge.packs.macroengine.config.tick.pause macroengine.meta matches 1 run data modify storage macroengine:output diagnostics.notices append value "tick.paused_config"

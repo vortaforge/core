@@ -1,3 +1,4 @@
+# macroengine:systems/math/map [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $map_v macroengine.tmp $(value)
 $scoreboard players set $map_imin macroengine.tmp $(in_min)

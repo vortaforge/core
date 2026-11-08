@@ -1,3 +1,4 @@
+# macroengine:core/state/toggle [MACRO]
 scoreboard players set $st_tog macroengine.tmp 0
 $execute if data storage macroengine:engine {states:{$(player):"$(on)"}} run scoreboard players set $st_tog macroengine.tmp 1
 

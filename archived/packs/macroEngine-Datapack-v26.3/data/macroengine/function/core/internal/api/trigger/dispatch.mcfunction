@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/trigger/dispatch
 scoreboard players operation $tc_player macroengine.tmp = @s macroengine_action
 
 scoreboard players set @s macroengine_action 0

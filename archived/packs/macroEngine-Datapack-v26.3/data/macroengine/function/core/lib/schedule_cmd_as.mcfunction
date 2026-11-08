@@ -1,3 +1,4 @@
+# macroengine:core/lib/schedule_cmd_as [MACRO]
 $execute if data storage macroengine:engine schedules.$(key) run data remove storage macroengine:engine schedules.$(key)
 
 $data modify storage macroengine:engine schedules.$(key).cmd set value "$(cmd)"

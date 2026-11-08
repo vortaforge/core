@@ -1,3 +1,4 @@
+# macroengine:core/lib/ticks_to_time [MACRO]
 $scoreboard players set $ttt_t macroengine.tmp $(ticks)
 
 execute if score $ttt_t macroengine.tmp matches ..-1 run scoreboard players set $ttt_t macroengine.tmp 0

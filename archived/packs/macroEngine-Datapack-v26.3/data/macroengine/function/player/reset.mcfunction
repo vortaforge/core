@@ -1,3 +1,4 @@
+# macroengine:player/reset [MACRO]
 $data remove storage macroengine:engine players.$(player)
 $data remove storage macroengine:engine cooldowns.$(player)
 $advancement revoke @a[name=$(player),limit=1] from macroengine:hidden/root

@@ -1,3 +1,4 @@
+# macroengine:player/get_pos [MACRO]
 data modify storage macroengine:output found set value 0b
 
 $execute unless entity @a[name=$(player),limit=1] run return 0

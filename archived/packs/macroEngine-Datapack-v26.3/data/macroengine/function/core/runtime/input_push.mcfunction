@@ -1,3 +1,4 @@
+# macroengine:core/runtime/input_push
 data modify storage macroengine:engine _input_stack append value {}
 
 data modify storage macroengine:engine _input_stack[-1].player set from storage macroengine:input player

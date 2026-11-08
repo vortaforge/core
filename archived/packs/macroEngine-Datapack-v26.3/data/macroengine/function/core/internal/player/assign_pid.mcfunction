@@ -1,3 +1,4 @@
+# macroengine:core/internal/player/assign_pid [MACRO]
 execute store result score $next_pid macroengine.tmp run data get storage macroengine:engine _pid_seq
 
 scoreboard players add $next_pid macroengine.tmp 1

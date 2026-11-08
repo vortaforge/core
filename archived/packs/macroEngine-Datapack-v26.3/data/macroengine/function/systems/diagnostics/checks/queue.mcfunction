@@ -2,7 +2,6 @@
 # Internal: called by systems/diagnostics/collect. Reads the work queue size and the applied cap.
 # Codes: queue.over_cap  queue.not_draining:sys_queue_off
 
-
 execute store result score #macroengine.dg_q macroengine.tmp run data get storage macroengine:engine work_queue
 execute store result storage macroengine:output diagnostics.queue.size int 1 run scoreboard players get #macroengine.dg_q macroengine.tmp
 execute store result storage macroengine:output diagnostics.queue.cap int 1 run scoreboard players get #queue_cap macroengine.tick

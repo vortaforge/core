@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/trigger/unbind_filter
 execute unless data storage macroengine:engine _tc_unbind[0] run return 0
 
 execute store result score $tc_fval macroengine.tmp run data get storage macroengine:engine _tc_unbind[0].value

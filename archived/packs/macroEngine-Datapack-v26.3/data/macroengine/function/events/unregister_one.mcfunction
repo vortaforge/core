@@ -1,3 +1,4 @@
+# macroengine:events/unregister_one [MACRO]
 $execute unless data storage macroengine:engine events.$(event) run return 0
 
 $data modify storage macroengine:engine _uro.event set value "$(event)"

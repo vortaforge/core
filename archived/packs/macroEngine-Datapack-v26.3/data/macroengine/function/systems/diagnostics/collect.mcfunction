@@ -26,7 +26,6 @@
 #   data get storage macroengine:output diagnostics.ok
 # ======================================================================================
 
-
 data modify storage macroengine:output diagnostics set value {ok:1b,issue_count:0,notice_count:0,issues:[],notices:[],modules:{enabled:0,disabled:0},queue:{size:0,cap:0},audit:{count:0},log:{level:0,buffered:0}}
 scoreboard players set #macroengine.dg_on macroengine.tmp 0
 scoreboard players set #macroengine.dg_off macroengine.tmp 0

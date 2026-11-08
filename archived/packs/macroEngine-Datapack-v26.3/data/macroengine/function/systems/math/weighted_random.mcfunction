@@ -1,3 +1,4 @@
+# macroengine:systems/math/weighted_random [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $wr_total macroengine.tmp $(total)
 

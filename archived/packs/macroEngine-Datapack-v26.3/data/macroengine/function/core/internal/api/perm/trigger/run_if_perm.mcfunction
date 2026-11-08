@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/perm/trigger/run_if_perm [MACRO]
 execute if entity @s[tag=macroengine.admin] run function macroengine:core/internal/api/perm/trigger/exec with storage macroengine:engine _ptd_current
 
 $execute unless entity @s[tag=macroengine.admin] if entity @s[tag=perm.$(perm)] run function macroengine:core/internal/api/perm/trigger/exec with storage macroengine:engine _ptd_current

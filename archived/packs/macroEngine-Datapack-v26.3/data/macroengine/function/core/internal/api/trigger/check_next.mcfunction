@@ -1,3 +1,4 @@
+# macroengine:core/internal/api/trigger/check_next
 execute unless data storage macroengine:engine _tc_binds[0] run return 0
 
 data modify storage macroengine:engine _tc_current set from storage macroengine:engine _tc_binds[0]

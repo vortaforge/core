@@ -1,3 +1,4 @@
+# macroengine:core/lib/process_queue
 scoreboard players add $pq_depth macroengine.tmp 1
 execute if score $pq_depth macroengine.tmp > #queue_cap macroengine.tick run return 0
 

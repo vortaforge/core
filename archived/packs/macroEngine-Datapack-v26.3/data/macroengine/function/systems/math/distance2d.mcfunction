@@ -1,3 +1,4 @@
+# macroengine:systems/math/distance2d [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $d2d_x1 macroengine.tmp $(x1)
 $scoreboard players set $d2d_z1 macroengine.tmp $(z1)

@@ -1,3 +1,4 @@
+# macroengine:systems/string/progress_bar_self [MACRO]
 execute if data storage macroengine:engine modules{string:0b} run return 0
 $scoreboard players set $pbs_max macroengine.tmp $(pb_max)
 execute if score $pbs_max macroengine.tmp matches ..0 run return fail

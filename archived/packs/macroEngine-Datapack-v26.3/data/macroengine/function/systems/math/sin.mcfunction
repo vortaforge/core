@@ -1,3 +1,4 @@
+# macroengine:systems/math/sin [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $sin_d macroengine.tmp $(deg)
 

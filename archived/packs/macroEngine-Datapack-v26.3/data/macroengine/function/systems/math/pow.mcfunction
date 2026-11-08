@@ -1,3 +1,4 @@
+# macroengine:systems/math/pow [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $pow_a macroengine.tmp $(a)
 $scoreboard players set $pow_n macroengine.tmp $(n)

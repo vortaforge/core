@@ -1,3 +1,4 @@
+# macroengine:systems/math/log2 [MACRO]
 execute if data storage macroengine:engine modules{math:0b} run return 0
 $scoreboard players set $lg2_v macroengine.tmp $(value)
 

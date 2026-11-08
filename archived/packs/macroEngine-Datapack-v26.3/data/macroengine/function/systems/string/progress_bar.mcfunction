@@ -1,3 +1,4 @@
+# macroengine:systems/string/progress_bar [MACRO]
 execute if data storage macroengine:engine modules{string:0b} run return 0
 $scoreboard players set $pb1_seg macroengine.tmp $(current)
 $scoreboard players set $pb1_max macroengine.tmp $(max)

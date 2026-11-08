@@ -1,3 +1,4 @@
+# macroengine:core/lib/repeat_n [MACRO]
 $scoreboard players set $rn_n macroengine.tmp $(n)
 scoreboard players set $rn_i macroengine.tmp 0
 

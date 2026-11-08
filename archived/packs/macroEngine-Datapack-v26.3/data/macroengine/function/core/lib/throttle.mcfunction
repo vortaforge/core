@@ -1,3 +1,4 @@
+# macroengine:core/lib/throttle [MACRO]
 scoreboard players set $thr_go macroengine.tmp 1
 
 $execute if data storage macroengine:engine throttle.$(key) run execute store result score $thr_exp macroengine.tmp run data get storage macroengine:engine throttle.$(key)

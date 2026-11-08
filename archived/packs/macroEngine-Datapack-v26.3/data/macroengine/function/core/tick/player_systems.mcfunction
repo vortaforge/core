@@ -1,3 +1,4 @@
+# macroengine:core/tick/player_systems
 execute as @a[scores={macroengine_run=1..}] run function #macroengine:admin/run
 scoreboard players set @a[scores={macroengine_run=1..}] macroengine_run 0
 scoreboard players enable @a[scores={macroengine_run=-1..}] macroengine_run

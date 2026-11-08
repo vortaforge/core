@@ -1,3 +1,4 @@
+# macroengine:api/interaction/spawn [MACRO]
 execute if data storage macroengine:engine modules{interaction:0b} run return 0
 $summon minecraft:interaction ~ ~ ~ {width:$(width), height:$(height), response:$(response), Tags:["macroengine.interaction","macroengine.ia_new"]}
 

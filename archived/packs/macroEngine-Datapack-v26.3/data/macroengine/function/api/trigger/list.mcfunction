@@ -1,3 +1,4 @@
+# macroengine:api/trigger/list
 execute if data storage macroengine:engine modules{trigger:0b} run return 0
 tellraw @s ["",{"text":"[MACROENGINE] ","color":"#00AAAA","bold":true},{"text":"━━━ Trigger Binds ","color":"aqua"},{"text":"━━━━━━━━━━━━━","color":"#555555"}]
 execute unless data storage macroengine:engine trigger_binds[0] run tellraw @s ["",{"text":" ","color":"#555555"},{"text":"(no binds registered)","color":"gray","italic":true}]

@@ -1,3 +1,4 @@
+# macroengine:core/runtime/input_pop
 data remove storage macroengine:input player
 data remove storage macroengine:input key
 data remove storage macroengine:input value
