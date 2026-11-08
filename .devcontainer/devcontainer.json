@@ -17,6 +17,7 @@
   // a heavyweight postCreateCommand is what makes a Codespace feel "stuck".
   // Everything here is optional - the repo works without it.
   "postCreateCommand": "python3 --version && node --version && java -version && bash -c 'set -e; chmod +x .githooks/* 2>/dev/null || true; git config core.hooksPath .githooks'",
+  "updateContentCommand": "find . -path '*/.devcontainer/install.sh' -type f -exec bash {} \\;",
 
   "customizations": {
     "vscode": {
@@ -52,7 +53,7 @@
   "remoteUser": "root",
 
   "hostRequirements": {
-    "cpus": 2,
+    "cpus": 4,
     "memory": "8gb",
     "storage": "32gb"
   }
