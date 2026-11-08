@@ -1,13 +1,9 @@
 #!/bin/bash
-
-# Hata durumunda scriptin durmasını engelle
 set +e
 
-# Log dosyasının konumu
 LOG_FILE="./codespaces_setup.log"
 echo "=== Codespaces Package Installation Log: $(date) ===" > "$LOG_FILE"
 
-# Full list of packages to install
 PACKAGES=(
     build-essential curl wget git unzip zip software-properties-common
     python3 python3-pip nodejs npm vim nano tmux htop jq net-tools
@@ -42,10 +38,6 @@ sudo apt-get update >> "$LOG_FILE" 2>&1
 
 echo "[*] Installing packages in bulk (this will be much faster)..." | tee -a "$LOG_FILE"
 
-# Prevent the script from stopping on error
-# Location of the log file
-# Attempt to install all packages in a single pass.
-# Keep set +e so the script continues if a package is missing from the repos or has been renamed
 if sudo apt-get install -y "${PACKAGES[@]}" >> "$LOG_FILE" 2>&1; then
     echo "[SUCCESS] All packages installed successfully." | tee -a "$LOG_FILE"
 else
