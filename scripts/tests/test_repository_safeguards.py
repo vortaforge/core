@@ -509,6 +509,11 @@ class VersionMatrix(unittest.TestCase):
     PROJECTS = {
         "mods/afk-manager": "1.21.1",
         "mods/join-throttle": "1.21.1",
+        "mods/chat-guard": "1.21.1",
+        "mods/death-point": "1.21.1",
+        "mods/home-manager": "1.21.1",
+        "mods/lag-report": "1.21.1",
+        "mods/tpa": "1.21.1",
         "examples/opmod-example": "26.3",
         "mods/TEMPLATE-MOD": "26.1.2",
     }

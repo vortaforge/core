@@ -9,8 +9,13 @@ body:
       description: Which subproject under mods/ is this about?
       options:
         - afk-manager
+        - chat-guard
         - datapack-blocker
+        - death-point
+        - home-manager
         - join-throttle
+        - lag-report
+        - tpa
         - TEMPLATE-MOD
         - Other / not sure
     validations:

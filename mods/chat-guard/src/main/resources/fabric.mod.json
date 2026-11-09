@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "chat-guard",
+  "version": "${version}",
+  "name": "Chat Guard",
+  "description": "Server-side chat spam control: limits messages per time window, drops repeated identical messages and over-long messages. Operators are exempt by default.",
+  "authors": ["VortaForge"],
+  "contact": {
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "Unlicense",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vortaforge.chatguard.ChatGuardMod"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}

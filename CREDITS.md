@@ -3,16 +3,13 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
-## 2026-11-09 - refactor(macroengine): one `$$(cmd)` file for stored commands; fix `events/fire_queued`
+## 2026-11-09 - feat(mods): chat-guard, death-point, tpa, lag-report, home-manager
 
 **Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
 
-- `archived/packs/macroEngine-Datapack-v26.3/`: new `core/dispatch/cmd` is now the only file that executes a `$$(cmd)` line (twin of `core/dispatch/exec`, which is the only file that executes `$function $(func)`). The nine gated stored-string executors (`core/lib/once/cmd`, wand, trigger, hook, `queue/run_cmd`, `queue/run_cmd_as`, `multi_cmd/exec_macro`, region_watch enter/leave) call it after `systems/cmd_gate/check`. No gate was added or removed.
-- **Deliberately not converted:** the direct wrappers `api/cmd/as_player`, `api/cmd/other/run_*`, `api/cmd/execute_if_pred`, `api/perm/run|exec` and `player/run/cmd_as_uuid` still substitute the raw string into an `execute ... run $(cmd)` line. Moving them to the shared file would route the string through a quoted data capture and break commands that contain double quotes (every `tellraw`/`title` with JSON).
-- Behaviour difference on the converted paths: the executed text is now the captured `in.cmd` (the exact string the gate checked) instead of the raw macro argument. The two differ only when the command contains a backslash escape sequence.
-- `events/fire_queued` queued `macroengine:events/internal/fire_deferred`, which does not exist; it now queues `core/internal/events/fire_deferred`, so queued events fire. `REMOVED.md` updated. Dead-code scan found nothing else: the four remaining unreachable functions are the manual tools listed there.
-- README and `docs/cmd_gate.md` updated to describe the two shapes.
-- **Not performed:** no Minecraft server or in-game test. Only static checks: call-graph reachability (1244 functions, no dangling references), every caller of the new file writes `in.cmd` and passes the gate first, datapack guard, `git diff --check`, repo unit tests.
+- `mods/chat-guard`, `mods/death-point`, `mods/tpa`, `mods/lag-report`, `mods/home-manager`: five new server-side Fabric mods for Minecraft 1.21.1, written entirely with AI assistance (all Java sources, tests, `fabric.mod.json`, READMEs). Every Java file carries an `AI-assisted` header comment. Build files and `LICENSE` were copied from `mods/afk-manager`.
+- Registered in `index.html` (fallback mod list), `docs/VERSION_MATRIX.md`, `scripts/tests/test_repository_safeguards.py` (`VersionMatrix.PROJECTS`) and `.github/ISSUE_TEMPLATE/bug_report_mod.yml`.
+- **Not performed:** `./gradlew` was not run - the sandbox could not reach the Fabric Maven, so none of the mods has been compiled against Minecraft/Fabric API and the `*Mod.java` entrypoints, command wiring, Fabric API event signatures (`ALLOW_CHAT_MESSAGE`, `AFTER_DEATH`, `SERVER_STARTED`), Yarn names (`teleport`, `getServerWorld`, `iterateEntities`, `getAverageTickTime`, `WorldSavePath.ROOT`) and `HomeFile` (Gson) are unverified. No Minecraft server or in-game test. Only the Minecraft-free classes and their unit tests were compiled and run (68 tests, with a throwaway JUnit stand-in rather than the real JUnit 5 runner).
 
 ## 2026-11-08 - chore(macroengine): v26.3 cleanup series (formatting, folder reorganization, dead-code removal)
 

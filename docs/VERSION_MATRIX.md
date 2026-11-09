@@ -11,15 +11,22 @@ file and the build files disagree, so it cannot drift silently.
 |---|---|---|---|---|
 | `mods/afk-manager` | 1.21.1 | 0.16.14 | 1.15.5 | Supported |
 | `mods/join-throttle` | 1.21.1 | 0.16.14 | 1.15.5 | Supported |
+| `mods/chat-guard` | 1.21.1 | 0.16.14 | 1.15.5 | New, not yet built in CI |
+| `mods/death-point` | 1.21.1 | 0.16.14 | 1.15.5 | New, not yet built in CI |
+| `mods/home-manager` | 1.21.1 | 0.16.14 | 1.15.5 | New, not yet built in CI |
+| `mods/lag-report` | 1.21.1 | 0.16.14 | 1.15.5 | New, not yet built in CI |
+| `mods/tpa` | 1.21.1 | 0.16.14 | 1.15.5 | New, not yet built in CI |
 | `examples/opmod-example` | 26.3 | 0.19.5 | 1.15.5 | Example, not shipped |
 | `mods/TEMPLATE-MOD` | 26.1.2 | 0.19.2 | 1.15.5 | Scaffold, not shipped |
 
 ## What this means
 
-- **Two supported Minecraft targets, not one.** `afk-manager` and
-  `join-throttle` build for 1.21.1. The example targets a snapshot line. There
-  is no single "the version this repo supports".
-- **A 1.21.3 client or server is not a supported target for either mod.** They
+- **Two supported Minecraft targets, not one.** The 1.21.1 mods target 1.21.1
+  (`afk-manager` and `join-throttle` are the established ones; `chat-guard`,
+  `death-point`, `home-manager`, `lag-report` and `tpa` are new and have not
+  been built in CI or run on a server yet). The example targets a snapshot line.
+  There is no single "the version this repo supports".
+- **A 1.21.3 client or server is not a supported target for any of these mods.** They
   are compiled against 1.21.1 and no compatibility work has been done for
   1.21.3. Running them there is untested, not impossible.
 - **Loom is one pinned release (1.15.5) everywhere**, including the template.
