@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "tpa",
+  "version": "${version}",
+  "name": "TPA",
+  "description": "Server-side teleport requests: /tpa <player> asks to teleport to someone, who can /tpaccept or /tpdeny. Requests expire and are rate-limited. Nothing is needed on the client.",
+  "authors": ["VortaForge"],
+  "contact": {
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "Unlicense",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vortaforge.tpa.TpaMod"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}

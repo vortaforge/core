@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "death-point",
+  "version": "${version}",
+  "name": "Death Point",
+  "description": "Server-side death location helper: tells a player where they died and offers /deathpos to look it up again. Nothing is needed on the client.",
+  "authors": ["VortaForge"],
+  "contact": {
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "Unlicense",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vortaforge.deathpoint.DeathPointMod"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}

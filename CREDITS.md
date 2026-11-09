@@ -3,6 +3,14 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-11-09 - feat(mods): chat-guard, death-point, tpa, lag-report, home-manager
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `mods/chat-guard`, `mods/death-point`, `mods/tpa`, `mods/lag-report`, `mods/home-manager`: five new server-side Fabric mods for Minecraft 1.21.1, written entirely with AI assistance (all Java sources, tests, `fabric.mod.json`, READMEs). Every Java file carries an `AI-assisted` header comment. Build files and `LICENSE` were copied from `mods/afk-manager`.
+- Registered in `index.html` (fallback mod list), `docs/VERSION_MATRIX.md`, `scripts/tests/test_repository_safeguards.py` (`VersionMatrix.PROJECTS`) and `.github/ISSUE_TEMPLATE/bug_report_mod.yml`.
+- **Not performed:** `./gradlew` was not run - the sandbox could not reach the Fabric Maven, so none of the mods has been compiled against Minecraft/Fabric API and the `*Mod.java` entrypoints, command wiring, Fabric API event signatures (`ALLOW_CHAT_MESSAGE`, `AFTER_DEATH`, `SERVER_STARTED`), Yarn names (`teleport`, `getServerWorld`, `iterateEntities`, `getAverageTickTime`, `WorldSavePath.ROOT`) and `HomeFile` (Gson) are unverified. No Minecraft server or in-game test. Only the Minecraft-free classes and their unit tests were compiled and run (68 tests, with a throwaway JUnit stand-in rather than the real JUnit 5 runner).
+
 ## 2026-11-08 - chore(macroengine): v26.3 cleanup series (formatting, folder reorganization, dead-code removal)
 
 **Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.

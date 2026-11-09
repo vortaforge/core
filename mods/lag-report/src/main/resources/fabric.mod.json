@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "lag-report",
+  "version": "${version}",
+  "name": "Lag Report",
+  "description": "Server-side diagnostics: /lag shows average tick time, TPS and the entity types that dominate each dimension. Read-only, operator-only by default.",
+  "authors": ["VortaForge"],
+  "contact": {
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "Unlicense",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vortaforge.lagreport.LagReportMod"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}

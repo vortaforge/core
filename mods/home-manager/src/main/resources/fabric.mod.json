@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "home-manager",
+  "version": "${version}",
+  "name": "Home Manager",
+  "description": "Server-side named homes: /sethome, /home, /delhome and /homes with a per-player limit. Homes are stored in the world folder. Nothing is needed on the client.",
+  "authors": ["VortaForge"],
+  "contact": {
+    "sources": "https://github.com/vortaforge/core"
+  },
+  "license": "Unlicense",
+  "environment": "server",
+  "entrypoints": {
+    "main": ["com.vortaforge.homemanager.HomeManagerMod"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}
