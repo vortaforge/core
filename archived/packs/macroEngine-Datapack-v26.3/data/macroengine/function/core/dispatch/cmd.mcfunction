@@ -1,5 +1,6 @@
 # ─────────────────────────────────────────────────────────────────
 # macroengine:core/dispatch/cmd [MACRO]
+# AI-assisted: written with Claude (Anthropic). See CREDITS.md at the repo root.
 # THE ONLY file in macroengine that executes a stored command string through
 # the $$(cmd) line. It is the command-string twin of core/dispatch/exec, which
 # is the only file that executes $function $(func).

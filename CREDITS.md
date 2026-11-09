@@ -3,6 +3,17 @@
 This file records which parts of the repository were written or changed with AI assistance, so that
 AI involvement is visible in the repository itself and not only through commit authorship.
 
+## 2026-11-09 - refactor(macroengine): one `$$(cmd)` file for stored commands; fix `events/fire_queued`
+
+**Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
+
+- `archived/packs/macroEngine-Datapack-v26.3/`: new `core/dispatch/cmd` is now the only file that executes a `$$(cmd)` line (twin of `core/dispatch/exec`, which is the only file that executes `$function $(func)`). The nine gated stored-string executors (`core/lib/once/cmd`, wand, trigger, hook, `queue/run_cmd`, `queue/run_cmd_as`, `multi_cmd/exec_macro`, region_watch enter/leave) call it after `systems/cmd_gate/check`. No gate was added or removed.
+- **Deliberately not converted:** the direct wrappers `api/cmd/as_player`, `api/cmd/other/run_*`, `api/cmd/execute_if_pred`, `api/perm/run|exec` and `player/run/cmd_as_uuid` still substitute the raw string into an `execute ... run $(cmd)` line. Moving them to the shared file would route the string through a quoted data capture and break commands that contain double quotes (every `tellraw`/`title` with JSON).
+- Behaviour difference on the converted paths: the executed text is now the captured `in.cmd` (the exact string the gate checked) instead of the raw macro argument. The two differ only when the command contains a backslash escape sequence.
+- `events/fire_queued` queued `macroengine:events/internal/fire_deferred`, which does not exist; it now queues `core/internal/events/fire_deferred`, so queued events fire. `REMOVED.md` updated. Dead-code scan found nothing else: the four remaining unreachable functions are the manual tools listed there.
+- README and `docs/cmd_gate.md` updated to describe the two shapes.
+- **Not performed:** no Minecraft server or in-game test. Only static checks: call-graph reachability (1244 functions, no dangling references), every caller of the new file writes `in.cmd` and passes the gate first, datapack guard, `git diff --check`, repo unit tests.
+
 ## 2026-11-08 - chore(macroengine): v26.3 cleanup series (formatting, folder reorganization, dead-code removal)
 
 **Tool:** Claude (Anthropic), at the maintainer's request. **Anti-Review:** no independent human review had been recorded when this entry was prepared.
