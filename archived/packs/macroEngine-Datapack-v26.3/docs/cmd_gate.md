@@ -58,8 +58,15 @@ the root). Callers use it exactly like `safe_name`:
 ```mcfunction
 $data modify storage macroengine:cmd_gate in.cmd set value "$(cmd)"
 execute unless function macroengine:systems/cmd_gate/check run return 0
-$$(cmd)
+function macroengine:core/dispatch/cmd with storage macroengine:cmd_gate in
 ```
+
+`core/dispatch/cmd` is the only file that executes a `$$(cmd)` line, the same
+way `core/dispatch/exec` is the only file that executes `$function $(func)`.
+It checks nothing itself and runs the string that was just checked
+(`in.cmd`), with the caller's executor and position. A caller that needs another
+executor sets it on the call: `$execute as $(player) at @s run function
+macroengine:core/dispatch/cmd with storage macroengine:cmd_gate in`.
 
 ## The blocklist
 

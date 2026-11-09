@@ -4,4 +4,4 @@
 
 $data modify storage macroengine:cmd_gate in.cmd set value "$(on_enter_cmd)"
 execute unless function macroengine:systems/cmd_gate/check run return 0
-$$(on_enter_cmd)
+function macroengine:core/dispatch/cmd with storage macroengine:cmd_gate in
