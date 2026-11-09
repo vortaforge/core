@@ -24,5 +24,8 @@ Nothing live referenced any of the items below.
 
 - `core/internal/load/cleanup` and `core/internal/text/unload`: manual teardown tools.
 - `core/internal/text/count` and `core/internal/text/has`: helper API of the text module.
-- `core/internal/events/fire_deferred`: `events/fire_queued` points at the wrong path, `events/internal/fire_deferred`, so the queued event never runs. Fix the path there rather than deleting this function.
 - Predicates, loot tables, item modifiers and recipes: public assets for dependent packs, not referenced internally by design.
+
+## Revived instead of removed
+
+- `core/internal/events/fire_deferred`: `events/fire_queued` queued the wrong path (`events/internal/fire_deferred`), so a queued event never ran and the queue logged a missing-function error instead. The path now points at the real function. A queued event now fires when its delay ends, which is what `events/fire_queued` always promised.

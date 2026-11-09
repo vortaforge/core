@@ -13,4 +13,4 @@ execute unless function macroengine:systems/cmd_gate/check run return 0
 
 tellraw @a[tag=macroengine.admin] [{"selector":"@s","color":"gold"},{"text":" - command passed the dynamic-command gate","color":"yellow"}]
 
-$$(cmd)
+function macroengine:core/dispatch/cmd with storage macroengine:cmd_gate in
